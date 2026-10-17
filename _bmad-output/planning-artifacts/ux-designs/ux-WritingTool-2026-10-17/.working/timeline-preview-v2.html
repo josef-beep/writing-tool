@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WritingTool · Grouped vertical timeline preview</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; background: #e7e7e7; color: #222; font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 1020px; margin: auto; }
+    h1 { margin: 0 0 12px; font-size: 25px; font-weight: 600; }
+    p { margin: 0; }
+    .notice { padding: 14px 18px; background: #f2f2f2; border: 1px solid #777; border-left: 5px solid #555; }
+    .notice strong { display: block; margin-bottom: 4px; }
+    .scroll { overflow-x: auto; margin-top: 24px; }
+    .control { width: 460px; margin: auto; border: 1px solid #141414; background: #292929; color: #e1e1e1; }
+    .header { padding: 14px 22px; background: #242424; border-bottom: 1px solid #555; font-size: 14px; font-weight: 600; }
+    .placeholder-note { margin: 18px 22px 0; color: #c1c1c1; font-size: 12px; }
+    .graphic { position: relative; height: 540px; margin: 20px 24px 24px; }
+    .axis { position: absolute; left: 64px; top: 42px; bottom: 42px; width: 2px; background: #bfbfbf; }
+    .orientation { position: absolute; left: 65px; transform: translateX(-50%); color: #ccc; font-size: 13px; }
+    .earlier { top: 2px; }
+    .later { bottom: 2px; }
+    .group { position: absolute; left: 0; width: 100%; }
+    .group-a { top: 104px; }
+    .group-b { top: 354px; }
+    .group::before { content: ''; position: absolute; left: 27px; top: 12px; width: 76px; height: 2px; background: #bfbfbf; }
+    .date { margin-left: 124px; color: #e1e1e1; font-size: 14px; }
+    .codes { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 12px 0 0 124px; }
+    .code { font: 16px/1.5 system-ui, sans-serif; border: 1px solid currentColor; border-radius: 0; padding: 5px 15px; background: #333; cursor: pointer; min-width: 88px; text-align: left; }
+    .decision { color: #71aaff; }
+    .event { color: #f18d8d; }
+    .code:focus-visible { outline: 2px solid #eee; outline-offset: 3px; }
+    .caption { margin-top: 12px; font-size: 13px; color: #444; }
+    .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 28px; margin-top: 24px; }
+    .note { border-top: 1px solid #999; padding-top: 12px; }
+    .note h2 { margin: 0 0 6px; font-size: 15px; }
+    .note p { font-size: 14px; }
+    footer { border-top: 1px solid #999; margin-top: 24px; padding-top: 14px; font-size: 13px; }
+    @media (max-width: 700px) { body { padding: 18px; } .notes { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Vertical timeline — grouped short-code preview</h1>
+    <div class="notice">
+      <strong>Control-only illustration · sample codes, not saved records</strong>
+      One common axis position per fictional-date group, with individually selectable codes stacked beside it. The example codes and date placeholders demonstrate composition only. Exact shades, spacing, side placement, labels, control forms and focus/selection treatment remain provisional, not adopted tokens.
+    </div>
+    <div class="scroll">
+      <section class="control" aria-label="Illustrative grouped vertical timeline control">
+        <header class="header">Universe timeline · control crop</header>
+        <p class="placeholder-note">Sample codes only. “Fictional date A/B” are placeholders, not accepted calendar formats.</p>
+        <div class="graphic">
+          <div class="axis" aria-hidden="true"></div>
+          <span class="orientation earlier">Earlier</span>
+          <section class="group group-a" aria-label="Illustrative same-date group A">
+            <p class="date">Fictional date A</p>
+            <div class="codes">
+              <button class="code event" type="button" aria-label="Event E001, sample code">E001</button>
+              <button class="code decision" type="button" aria-label="Decision D001, sample code">D001</button>
+              <button class="code decision" type="button" aria-label="Decision D002, sample code">D002</button>
+            </div>
+          </section>
+          <section class="group group-b" aria-label="Illustrative later-date group B">
+            <p class="date">Fictional date B</p>
+            <div class="codes">
+              <button class="code event" type="button" aria-label="Event E002, sample code">E002</button>
+            </div>
+          </section>
+          <span class="orientation later">Later</span>
+        </div>
+      </section>
+    </div>
+    <p class="caption">Each group crosses the straight vertical axis once. Red event and blue decision codes are separate selectable records at that shared date position. Stacking creates no extra dates, times or chronology; schematic group spacing encodes no real interval.</p>
+    <div class="notes">
+      <section class="note">
+        <h2>Left initial dock; independent visibility</h2>
+        <p>The dedicated timeline initially docks left. View independently shows/hides it and other workspace controls. Visibility and arrangement are remembered application-wide; movement, resizing, collapse, docking and floating remain available. This crop does not decide simultaneous navigation-panel geometry.</p>
+      </section>
+      <section class="note">
+        <h2>Selection opens the canonical center editor</h2>
+        <p>In the application, selecting a record opens its canonical center editor after pending-edit safeguards. Failed saves or Cancel retain current edits/editor. Here native buttons demonstrate keyboard/mouse reachability only: there is no navigation, stored selection or JavaScript.</p>
+      </section>
+      <section class="note">
+        <h2>Generated, editable display codes</h2>
+        <p>Event defaults E001… and decision defaults D001… expand beyond 999. Codes are required, trimmed, nonblank and case-insensitively unique across events/decisions per universe. UUID remains separate; codes stay stable through date/reorder changes. Editing a code refreshes live views, while retained revisions preserve original codes.</p>
+      </section>
+      <section class="note">
+        <h2>Existing chronology and filters continue</h2>
+        <p>Date-only fictional calendar rules, canonical identity, applicable saved same-date ordering and synchronized maker/category visibility remain binding. Code generation follows creation order and advances past issued/occupied codes. This sample creates no permanent order data or new category lanes.</p>
+      </section>
+    </div>
+    <footer>No actual calendar, record, saved status, scale or performance result is represented. Final date formatting comes from the owning universe. Zoom, scrolling, exact group geometry, colors and selection visuals remain open. Prior timeline preview is preserved; this file illustrates the later accepted grouping/code/date behavior.</footer>
+  </main>
+</body>
+</html>

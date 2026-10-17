@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "universe-profile.schema.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "recordType": {
+      "const": "universe-profile"
+    },
+    "id": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "owner": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "universe"
+        },
+        "id": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "universeId": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "recordVersion": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "id",
+    "owner",
+    "universeId",
+    "recordVersion",
+    "data"
+  ],
+  "additionalProperties": false
+}

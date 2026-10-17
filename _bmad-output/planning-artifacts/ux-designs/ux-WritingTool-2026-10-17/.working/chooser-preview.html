@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WritingTool · Discovery project chooser</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; color: #222; background: #e7e7e7; font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 1320px; margin: auto; }
+    h1 { margin: 0 0 10px; font-size: 25px; font-weight: 600; }
+    p { margin: 0; }
+    .notice { padding: 14px 18px; background: #f2f2f2; border: 1px solid #777; border-left: 5px solid #555; }
+    .notice strong { display: block; margin-bottom: 4px; }
+    .scroll { margin-top: 24px; overflow-x: auto; padding-bottom: 8px; }
+    .window { width: 1280px; height: 720px; background: #292929; color: #e1e1e1; border: 1px solid #141414; }
+    .window-header { height: 56px; padding: 17px 24px; background: #242424; border-bottom: 1px solid #555; font-weight: 600; font-size: 14px; }
+    .content { max-width: 1060px; margin: 82px auto 0; display: grid; grid-template-columns: 340px 1fr; gap: 72px; }
+    .content h2 { margin: 0 0 26px; font-size: 24px; font-weight: 600; }
+    .action-stack { display: flex; flex-direction: column; gap: 12px; }
+    button { font: inherit; width: 100%; text-align: left; color: #e1e1e1; background: #363636; padding: 15px 18px; border: 1px solid #686868; border-radius: 3px; }
+    button:disabled { cursor: default; opacity: 1; -webkit-text-fill-color: currentColor; }
+    .primary { margin-bottom: 12px; color: #202020; background: #cecece; border-color: #e3e3e3; padding: 22px 20px; font-size: 19px; font-weight: 600; }
+    .secondary { font-size: 15px; }
+    .secondary small { display: block; font-size: 12px; font-weight: 400; color: #bfbfbf; margin-top: 3px; }
+    .recent { margin-top: 2px; }
+    .recent h2 { font-size: 18px; padding-bottom: 17px; border-bottom: 1px solid #555; }
+    .empty { min-height: 246px; background: #303030; border: 1px solid #555; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; }
+    .empty strong { font-size: 17px; font-weight: 500; }
+    .empty span { color: #bfbfbf; font-size: 12px; }
+    .caption { margin: 10px 0 22px; color: #444; font-size: 13px; }
+    .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+    .note { border-top: 1px solid #999; padding-top: 12px; }
+    .note h2 { font-size: 15px; margin: 0 0 6px; }
+    .note p { font-size: 14px; }
+    @media (max-width: 700px) { body { padding: 18px; } .notes { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Launch chooser — Discovery preview</h1>
+    <div class="notice">
+      <strong>Static illustration · provisional composition</strong>
+      Placement, control forms, grayscale values, font, dimensions and list layout are illustrative, not adopted design tokens. This follows the approved darker main-workspace direction. Controls do not open dialogs or perform actions.
+    </div>
+    <div class="scroll">
+      <section class="window" aria-label="Illustrative desktop launch chooser">
+        <header class="window-header">WritingTool</header>
+        <div class="content">
+          <section aria-label="Project and universe actions">
+            <h2>Project chooser</h2>
+            <div class="action-stack">
+              <button class="primary" disabled>Open project</button>
+              <button class="secondary" disabled>New project</button>
+              <button class="secondary" disabled>Open universe<small>Standalone universe work</small></button>
+              <button class="secondary" disabled>Recover from backup</button>
+            </div>
+          </section>
+          <section class="recent" aria-label="Illustrative empty recent-project list">
+            <h2>Recent projects</h2>
+            <div class="empty">
+              <strong>No recent projects</strong>
+              <span>Illustrative empty-list state</span>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+    <p class="caption">Near-desktop illustration at 1280 × 720; no real recent-project data was supplied. Empty-list treatment is provisional and does not imply a first-run rule or list capacity.</p>
+    <div class="notes">
+      <section class="note">
+        <h2>Approved entry choices</h2>
+        <p>Application launch shows this chooser rather than automatically opening the last project. Open project is the main action; New project, standalone Open universe and Recover from backup are secondary. A selected project still requires matching-universe authority and schema/reference checks before activation.</p>
+      </section>
+      <section class="note">
+        <h2>Recent-project details remain open</h2>
+        <p>The recent-project list is approved for quick reopening. Exact metadata, ordering, capacity, missing-path handling and removal behavior remain unresolved. No project names, paths, timestamps or other saved metadata are invented here.</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

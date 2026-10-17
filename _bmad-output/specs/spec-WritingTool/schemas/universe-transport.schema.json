@@ -1,0 +1,1553 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "universe-transport.schema.json",
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "createInput": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "submittedEditorRevision": {
+          "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "operationId",
+        "submittedEditorRevision",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "saveInput": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "ownerId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "expectedUnitGeneration": {
+          "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+        },
+        "expectedRecordVersion": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "submittedEditorRevision": {
+          "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "operationId",
+        "ownerId",
+        "expectedUnitGeneration",
+        "expectedRecordVersion",
+        "submittedEditorRevision",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "rootId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "generation": {
+          "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+        },
+        "recordVersion": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "profile": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        "location": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ownerId",
+        "rootId",
+        "generation",
+        "recordVersion",
+        "profile",
+        "location"
+      ],
+      "additionalProperties": false
+    },
+    "request": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.create"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "submittedEditorRevision": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "operationId",
+                "submittedEditorRevision",
+                "data"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "reconcileOperationId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "reconcileOperationId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.current"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.profile.save"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "expectedUnitGeneration": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "expectedRecordVersion": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "submittedEditorRevision": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "operationId",
+                "ownerId",
+                "expectedUnitGeneration",
+                "expectedRecordVersion",
+                "submittedEditorRevision",
+                "data"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.close"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "hostRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.create"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "submittedEditorRevision": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "operationId",
+                "submittedEditorRevision",
+                "data"
+              ],
+              "additionalProperties": false
+            },
+            "basePath": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "input",
+            "basePath"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "basePath": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "basePath"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "basePath": {
+              "type": "string"
+            },
+            "reconcileOperationId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "basePath",
+            "reconcileOperationId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.current"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.profile.save"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "expectedUnitGeneration": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "expectedRecordVersion": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "submittedEditorRevision": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "operationId",
+                "ownerId",
+                "expectedUnitGeneration",
+                "expectedRecordVersion",
+                "submittedEditorRevision",
+                "data"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.close"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "basePath": {
+              "type": "string"
+            },
+            "reconcileOperationId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "reconcileExpected": {
+              "$ref": "#/$defs/reconcileExpected"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "basePath",
+            "reconcileOperationId",
+            "reconcileExpected"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.create"
+            },
+            "status": {
+              "const": "ok"
+            },
+            "snapshot": {
+              "type": "object",
+              "properties": {
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "rootId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "generation": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "recordVersion": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "profile": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                },
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ownerId",
+                "rootId",
+                "generation",
+                "recordVersion",
+                "profile",
+                "location"
+              ],
+              "additionalProperties": false
+            },
+            "receipt": {
+              "$ref": "foundation.schema.json#/$defs/saveReceipt"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "snapshot",
+            "receipt"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.create"
+            },
+            "status": {
+              "const": "canceled"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.create"
+            },
+            "status": {
+              "const": "error"
+            },
+            "code": {
+              "enum": [
+                "VALIDATION",
+                "UNSUPPORTED_VERSION",
+                "GENERATION_CONFLICT",
+                "LEASE_UNAVAILABLE",
+                "IO_FAILURE",
+                "INTEGRITY_MISMATCH",
+                "RECOVERY_REQUIRED",
+                "OPERATION_CONFLICT",
+                "HOST_UNAVAILABLE"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "outcome": {
+              "enum": [
+                "not-committed",
+                "committed",
+                "unknown"
+              ]
+            },
+            "retry": {
+              "enum": [
+                "same-operation",
+                "new-request",
+                "after-recovery",
+                "not-retryable"
+              ]
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "code",
+            "message",
+            "outcome",
+            "retry"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "status": {
+              "const": "ok"
+            },
+            "snapshot": {
+              "type": "object",
+              "properties": {
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "rootId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "generation": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "recordVersion": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "profile": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                },
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ownerId",
+                "rootId",
+                "generation",
+                "recordVersion",
+                "profile",
+                "location"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "snapshot"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "status": {
+              "const": "ok"
+            },
+            "snapshot": {
+              "type": "object",
+              "properties": {
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "rootId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "generation": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "recordVersion": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "profile": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                },
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ownerId",
+                "rootId",
+                "generation",
+                "recordVersion",
+                "profile",
+                "location"
+              ],
+              "additionalProperties": false
+            },
+            "reconciliation": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "outcome": {
+                  "const": "not-committed"
+                }
+              },
+              "required": [
+                "operationId",
+                "outcome"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "snapshot",
+            "reconciliation"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "status": {
+              "const": "ok"
+            },
+            "snapshot": {
+              "type": "object",
+              "properties": {
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "rootId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "generation": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "recordVersion": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "profile": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                },
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ownerId",
+                "rootId",
+                "generation",
+                "recordVersion",
+                "profile",
+                "location"
+              ],
+              "additionalProperties": false
+            },
+            "receipt": {
+              "$ref": "foundation.schema.json#/$defs/saveReceipt"
+            },
+            "reconciliation": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "outcome": {
+                  "const": "committed"
+                }
+              },
+              "required": [
+                "operationId",
+                "outcome"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "snapshot",
+            "receipt",
+            "reconciliation"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "status": {
+              "const": "canceled"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.open"
+            },
+            "status": {
+              "const": "error"
+            },
+            "code": {
+              "enum": [
+                "VALIDATION",
+                "UNSUPPORTED_VERSION",
+                "GENERATION_CONFLICT",
+                "LEASE_UNAVAILABLE",
+                "IO_FAILURE",
+                "INTEGRITY_MISMATCH",
+                "RECOVERY_REQUIRED",
+                "OPERATION_CONFLICT",
+                "HOST_UNAVAILABLE"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "outcome": {
+              "enum": [
+                "not-committed",
+                "committed",
+                "unknown"
+              ]
+            },
+            "retry": {
+              "enum": [
+                "same-operation",
+                "new-request",
+                "after-recovery",
+                "not-retryable"
+              ]
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "code",
+            "message",
+            "outcome",
+            "retry"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.current"
+            },
+            "status": {
+              "const": "ok"
+            },
+            "snapshot": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "$ref": "foundation.schema.json#/$defs/uuid"
+                    },
+                    "rootId": {
+                      "$ref": "foundation.schema.json#/$defs/uuid"
+                    },
+                    "generation": {
+                      "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                    },
+                    "recordVersion": {
+                      "$ref": "foundation.schema.json#/$defs/uuid"
+                    },
+                    "profile": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "pattern": "\\S"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "description"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "location": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ownerId",
+                    "rootId",
+                    "generation",
+                    "recordVersion",
+                    "profile",
+                    "location"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "snapshot"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.current"
+            },
+            "status": {
+              "const": "error"
+            },
+            "code": {
+              "enum": [
+                "VALIDATION",
+                "UNSUPPORTED_VERSION",
+                "GENERATION_CONFLICT",
+                "LEASE_UNAVAILABLE",
+                "IO_FAILURE",
+                "INTEGRITY_MISMATCH",
+                "RECOVERY_REQUIRED",
+                "OPERATION_CONFLICT",
+                "HOST_UNAVAILABLE"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "outcome": {
+              "enum": [
+                "not-committed",
+                "committed",
+                "unknown"
+              ]
+            },
+            "retry": {
+              "enum": [
+                "same-operation",
+                "new-request",
+                "after-recovery",
+                "not-retryable"
+              ]
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "code",
+            "message",
+            "outcome",
+            "retry"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.profile.save"
+            },
+            "status": {
+              "const": "ok"
+            },
+            "snapshot": {
+              "type": "object",
+              "properties": {
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "rootId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "generation": {
+                  "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+                },
+                "recordVersion": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "profile": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                },
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ownerId",
+                "rootId",
+                "generation",
+                "recordVersion",
+                "profile",
+                "location"
+              ],
+              "additionalProperties": false
+            },
+            "receipt": {
+              "$ref": "foundation.schema.json#/$defs/saveReceipt"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "snapshot",
+            "receipt"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.profile.save"
+            },
+            "status": {
+              "const": "error"
+            },
+            "code": {
+              "enum": [
+                "VALIDATION",
+                "UNSUPPORTED_VERSION",
+                "GENERATION_CONFLICT",
+                "LEASE_UNAVAILABLE",
+                "IO_FAILURE",
+                "INTEGRITY_MISMATCH",
+                "RECOVERY_REQUIRED",
+                "OPERATION_CONFLICT",
+                "HOST_UNAVAILABLE"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "outcome": {
+              "enum": [
+                "not-committed",
+                "committed",
+                "unknown"
+              ]
+            },
+            "retry": {
+              "enum": [
+                "same-operation",
+                "new-request",
+                "after-recovery",
+                "not-retryable"
+              ]
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "code",
+            "message",
+            "outcome",
+            "retry"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.close"
+            },
+            "status": {
+              "const": "ok"
+            },
+            "snapshot": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "snapshot"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "requestId": {
+              "$ref": "foundation.schema.json#/$defs/uuid"
+            },
+            "command": {
+              "const": "universe.close"
+            },
+            "status": {
+              "const": "error"
+            },
+            "code": {
+              "enum": [
+                "VALIDATION",
+                "UNSUPPORTED_VERSION",
+                "GENERATION_CONFLICT",
+                "LEASE_UNAVAILABLE",
+                "IO_FAILURE",
+                "INTEGRITY_MISMATCH",
+                "RECOVERY_REQUIRED",
+                "OPERATION_CONFLICT",
+                "HOST_UNAVAILABLE"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "outcome": {
+              "enum": [
+                "not-committed",
+                "committed",
+                "unknown"
+              ]
+            },
+            "retry": {
+              "enum": [
+                "same-operation",
+                "new-request",
+                "after-recovery",
+                "not-retryable"
+              ]
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "requestId",
+            "command",
+            "status",
+            "code",
+            "message",
+            "outcome",
+            "retry"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "reconcileExpected": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "ownerId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                },
+                "rootId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                }
+              },
+              "required": [
+                "ownerId",
+                "rootId"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "creationOperationId": {
+                  "$ref": "foundation.schema.json#/$defs/uuid"
+                }
+              },
+              "required": [
+                "creationOperationId"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "mutation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "const": "universe.create"
+                },
+                "input": {
+                  "$ref": "#/$defs/createInput"
+                }
+              },
+              "required": [
+                "command",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "const": "universe.profile.save"
+                },
+                "input": {
+                  "$ref": "#/$defs/saveInput"
+                }
+              },
+              "required": [
+                "command",
+                "input"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "identity",
+        "mutation"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/result"
+    }
+  ]
+}

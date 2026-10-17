@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "universe-journal.schema.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "scope": {
+      "const": "single-unit"
+    },
+    "command": {
+      "const": "universe.profile.save"
+    },
+    "ownerId": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "rootId": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "operationId": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "ownerId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "expectedUnitGeneration": {
+          "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+        },
+        "expectedRecordVersion": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "submittedEditorRevision": {
+          "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "operationId",
+        "ownerId",
+        "expectedUnitGeneration",
+        "expectedRecordVersion",
+        "submittedEditorRevision",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "requestDigest": {
+      "type": "string"
+    },
+    "expectedGeneration": {
+      "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+    },
+    "targetGeneration": {
+      "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+    },
+    "fencingToken": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "before": {
+      "type": "string"
+    },
+    "after": {
+      "type": "string"
+    },
+    "beforeHash": {
+      "type": "string"
+    },
+    "afterHash": {
+      "type": "string"
+    },
+    "beforeLength": {
+      "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+    },
+    "afterLength": {
+      "$ref": "foundation.schema.json#/$defs/unsignedDecimal"
+    },
+    "expectedRecordVersion": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "beforeRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "rootId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "recordType": {
+          "const": "universe-profile"
+        },
+        "relativePath": {
+          "type": "string"
+        },
+        "recordVersion": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "rootId",
+        "recordType",
+        "relativePath",
+        "recordVersion",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "afterRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "rootId": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "recordType": {
+          "const": "universe-profile"
+        },
+        "relativePath": {
+          "type": "string"
+        },
+        "recordVersion": {
+          "$ref": "foundation.schema.json#/$defs/uuid"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "rootId",
+        "recordType",
+        "relativePath",
+        "recordVersion",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "receipt": {
+      "$ref": "foundation.schema.json#/$defs/saveReceipt"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "scope",
+    "command",
+    "ownerId",
+    "rootId",
+    "operationId",
+    "request",
+    "requestDigest",
+    "expectedGeneration",
+    "targetGeneration",
+    "fencingToken",
+    "before",
+    "after",
+    "beforeHash",
+    "afterHash",
+    "beforeLength",
+    "afterLength",
+    "expectedRecordVersion",
+    "beforeRecord",
+    "afterRecord",
+    "receipt"
+  ],
+  "additionalProperties": false
+}

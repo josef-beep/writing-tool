@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "universe-descriptor.schema.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "universe"
+    },
+    "id": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "rootId": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    },
+    "creationOperationId": {
+      "$ref": "foundation.schema.json#/$defs/uuid"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "kind",
+    "id",
+    "rootId",
+    "creationOperationId"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,49 @@
+{
+  "wrtText": "A😀é\n***\n",
+  "formatting": {
+    "formatVersion": 1,
+    "chapterId": "00000000-0000-4000-8000-000000000001",
+    "recordVersion": "00000000-0000-4000-8000-000000000002",
+    "text": {
+      "relativePath": "chapters/00000000-0000-4000-8000-000000000001.wrt",
+      "sha256": "38746b50e6b18706d169d76d58057345d74b7d42e12e5e67b180307051333026",
+      "byteLength": "12",
+      "scalarLength": "8"
+    },
+    "paragraphs": [
+      {
+        "id": "00000000-0000-4000-8000-000000000003",
+        "start": "0",
+        "end": "3",
+        "kind": "body",
+        "indent": "0",
+        "marks": [
+          {
+            "start": "1",
+            "end": "2",
+            "styles": [
+              "bold",
+              "italic"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "00000000-0000-4000-8000-000000000004",
+        "start": "4",
+        "end": "7",
+        "kind": "scene-break",
+        "indent": "0",
+        "marks": []
+      },
+      {
+        "id": "00000000-0000-4000-8000-000000000005",
+        "start": "8",
+        "end": "8",
+        "kind": "body",
+        "indent": "0",
+        "marks": []
+      }
+    ]
+  }
+}

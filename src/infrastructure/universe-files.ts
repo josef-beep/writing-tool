@@ -1,0 +1,274 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { createHash, randomUUID } from 'node:crypto';
+export const hash = (bytes: string | Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
+// RFC8785 for the closed JSON-only slice: keys are UTF-16 sorted; no domain numbers.
+export function canonical(v: unknown): string {
+    if (v === null || typeof v !== 'object')
+        return JSON.stringify(v);
+    if (Array.isArray(v))
+        return '[' + v.map(canonical).join(',') + ']';
+    const o = v as Record<string, unknown>;
+    return '{' + Object.keys(o).sort().map(k => JSON.stringify(k) + ':' + canonical(o[k])).join(',') + '}';
+}
+export const jsonBytes = (v: unknown): string => canonical(v) + '\n';
+// Scan keys before JSON.parse can erase duplicates, while retaining normal JSON grammar.
+export function decode(bytes: Uint8Array): unknown {
+    if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf)
+        throw new Error('BOM is unsupported');
+    const s = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    let i = 0;
+    const ws = () => {
+        while (/[\x20\t\r\n]/.test(s[i] ?? '') && i < s.length)
+            i++;
+    };
+    const string = (): string => {
+        const start = i++;
+        while (i < s.length) {
+            const c = s[i++];
+            if (c === '\\')
+                i++;
+            else if (c === '"') {
+                const v = JSON.parse(s.slice(start, i)) as string;
+                if (/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(v))
+                    throw new Error('Malformed Unicode');
+                return v;
+            }
+        }
+        throw new Error('Unterminated JSON string');
+    };
+    const value = (): void => {
+        ws();
+        const c = s[i];
+        if (c === '"') {
+            string();
+            return;
+        }
+        if (c === '{') {
+            i++;
+            ws();
+            const keys = new Set<string>();
+            if (s[i] === '}') {
+                i++;
+                return;
+            }
+            while (i < s.length) {
+                ws();
+                if (s[i] !== '"')
+                    throw new Error('Invalid object');
+                const k = string();
+                if (keys.has(k))
+                    throw new Error('Duplicate JSON key');
+                keys.add(k);
+                ws();
+                if (s[i++] !== ':')
+                    throw new Error('Invalid object');
+                value();
+                ws();
+                if (s[i] === '}') {
+                    i++;
+                    return;
+                }
+                if (s[i++] !== ',')
+                    throw new Error('Invalid object');
+            }
+        }
+        else if (c === '[') {
+            i++;
+            ws();
+            if (s[i] === ']') {
+                i++;
+                return;
+            }
+            while (i < s.length) {
+                value();
+                ws();
+                if (s[i] === ']') {
+                    i++;
+                    return;
+                }
+                if (s[i++] !== ',')
+                    throw new Error('Invalid array');
+            }
+        }
+        else {
+            const match = /^(?:null|true|false|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i));
+            if (!match)
+                throw new Error('Invalid JSON');
+            i += match[0].length;
+            return;
+        }
+        throw new Error('Invalid JSON');
+    };
+    value();
+    ws();
+    if (i !== s.length)
+        throw new Error('Trailing JSON bytes');
+    return JSON.parse(s);
+}
+// The supported local primitive is Linux directory-descriptor-relative I/O.
+// Walking with O_NOFOLLOW pins each directory before resolving the next segment.
+// Paths through /proc/self/fd refer to the open directory, even after a rename.
+function directoryHandle(p: string): number {
+    if (process.platform !== 'linux')
+        throw new Error('Verified directory-relative I/O is unavailable on this platform');
+    let fd = fs.openSync('/', fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW);
+    try {
+        for (const segment of path.resolve(p).split('/').filter(Boolean)) {
+            const next = fs.openSync(`/proc/self/fd/${fd}/${segment}`, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW);
+            fs.closeSync(fd);
+            fd = next;
+        }
+        return fd;
+    }
+    catch (error) {
+        fs.closeSync(fd);
+        throw error;
+    }
+}
+function anchored(p: string): {
+    fd: number;
+    file: string;
+} {
+    const fd = directoryHandle(path.dirname(p));
+    return { fd, file: `/proc/self/fd/${fd}/${path.basename(p)}` };
+}
+function regular(fd: number): fs.Stats {
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1)
+        throw new Error('Aliased or invalid managed file');
+    return stat;
+}
+export function syncDir(p: string): void {
+    const fd = directoryHandle(p);
+    try {
+        fs.fsyncSync(fd);
+    }
+    finally {
+        fs.closeSync(fd);
+    }
+}
+export function writeExclusive(p: string, data: string, reserved?: () => void): void {
+    const parent = anchored(p);
+    let fd: number | undefined;
+    try {
+        fd = fs.openSync(parent.file, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+        reserved?.();
+        regular(fd);
+        fs.writeFileSync(fd, data, 'utf8');
+        fs.fsyncSync(fd);
+        fs.fsyncSync(parent.fd);
+    }
+    finally {
+        if (fd !== undefined)
+            fs.closeSync(fd);
+        fs.closeSync(parent.fd);
+    }
+}
+// Atomically publish metadata; keep a torn legacy marker under a distinct name.
+export function publishMarker(root: string, relative: string, data: string, staged?: () => void): void {
+    const parent = anchored(path.join(root, relative));
+    const temporary = `/proc/self/fd/${parent.fd}/.marker-${randomUUID()}`;
+    try {
+        const fd = fs.openSync(temporary, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+        try {
+            regular(fd);
+            fs.writeFileSync(fd, data, 'utf8');
+            fs.fsyncSync(fd);
+        }
+        finally {
+            fs.closeSync(fd);
+        }
+        fs.fsyncSync(parent.fd);
+        staged?.();
+        try {
+            fs.lstatSync(parent.file);
+            throw new Error('Publication marker already exists');
+        }
+        catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+                throw error;
+        }
+        fs.renameSync(temporary, parent.file);
+        fs.fsyncSync(parent.fd);
+    }
+    finally {
+        fs.closeSync(parent.fd);
+    }
+}
+export function preserveMarker(root: string, relative: string): void {
+    const parent = anchored(path.join(root, relative));
+    try {
+        const fd = fs.openSync(parent.file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+        try {
+            regular(fd);
+        }
+        finally {
+            fs.closeSync(fd);
+        }
+        fs.renameSync(parent.file, parent.file + '.damaged-' + randomUUID());
+        fs.fsyncSync(parent.fd);
+    }
+    finally {
+        fs.closeSync(parent.fd);
+    }
+}
+export function checked(root: string, relative: string, directory = false): string {
+    const segments = relative.split('/');
+    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || path.isAbsolute(relative))
+        throw new Error('Unsafe managed path');
+    let p = root;
+    for (let i = 0; i < segments.length; i++) {
+        p = path.join(p, segments[i]);
+        const stat = fs.lstatSync(p);
+        const dir = i < segments.length - 1 || directory;
+        if (stat.isSymbolicLink() || (dir ? !stat.isDirectory() : (!stat.isFile() || stat.nlink !== 1)))
+            throw new Error('Aliased or invalid managed path');
+    }
+    return p;
+}
+export function readManaged(root: string, relative: string): Buffer {
+    const p = checked(root, relative);
+    const parent = anchored(p);
+    let fd: number | undefined;
+    try {
+        fd = fs.openSync(parent.file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+        regular(fd);
+        return fs.readFileSync(fd);
+    }
+    finally {
+        if (fd !== undefined)
+            fs.closeSync(fd);
+        fs.closeSync(parent.fd);
+    }
+}
+export function replaceManaged(root: string, relative: string, data: string): void {
+    const target = checked(root, relative);
+    const parent = anchored(target);
+    const temporary = `/proc/self/fd/${parent.fd}/.publish-${randomUUID()}`;
+    let original: number | undefined;
+    try {
+        original = fs.openSync(parent.file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+        const expected = regular(original);
+        const fd = fs.openSync(temporary, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+        try {
+            regular(fd);
+            fs.writeFileSync(fd, data, 'utf8');
+            fs.fsyncSync(fd);
+        }
+        finally {
+            fs.closeSync(fd);
+        }
+        fs.fsyncSync(parent.fd);
+        const current = fs.lstatSync(parent.file);
+        if (!current.isFile() || current.nlink !== 1 || current.ino !== expected.ino || current.dev !== expected.dev)
+            throw new Error('Publication target identity changed');
+        fs.renameSync(temporary, parent.file);
+        fs.fsyncSync(parent.fd);
+    }
+    finally {
+        if (original !== undefined)
+            fs.closeSync(original);
+        fs.closeSync(parent.fd);
+    }
+}

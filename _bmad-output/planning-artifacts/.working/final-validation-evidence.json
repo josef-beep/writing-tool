@@ -1,0 +1,551 @@
+{
+  "checks": {
+    "story_count": 49,
+    "unique_ids": 49,
+    "all_story_fields_present": true,
+    "primary_fr_count": 49,
+    "unchecked_product_decisions": 6,
+    "unchecked_technical_gates": 13
+  },
+  "stories": [
+    {
+      "id": "1.1",
+      "title": "Set up initial project from starter template",
+      "ac_blocks": 5,
+      "has_story_format": true,
+      "requirements": "AD-1/3/11/18 (AR-01/03/11/18); NFR-1/7/9. This is the architecture-required starter story for Epic 1.",
+      "dependencies": "No earlier story. TECH-01's shared versioned contracts must be published before implementing IPC; candidate dependencies remain subject to TECH-12 verification before lockfile adoption. Record bootstrap compatibility evidence for the components actually exercised here. DEC-09/10 govern full installed-platform acceptance; this local packaged smoke check does not settle that matrix."
+    },
+    {
+      "id": "1.2",
+      "title": "Create and reopen a universe in a chosen folder",
+      "ac_blocks": 8,
+      "has_story_format": true,
+      "requirements": "FR-44 foundation; AD-2/3/4/8/9/10/18 (AR-02/03/04/08/09/10/18); NFR-1/2/6/7/9; permanent UUID/location contract. Character/faction/event sharing under FR-44 is completed by the corresponding later stories.",
+      "dependencies": "Approved Story 1.1 only. TECH-01 must publish the shared identity/storage/transport contracts before their implementation; TECH-04 must settle writer ownership and concurrent-open behavior; TECH-11 must choose and verify the SQLite binding, engine and migration strategy; TECH-12 must verify affected native/background packaging before dependency adoption. The applicable TECH-02/05 publication and operation-recovery rules must cover failed/interrupted universe creation before it is accepted. These are unresolved technical prerequisites, not implicit decisions or completed work.",
+      "universeProfileDecision": "DEC-12 resolved: inventory complete; required name, optional free-text description, existing approved universe capabilities and faction extensions; no separate world/city profiles added."
+    },
+    {
+      "id": "1.3",
+      "title": "Create and reopen a project linked to a universe",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-44 project/universe association foundation; AD-2/3/6/8/9/10/18; NFR-1/2/3/6/7/9; permanent UUID/location contract. Universe-owned character/faction/event context is added when those record types are implemented.",
+      "dependencies": "Approved Stories 1.1 and 1.2 only. Inherit the applicable TECH-01/02/04/05/11/12 prerequisites for identity, storage publication, operation recovery, writer coordination and native packaging. DEC-12 remains open for universe information; this story does not add universe profile fields. No project metadata fields beyond the agreed identity/association/storage needs are silently specified."
+    },
+    {
+      "id": "1.4",
+      "title": "Create, name and manually order stories in a project",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "CAP-1; AD-6/8/10; shared identity and volume-grouping contracts; FR-44 ownership foundation; NFR-1/2/3/6/9.",
+      "dependencies": "Approved Stories 1.1\u20131.3 only. Inherit shared TECH-01/02/04/05/11 storage, identity, writer and failure-handling gates where applicable. Required story-list interactions must be captured under PLAN-04. Exact title validation or additional story-profile fields are not silently settled by this proposal."
+    },
+    {
+      "id": "1.5",
+      "title": "Organize stories into optional, manually ordered volumes",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "CAP-1; AD-6/8/10; shared volume-grouping and permanent-identity contracts; NFR-1/2/3/6/9.",
+      "dependencies": "Approved Stories 1.1\u20131.4 only. Inherit the applicable shared TECH-01/02/04/05/11 contracts and writer/storage-failure gates. Capture grouping and ordering interactions under PLAN-04 before implementation. Default insertion positions and exact name validation are not silently adopted here; manual order must be explicitly controllable."
+    },
+    {
+      "id": "1.6",
+      "title": "Build and save a universe's repeating fictional calendar",
+      "ac_blocks": 10,
+      "has_story_format": true,
+      "requirements": "CAP-4; FR-8\u201313 and initial configuration support for FR-7; AD-3/6/8/10 and chronology convention; NFR-1/2/3/6/9.",
+      "dependencies": "Approved Stories 1.1\u20131.5 only; no future event or chapter story is required to build/use this calendar configuration. Resolve DEC-03 (elapsed coordinate/epoch/year bounds), DEC-04 (standalone-day/year-name display) and DEC-13 (builder validation) before their affected implementation. Inherit applicable TECH-01/02/04/05/11 storage/write gates; capture the builder interactions under PLAN-04. None of these unresolved details is decided by scope approval.",
+      "minimumYearDecision": "Year number and day count suffice; no months/names/explicit standalone-day entries required in days-only mode; optional empty list is not zero length.",
+      "calendarValidationDecision": "DEC-13 resolved: positive whole day/month/target counts, integer year, clear missing/fraction/nonnumeric errors; optional months/names; mismatch still saveable.",
+      "yearNumberingDecision": "DEC-03 resolved: no fixed upper/lower year bounds, arbitrary-precision exact integers, negative/zero/positive continuous order, no artificial epoch.",
+      "standaloneDateDisplay": "DEC-04 resolved: yearname/dayname-dayOfYear/yearnumber; omit absent year segment; omit absent dayname/hyphen; no empty segments. Exact signed unbounded year preserved."
+    },
+    {
+      "id": "1.7",
+      "title": "Record standalone events on the universe timeline",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "CAP-3; FR-35, standalone-event application of FR-40 and timeline/event sharing under FR-44; optional-order entry support for FR-41. AD-3/6/8/10/18 and canonical event-ownership/chronology conventions; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Stories 1.1\u20131.6 only. Direct universe operation does not require a project, although project entry uses the already approved association workflow. Inherit applicable TECH-01/02/04/05/11 identity/storage/publication/writer gates and DEC-03/04 chronology/display contracts. Capture timeline/event-entry interactions under PLAN-04. Date input must use the agreed bounds and conversion contract; no additional time precision is inferred.",
+      "sameDateOrderingDecision": "DEC-14 resolved: new/redated event last in destination group; preserve others\u2019 relative/manual order and same-date edit position."
+    },
+    {
+      "id": "1.8",
+      "title": "Manually arrange timeline events sharing a date",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "FR-41; FR-40 date-only chronology and FR-44 authoritative universe context; AD-3/8/10/18; NFR-1/2/3/6/9.",
+      "dependencies": "Approved Stories 1.1\u20131.7 only. Resolve DEC-14 before insertion/date-transition placement is implemented; the plot-specific FR-34 placement rule is not a timeline default. Capture the ordering interaction under PLAN-04. Inherit the existing TECH-01/02/04/05/11 storage, identity, publication and writer contracts.",
+      "sameDateOrderingDecision": "DEC-14 resolved: new/redated event last in destination group; preserve others\u2019 relative/manual order and same-date edit position."
+    },
+    {
+      "id": "1.9",
+      "title": "Revise a populated calendar without changing elapsed chronology",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "CAP-4; FR-7 with continued FR-8\u201313/40/41/44 behavior; AD-3/6/8/10/18 and the common fictional-chronology convention; NFR-1/2/3/6/9.",
+      "dependencies": "Approved Stories 1.1\u20131.8 only. Resolve DEC-03/04/13 chronology, display and calendar-validation contracts before implementation. Use TECH-01's common chronology contract and TECH-02/04/05's consistent publication, writer serialization and operation-recovery guarantees; inherit relevant TECH-11 persistence verification. Capture populated-calendar editing interactions under PLAN-04."
+    },
+    {
+      "id": "2.1",
+      "title": "Create and organize undated chapters within a story",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "FR-42 undated creation/ordering foundation; CAP-2 and AD-3/6/8/10/13/18; NFR-1/2/3/6/7/9. Full dated ordering and independent date editing follow within Epic 2.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 only. Inherit applicable TECH-01/02/04/05/11 contracts for chapter identity, storage publication, operation recovery and writer coordination. Any initialized empty manuscript must follow TECH-01's versioned WritingTool document contract rather than a new local format; the editing adapter is not a prerequisite for outlining. Capture chapter-list interactions under PLAN-04."
+    },
+    {
+      "id": "2.2",
+      "title": "Write, format and save chapter manuscripts",
+      "ac_blocks": 8,
+      "has_story_format": true,
+      "requirements": "FR-1; CAP-2; AD-3/10/11/12/13/14/18; NFR-1/2/3/6/7/9. This story delivers manual manuscript persistence; FR-43 autosave follows within Epic 2.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 and Story 2.1 only. TECH-01 must define the manuscript schema, adapter mapping, validation and version-handling contract before document persistence. TECH-03/05 must settle pending-edit acknowledgments, navigation/close coordination and failures; TECH-12 must verify Lexical integration and round-trip behavior before candidate pins are adopted. Inherit applicable TECH-02/04/11 storage-publication, writer and SQLite contracts. Resolve DEC-15 and capture editor interactions under PLAN-04 before their implementation. Scope approval does not pick unsaved-navigation behavior.",
+      "storageAmendment": "Plain-text chapter-id.wrt with chapter details/formatting in matching chapter-id.json; save, history, restore, backup and export keep versions matched with coordinated catalog publication.",
+      "navigationDecision": "DEC-15: automatic matched-version save before leaving; warning, retained writing and pending navigation with retry/cancel if save fails."
+    },
+    {
+      "id": "2.3",
+      "title": "Set independent chapter dates and view chapters chronologically",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-42; independent chapter-field behavior under FR-5 and contracts.md; continued FR-7 preservation for newly introduced chapter dates; CAP-2/3/4; AD-3/6/8/10/13/18 and AD-16 as superseded by independent date fields; NFR-1/2/3/6/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 and Epic 2 Stories 2.1\u20132.2 only. Resolve DEC-01 (end-before-start behavior) and DEC-16 (same-start chapter ties) before implementing those cases. Use DEC-03/04's chronology bounds/display contract, TECH-01's common date representation and TECH-02/04/05's coordinated publication/writer/recovery guarantees, including cross-store consistency where needed. Inherit TECH-11 persistence and DEC-15 pending-editor-state protections. Capture date-entry/list interactions under PLAN-04.",
+      "dateRangeDecision": "DEC-01 resolved: end=start for inverted valid pair, otherwise independent optional bounds; linked events unchanged.",
+      "chapterTieDecision": "DEC-16 resolved: saved creation order within same-start group; missing starts first; other dates chronological."
+    },
+    {
+      "id": "2.4",
+      "title": "Automatically save current work at a configurable interval",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-43; CAP-12; AD-3/13/14/18 and save/settings convention; NFR-1/2/3/6/7/9. Future FR-28/29 settings round-trip must include this exact autosave setting.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 and Epic 2 Stories 2.1\u20132.3 only. Resolve DEC-07 interval validation and DEC-17 scheduling semantics before implementation; DEC-15 continues to govern pending-edit navigation. Use TECH-01's document/settings/transport contracts, TECH-03's pending-edit acknowledgments and TECH-02/04/05's publication/writer/lifecycle/recovery guarantees. Inherit relevant TECH-11/12 persistence/editor integration checks. Capture the interval control and save-status interactions under PLAN-04.",
+      "autosaveDecision": "DEC-17: timer starts on open/restarts on interval change; one overdue resume save; no overlap; warning/retained edits on failure with next-interval retry and Retry now."
+    },
+    {
+      "id": "2.5",
+      "title": "Choose light, dark or system application appearance",
+      "ac_blocks": 5,
+      "has_story_format": true,
+      "requirements": "FR-30 appearance behavior and persistence; CAP-12; AD-3/11/18 and settings convention; NFR-1/2/3/7/9. FR-28/29 import/export will round-trip this selected mode in a later Epic 2 story.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 and Epic 2 Stories 2.1\u20132.4 only. Use the shared TECH-01 settings/transport contract and existing settings-persistence/failure guarantees; retain DEC-15 pending-edit protections. PLAN-04 must capture the appearance control and required light/dark visual treatment before implementation. This proposal does not select colors, typography, UI libraries, accessibility thresholds or a first-install default theme. Full installed-platform verification remains DEC-09/10 and VERIFY-09."
+    },
+    {
+      "id": "2.6",
+      "title": "Configure independent saving and recovery settings",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "CAP-12; FR-28/29 settings-content foundation, FR-43 configuration and continued FR-30 behavior; FR-18/19/24/25 configuration foundation; AD-3/9/15/18 and save/settings convention; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 and Epic 2 Stories 2.1\u20132.5 only. Resolve DEC-07 settings validation before implementation; reuse DEC-17 autosave cadence and existing TECH-01 settings/transport contracts. Inherit applicable TECH-02/04/05 persistence/publication/writer/lifecycle guarantees, DEC-15 pending-editor protections and PLAN-04 settings interactions. The user-selected backup destination's default is not invented by this proposal.",
+      "settingsValidationDecision": "DEC-07 resolved: positive whole-minute intervals/whole-day retention; missing=current, unknown=warn/ignore, invalid known=reject whole import; unavailable backup folder allowed."
+    },
+    {
+      "id": "2.7",
+      "title": "Export and import application settings as JSON",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-28/29; full FR-30 and FR-43 settings round-trip integration; CAP-12; AD-3/15/18 and settings convention; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 and Epic 2 Stories 2.1\u20132.6 only. Publish the shared settings JSON serialization/validation contract under TECH-01; settle missing/unrecognized field and compatibility behavior under DEC-07 before implementation. Use existing TECH-02/04/05 settings publication/writer/lifecycle guarantees, DEC-17 scheduler behavior and DEC-15 pending-editor protections. Capture file-selection, result and error interactions under PLAN-04. This proposal does not require a new version field or pick field names/units independently of the shared schema.",
+      "settingsValidationDecision": "DEC-07 resolved: positive whole-minute intervals/whole-day retention; missing=current, unknown=warn/ignore, invalid known=reject whole import; unavailable backup folder allowed."
+    },
+    {
+      "id": "3.1",
+      "title": "Create and filter universe characters by type",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-15; FR-16 required-name foundation; character-sharing extension of FR-44; CAP-5; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9 and Epic 2 Stories 2.1\u20132.7 only. Use shared TECH-01 identity/transport/storage contracts and applicable TECH-02/04/05/11 publication, writer, recovery and SQLite guarantees. Capture basic character-list/create/filter interactions under PLAN-04. No text-search feature, automatic default type, unique-name restriction or additional profile field is silently selected by this proposal."
+    },
+    {
+      "id": "3.2",
+      "title": "Develop character profiles with guided prompts and explicit waivers",
+      "ac_blocks": 8,
+      "has_story_format": true,
+      "requirements": "FR-16 textual field matrix and completeness; FR-48 guided prompts, expected states and textual viewer; continued FR-15 extras behavior and FR-44 sharing; CAP-5; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Story 3.1 only. Resolve DEC-05 prompt wording and waiver transitions before implementation. Use TECH-01's character/profile/state contracts and the applicable TECH-02/04/05/11 publication, writer, recovery and persistence guarantees. Capture creator/viewer and completeness interactions under PLAN-04. No additional expected prompt is invented by this proposal.",
+      "waiverTransitionDecision": "DEC-05 resolved: answer clears waiver; cleared answer incomplete if expected; type changes preserve answers/explicit waivers; newly expected unanswered fields incomplete unless explicitly waived; name never waivable.",
+      "guidedPromptDecision": "DEC-05 resolved: exact seven existing-field prompts recorded in Story 3.2 and canonical contracts; no new fields or expectations."
+    },
+    {
+      "id": "3.3",
+      "title": "Select and view multiple character personality labels",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "FR-17; FR-16 optional personality field; FR-48 viewer integration; FR-44 authoritative character sharing; CAP-5; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.2 only. TECH-01 must specify the common persisted catalog-selection representation before implementation, without exposing a separate adapter-specific format. Inherit applicable TECH-02/04/05/11 writer, publication, recovery and storage guarantees. Capture multiselect/viewer interactions under PLAN-04. No catalog-editing, custom-label, search, display-order or extra scoring feature is silently adopted here."
+    },
+    {
+      "id": "3.4",
+      "title": "Add and view optional character images",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "FR-16 optional image support; FR-48 character viewer; FR-44 shared universe context; CAP-5; AD-3/4/8/9/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.3 only. Resolve DEC-18 supported formats/import validation/display treatment before implementation. TECH-01 must define the shared asset-reference contract, TECH-02/04/05 must cover coordinated asset publication/writer/restart recovery, and TECH-09's immutable image-version/object-identity rules must be settled before replacement or removal is implemented. Inherit TECH-11 persistence verification and capture image selection/placeholder/display interactions under PLAN-04.",
+      "profileImageDecision": "DEC-18 resolved: PNG/JPEG/WebP readable-content validation; unchanged managed copy; preserve aspect ratio, no crop/stretch; failed import retains prior image."
+    },
+    {
+      "id": "3.5",
+      "title": "Record character birth years on the universe timeline",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-14; birth-event application of FR-40/41/44 and FR-7 chronology preservation; CAP-3/5; AD-3/6/8/10/18 and canonical timeline ownership; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.4 only. Use DEC-03/04's year-bounds/chronology/display contracts and DEC-14's event insertion/date-transition ordering. Resolve DEC-19 before birth clearing/direct-edit and post-calendar profile display behavior is implemented. Use TECH-01's common character/event/reference schema and TECH-02/04/05/11 publication, writer, operation-recovery and persistence guarantees. TECH-08 applies before any removal affecting shared references/history. Capture character birth entry and timeline presentation under PLAN-04.",
+      "birthPrecisionDecision": "DEC-19 accepted: year edits preserve valid recorded month/day; unavailable combination falls back to first month/day of target year, preserving event UUID.",
+      "birthClearingDecision": "Accepted: resolve affected links before active birth/current association removal; preserve retained history/dependencies.",
+      "birthSynchronizationDecision": "DEC-19 resolved: direct birth-date edits update profile year; after calendar reconfiguration display year containing preserved birth position without shifting event to day 1."
+    },
+    {
+      "id": "3.6",
+      "title": "Record character background events on the shared timeline",
+      "ac_blocks": 8,
+      "has_story_format": true,
+      "requirements": "FR-39; FR-40/41/44 background-event integration; FR-7 calendar preservation; related FR-16/48 background presentation; CAP-3/5; AD-3/6/8/10/18 and canonical event-ownership convention; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.5 only. Use DEC-03/04's shared chronology/display contract and DEC-14's event-placement rules. Resolve DEC-20 before integrating structured events with guided background completeness. Reuse TECH-01's event/character/reference schemas and applicable TECH-02/04/05/11 publication, writer, recovery and storage guarantees. Capture the background/event-entry interactions under PLAN-04. TECH-08 remains a gate before future shared-record deletion or unlinking semantics.",
+      "backgroundCompletenessDecision": "DEC-20 resolved: narrative answer OR one+ linked background event OR explicit waiver satisfies expected background; none/last removal means incomplete unless waived, drafts save; existing expected matrix unchanged."
+    },
+    {
+      "id": "3.7",
+      "title": "Record faction profiles and track completeness",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-36 non-roster profile fields, draft saving and completeness; FR-44 faction sharing; CAP-6; AD-3/4/6/8/9/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.6 only. Reuse Story 3.4's asset contracts/service under DEC-18 and TECH-09; do not copy its character-specific optional-field completeness rule. Use TECH-01's common faction/asset/state schema and the applicable TECH-02/04/05/11 writer, publication, operation-recovery and persistence guarantees. Capture faction form, draft/completeness and image interactions under PLAN-04. Exact field validation follows the shared contract rather than inferred example defaults.",
+      "storageAmendment": "Faction JSON includes population/resources/culture and applicable worlds/cities list in addition to original profile fields; validation/completeness gated by DEC-37.",
+      "addedFactionFieldDecision": "DEC-37 resolved: exact/estimate/range/unknown population; resources/culture free text; optional names-and-notes worlds/cities; added fields optional and excluded from completeness.",
+      "profileImageDecision": "DEC-18 resolved: PNG/JPEG/WebP readable-content validation; unchanged managed copy; preserve aspect ratio, no crop/stretch; failed import retains prior image."
+    },
+    {
+      "id": "3.8",
+      "title": "Record optional military unit types in faction profiles",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "FR-36 optional repeating military roster; FR-44 faction sharing; CAP-6; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.7 only. Resolve DEC-21 entry validation before implementation. Reuse TECH-01's faction/unit/reference schemas and applicable TECH-02/04/05/11 publication, writer, recovery and storage guarantees. Resolve TECH-08's reference/history preservation before implementing removal; deleting a current entry must not undermine retained revisions. Capture roster entry/edit/removal interactions under PLAN-04.",
+      "militaryRosterValidationDecision": "DEC-21 resolved: partial entries save, empty rows ignored, free-text name/role/description; non-negative decimal strength/movement; signed decimal modifiers; blank unset, invalid field errors, no completeness effect."
+    },
+    {
+      "id": "3.9",
+      "title": "Track faction affiliation history on the character sheet",
+      "ac_blocks": 8,
+      "has_story_format": true,
+      "requirements": "FR-37/38 and the accepted character-sheet-only affiliation contract; FR-48 faction viewer integration; FR-7/40/44 date-only chronology/sharing integration; CAP-6; AD-3/6/8/10/18 and derived-state/ownership conventions; NFR-1/2/3/6/7/9. FR-41 timeline-event ordering does not define affiliation-history ordering.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.8 only. Resolve DEC-22 character-history sequencing/current-state/correction rules before implementation. Use DEC-03/04 shared dates/display. Reuse TECH-01 character/faction/affiliation-history/reference contracts and TECH-02/04/05/11 publication, writer, recovery and storage guarantees. TECH-08 applies to any corrections involving removal or protected references/history. Capture assignment/history/viewer interactions under PLAN-04. DEC-14 timeline-event placement is not a dependency of character-sheet affiliation history.",
+      "affiliationHistoryDecision": "DEC-22 resolved: fictional-date order, editable same-date sequence/new entries last; final change determines current faction; backdating/correction recalculates chain preserving other choices and retained history; character sheet only."
+    },
+    {
+      "id": "3.10",
+      "title": "Associate chapter characters and display writing targets",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-47; FR-44 shared-character reference integration and FR-48 character-sheet access; CAP-2; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.9 only. Resolve DEC-23 target scope/validation before implementation. Use TECH-01's chapter/character/reference/target schema, TECH-02/04/05/11 publication, writer, recovery and storage guarantees, and TECH-08's retained-reference preservation before association removal. Preserve DEC-15 pending manuscript edits. Capture association/target/editor interactions under PLAN-04 without imposing a layout or extra metric.",
+      "writingTargetDecision": "DEC-23 resolved: optional chapter-count target per story, per-chapter word default 2500; both clearable, blank unset/zero distinct, non-negative whole numbers, invalid field errors; no creation/writing/save cap."
+    },
+    {
+      "id": "3.11",
+      "title": "Plan linked chapter events from the chapter or timeline",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-46; main/flashback link foundation for FR-5/6; event-context foundation for FR-45; continued FR-7/40/41/42/44; CAP-3; AD-3/6/8/10/18 and event ownership; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.10 only. Resolve DEC-24 eligibility/role/range/date-entry rules before implementation. Reuse DEC-03/04 chronology/display, DEC-14 event insertion and existing optional chapter-date validation. TECH-01 must define the common chapter/event/depiction-role contract; TECH-02/04/05 must prove coordinated cross-project/universe publication, writer serialization and restart recovery before these linked writes. Use TECH-08 before removing links, TECH-11 persistence guarantees and DEC-15 pending-editor protection. Capture both entry directions under PLAN-04.",
+      "chapterEventLinkDecision": "DEC-24 resolved: any same-universe canonical event; one role per pair/multiple chapters; out-of-range dates allowed unchanged; selected date prefills editable new events only; affiliation history excluded."
+    },
+    {
+      "id": "3.12",
+      "title": "Edit flashback historical dates independently of chapter dates",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-6 direct historical-date editing and ordinary chapter-movement protection; FR-5 independent event editing and no chapter-driven mutation; continued FR-7/40/41/44/46; CAP-3; AD-3/6/8/10/18 and the accepted chapter-date contracts; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.11 only. Use DEC-03/04 chronology/display, DEC-14 event placement, DEC-24 depiction-role/range validation and DEC-15 pending-editor behavior. Reuse TECH-01's event/depiction/reference/date contracts and applicable TECH-02/04/05/11 coordinated publication, writer, restart-recovery and persistence guarantees. Capture explicit flashback-date editing under PLAN-04."
+    },
+    {
+      "id": "3.13",
+      "title": "Open the event editor from a chapter without chapter-driven event changes",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-5 independent event editing and required chapter-view Edit event link; FR-6 flashback independence; continued FR-42/44/46; CAP-3; AD-3/6/8/10/18 and the superseding chapter/event-isolation contracts; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.12 only. Reuse the dedicated canonical event editor and Story 3.11 depiction references. Capture link placement/navigation/return interactions under PLAN-04; DEC-15 must cover opening the event editor with pending manuscript edits. TECH-01 defines the common event-editor command/reference contract; inherit TECH-02/04/05/11 publication, writer, restart-recovery and persistence guarantees. DEC-24 governs valid links/roles; DEC-02's chapter-event selection controls are superseded, not an unresolved implementation prerequisite."
+    },
+    {
+      "id": "3.14",
+      "title": "Inspect chapter chronology and characters alongside manuscript writing",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-45 chapter-period zoom and character/event writing context; FR-44 synchronized ownership; continued FR-5/6/7/40/41/42/46/47; CAP-2/3; AD-3/6/8/10/18; NFR-1/2/3/7/9.",
+      "dependencies": "Approved Epic 1 Stories 1.1\u20131.9, Epic 2 Stories 2.1\u20132.7 and Epic 3 Stories 3.1\u20133.13 only. Resolve DEC-25 partial/absent-date focus and out-of-period navigation before implementation; retain DEC-01 range validation, DEC-03/04 shared chronology/display, DEC-14 event order, DEC-16 chapter ties and DEC-15 pending-edit navigation. TECH-01 defines common context query/selection/reference results; reuse the existing authoritative stores, secure transport and dedicated editors rather than a separate timeline database. Capture chapter-context/editor layout and interactions under PLAN-04; quantitative performance budgets remain DEC-11.",
+      "chapterFocusDecision": "DEC-25 resolved: both dates range focus, single recorded date focus, undated current view retained; out-of-period linked events listed with Go to event/Return to chapter period, view only."
+    },
+    {
+      "id": "4.1",
+      "title": "Maintain a story\u2019s dated and undated plot sequence",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-34; supporting FR-7/40/44; CAP-8; AD-3/6/8/10/18 and shared plot-ordering contract; NFR-1/2/3/6/7/9.",
+      "dependencies": "Earlier approved Epic 1\u20133 capabilities only. TECH-01 must define the plot command/query, heading validation, date and derived-order contracts; inherit DEC-03/04 chronology/display, DEC-15 pending-editor navigation and applicable TECH-02/04/05/11 publication, writer/restart and persistence guarantees. Capture plot layout/reordering/error interactions under PLAN-04. No later decision, revision, backup or export story is needed to use this sequence."
+    },
+    {
+      "id": "4.2",
+      "title": "Record established decisions on the universe timeline",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-31 decision recording and timeline context; initial FR-32 link-derived unresolved state; supporting FR-7/40/41/44; CAP-7; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Apply Personal-required/Story-optional maker rules; resolve DEC-30 custom-type maker/ownership/name rules before affected implementation. Approved Epic 1\u20133 capabilities and Story 4.1 only; no future result-link/tree/lookup/context story is needed to record and inspect decisions. Resolve DEC-26 decision-maker representation/validation before the affected model/editor; TECH-01 defines shared decision DTOs, reference/date validation and query commands. Inherit DEC-03/04 chronology/display, DEC-14 timeline insertion and DEC-15 pending-editor navigation, and applicable TECH-02/04/05/11 persistence/publication/writer/restart guarantees. PLAN-04 covers decision-editor and timeline interactions.",
+      "makerDecision": "DEC-26 partial: at most one existing same-universe character/faction; canonical reference/rename reflection, resolve affected references before removal; Personal required, Story/Universe Events optional. Context associations remain open."
+    },
+    {
+      "id": "4.3",
+      "title": "Link established decisions to their resulting events",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-32 many-to-many resulting-event relationships and link-derived resolution; supporting FR-31/35/40/44; CAP-7; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1\u20133 capabilities and Stories 4.1\u20134.2 only. TECH-01 defines relationship identity, endpoint validation, reverse queries and shared commands; TECH-02/04/05/11 govern coordinated publication, serialization, restart recovery and persistence. Resolve DEC-27 result-event eligibility and temporal validation before linking implementation. Inherit DEC-03/04 chronology/display, DEC-14 event insertion and DEC-15 pending-edit navigation. PLAN-04 covers result creation/link/unlink interactions. No future tree, lookup, recovery or context story is needed to create and inspect these links.",
+      "resultEventValidationDecision": "DEC-27 resolved: any same-universe canonical event including birth/background, result date on/after decision; earlier rejected clearly without date shifting; faction-affiliation history excluded."
+    },
+    {
+      "id": "4.4",
+      "title": "Link an established decision to a decision it leads to",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "Amended FR-32 direct decision-to-decision links; FR-31/44; CAP-7; AD-3/6/8/10/18; NFR-1/2/3/6/7/9.",
+      "dependencies": "Approved Epic 1\u20133 capabilities and Stories 4.1\u20134.3 only. Resolve DEC-28 permitted cardinality/self-links/cycles/temporal validation before affected implementation; either outgoing result kind resolves its source under the accepted shared contract. TECH-01 must include directed decision relationship DTOs, validation, errors and bidirectional queries; TECH-02/04/05/11 govern serialized crash-safe publication and persistence. Reuse DEC-15 editor navigation; PLAN-04 covers link/unlink interactions. Tree visualization follows as Story 4.5 and is not a dependency for creating/inspecting links.",
+      "directDecisionValidationDecision": "DEC-28 resolved: many predecessors/successors; reject self-links/cycles/earlier following dates; allow same/later dates, preserve dates/existing links on errors. Either outgoing result kind resolves source."
+    },
+    {
+      "id": "4.5",
+      "title": "Inspect established decision/result relationships in a tree view",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-32 established relationship-tree display; supporting FR-31/35/40/44; CAP-7; AD-3/6/8/10/18; NFR-1/2/3/7/9. Quantitative performance acceptance remains DEC-11.",
+      "dependencies": "Approved Epic 1\u20133 capabilities and Stories 4.1\u20134.4 only. Reuse TECH-01 canonical relationship queries, identities, errors and selection results; inherit DEC-03/04 date display, DEC-15 pending-editor navigation and Stories 4.3\u20134.4\u2019s relationship contracts, including the accepted either-result resolution rule. DEC-28 validation rules remain an implementation gate. PLAN-04 must capture tree layout, shared-event presentation, navigation, empty/error states and readable access to all relationships before this UI implementation. The dedicated unresolved lookup and character/story/writing-context integration are later stories, not prerequisites."
+    },
+    {
+      "id": "4.6",
+      "title": "Find unresolved decisions from the universe timeline",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-33; FR-32 combined outgoing-result resolution; supporting FR-31/35/40/44; CAP-7; AD-3/6/8/10/18; NFR-1/2/3/7/9.",
+      "dependencies": "Approved Epic 1\u20133 capabilities and Stories 4.1\u20134.5 only. Reuse TECH-01 canonical decision/relationship queries, error contracts, identity/selection and committed-state refresh. Inherit DEC-03/04 chronology/display, DEC-15 pending-writing navigation and existing validated link operations; DEC-26/27/28 remain gates only for their unanswered maker/context and link-validation details. PLAN-04 captures lookup entry point, list/detail navigation, refresh and empty/error presentation. Character/story-arc and writing-context integration follows separately; no future context, recovery or export story is needed to use this lookup."
+    },
+    {
+      "id": "4.7",
+      "title": "Inspect established decisions in character, story-arc and writing context",
+      "ac_blocks": 11,
+      "has_story_format": true,
+      "requirements": "Completes FR-31 character/story-arc context and Epic 4\u2019s amended FR-45 established-decision context and decision-maker/event-type visibility alongside writing; supporting FR-32/33/35/40/44 and chapter/event independence under FR-5/6/42; CAP-2/3/7; AD-3/6/8/10/18; NFR-1/2/3/7/9.",
+      "dependencies": "Approved Epic 1\u20133 capabilities, especially Story 3.14\u2019s chapter/timeline/character/event workspace, and Stories 4.1\u20134.6 only. Resolve DEC-26 association meaning, ownership, creation/editing and relevance/query rules before implementing contextual associations; approval chooses no unanswered association rule or mandatory field. Initial categories and Personal/Story maker rules are settled; resolve DEC-30 custom-type/makerless details and DEC-29 filter selection/default/persistence/surface-interaction rules before affected filter implementation. Retain DEC-25 partial-date focus and DEC-15 pending-writing navigation. TECH-01 defines common context/selection/reference/filter contracts rather than a parallel decision store; inherit existing publication/writer/restart/persistence guarantees for any accepted association mutation. PLAN-04 must capture character/story-arc/writing layouts and navigation, including out-of-period decisions/results, visibility controls and filtered-empty/hidden-relationship presentation. DEC-11 performance acceptance remains open.",
+      "decisionContextAssociationDecision": "DEC-26 resolved: explicit many-character/story relevant-to associations, separate maker; universe-owned character/project-owned story links; editor add/remove; views use explicit matches and writing context unions story/chapter-character matches without duplicate decisions."
+    },
+    {
+      "id": "5.1",
+      "title": "Capture and inspect complete scheduled revisions of current work",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-18 scheduled complete revisions; FR-20 complete no-replay manifests; FR-21 within-store content reuse; FR-22 dependency protection; FR-2 read-only historical item inspection only. Supporting FR-1/28/29/43 and current FR-31/32/34/35/44/45 contracts; CAP-9/12; AD-3/4/6/8/10/13/14/18; NFR-1/2/3/4/5/6/7/9. Performance acceptance remains DEC-11.",
+      "dependencies": "Approved Epics 1\u20134 only. TECH-01 versioned document/manifest/identity/query contracts, TECH-02 consistent crash-safe publication, TECH-03 pending-edit acknowledgment/consistent snapshot, TECH-04 writer coordination, TECH-05 host-restart recovery, TECH-09 immutable object/checkpoint identities and cleanup roots, and TECH-11 persistence/migrations must be resolved before their affected implementation. Retain TECH-08 shared reference/history protection and DEC-07 settings validation. Resolve DEC-31 revision-scheduler timing/retry details; reuse DEC-15 pending-editor handling without treating autosave scheduling rules as automatically applying. PLAN-04 captures history/preview, settings and capture-error/retry interactions. Existing DEC-26\u201330 product gates still apply to their source records; revision approval does not settle them.",
+      "revisionTimingDecision": "DEC-31: independent default 10-minute project-open timer; restart on interval change; one overdue resume capture; non-overlap; failed capture warns/preserves work and retries next interval or Retry now."
+    },
+    {
+      "id": "5.2",
+      "title": "Restore a chapter revision while preserving replaced work",
+      "ac_blocks": 9,
+      "has_story_format": true,
+      "requirements": "FR-2 chapter restoration/read-only preview; FR-4 mandatory recoverable Replaced capture; FR-18 pre-restoration trigger; supporting FR-1/5/6/7/20/21/22/42/44 and the restored calendar-format flag contract; CAP-9; AD-3/6/8/10/13/14/18 and superseding chapter-only restoration/event-isolation contracts; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Story 5.1 only. Resolve TECH-08 partial-item association/dependency scope and shared-history protection before implementing affected restoration. TECH-01 manifest/document/reference/error schemas, TECH-02/03 consistent capture/publication, TECH-04 serialization, TECH-05 restart recovery, TECH-07 applicable freshness/commit checks, TECH-09 immutable protected dependency roots and TECH-11 persistence/migrations govern the operation. Resolve DEC-32 calendar-format mismatch detection/update/flag-clearing rules before the affected implementation, without presuming automatic conversion or a new restoration-blocking rule. Inherit DEC-01 date-range validity, DEC-03/04 date/display, DEC-15 pending editor/navigation and DEC-16 chapter ties. PLAN-04 specifies old-calendar update flags and the accepted update interactions, preview/confirmation, Replaced history labels and blocked/canceled/failed restoration/retry presentation. No future character/event/project restoration, reconciliation UI or backup story is needed to restore a valid chapter with resolvable dependencies.",
+      "calendarUpdateDecision": "DEC-32 resolved: explicit update display from preserved elapsed positions; clear on saved success; failed update flagged/retryable; writing allowed pending."
+    },
+    {
+      "id": "5.3",
+      "title": "Restore a character revision against the authoritative universe",
+      "ac_blocks": 9,
+      "has_story_format": true,
+      "requirements": "FR-2 character-item restoration; FR-4 recoverable Replaced protection; FR-18 pre-restoration capture; supporting FR-14/15/16/17/20/21/22/37/38/39/44/48 and restored calendar-format update contract; CAP-5/6/9; AD-3/4/6/7/8/10/14/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Stories 5.1\u20135.2 only. TECH-08 must settle exact character-item scope, required/shared reference handling and protection of current state affected across projects; existing DEC-19/20/22 character/birth/background/affiliation gates remain applicable rather than answered here. TECH-01 schemas/reference/comparison contracts, TECH-02/03 coordinated capture/publication, TECH-04 writers, TECH-05 restart recovery, TECH-06 version/equality metadata, TECH-07 freshness/commit, TECH-09 immutable assets/manifests and TECH-11 persistence/migrations apply. DEC-32 governs calendar-format flags; DEC-15 pending edits and PLAN-04 preview/conflict/confirmation/Replaced/cancel-resume/error layouts apply. This story supplies the character-specific manual conflict/restore workflow itself, not a dependency on later whole-project reconciliation or ZIP recovery UI.",
+      "calendarUpdateDecision": "DEC-32 resolved: explicit update display from preserved elapsed positions; clear on saved success; failed update flagged/retryable; writing allowed pending."
+    },
+    {
+      "id": "5.4",
+      "title": "Restore an event revision without changing its depicting chapters",
+      "ac_blocks": 9,
+      "has_story_format": true,
+      "requirements": "FR-2 event-item restoration; FR-4 Replaced recovery; FR-18 pre-restoration capture; supporting FR-5/6/7/14/20/21/22/32/35/39/40/41/42/44 and restored calendar-format update contract; CAP-3/7/9; AD-3/6/7/8/10/14/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Stories 5.1\u20135.3 only. Reuse capture/history/protection and shared manual-conflict/recheck contracts. TECH-08 must settle exact event-item association/dependency scope and retained/current cross-project protection. TECH-01 common schemas/reference/comparison rules, TECH-02/03 consistent capture/publication, TECH-04 writers, TECH-05 restart recovery, TECH-06 equality/version metadata, TECH-07 freshness, TECH-09 immutable manifests and TECH-11 persistence apply. Retain DEC-03/04 chronology/display, DEC-14 same-date insertion, DEC-15 pending-writing navigation, DEC-19 birth-field interaction, DEC-24 depiction validity, DEC-27/28 result-link validity and DEC-32 restored-calendar flags. PLAN-04 specifies event-history preview, confirmation, conflicts, Replaced recovery, flags and failure/cancel-resume presentation. No later whole-project restore or ZIP recovery UI is required for a valid event-item restore against an available authority.",
+      "calendarUpdateDecision": "DEC-32 resolved: explicit update display from preserved elapsed positions; clear on saved success; failed update flagged/retryable; writing allowed pending."
+    },
+    {
+      "id": "5.5",
+      "title": "Create independent complete project and universe ZIP backups",
+      "ac_blocks": 10,
+      "has_story_format": true,
+      "requirements": "FR-23 independent complete project/standalone-universe backups; FR-24 manual trigger; FR-25 destinations/outside-close cancellation; FR-21 within-ZIP reuse; FR-19 valid-completion accounting/ten protected archive contract; supporting FR-18/20/22 and adopted capture/authority/typed-content contracts; CAP-10; AD-3/4/5/6/8/9/10/14/15/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "DEC-35 governs exact readable archive filename/timezone/name/collision/volume representation. Approved Epics 1\u20134 and Stories 5.1\u20135.4 only. Resolve DEC-33 category-folder layout/content formats and database/index authority responsibilities before affected implementation; the later live-category-folder contract takes precedence over prior database-only assumptions. TECH-01 versioned archive/database/category-file/manifest/reference schemas, TECH-02/03 crash-safe coordinated publication/consistent capture, TECH-04 writers, TECH-05 restart recovery, TECH-09 immutable object/history closure, TECH-10 archive discovery/protection identity and TECH-11 consistent SQLite snapshot handling must be settled before affected implementation. Reuse existing backup-destination settings and DEC-07 validation; PLAN-04 defines backup entry point, destination dialog, progress/outcome, unavailable-folder prompt and retry UI. DEC-11 performance and installed/native acceptance remain open. No later restore/cleanup/scheduled-backup story is needed to create and validate a complete manual ZIP."
+    },
+    {
+      "id": "5.6",
+      "title": "Restore a whole project against its authoritative universe",
+      "ac_blocks": 11,
+      "has_story_format": true,
+      "requirements": "FR-3 whole-project restoration; FR-4 Replaced recovery; FR-18 pre-restoration capture; supporting FR-20/21/22/23 and current category-folder/calendar-format/authority contracts; CAP-9/10; AD-3/4/5/6/7/8/9/10/13/14/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Stories 5.1\u20135.5 only. Reuse complete capture/history, manual conflict/freshness/replaced-state protection and complete ZIP creation rather than a later backup capability. TECH-01 comparison/identity/reference/manifest/category schemas, TECH-02/03 coordinated capture/publication, TECH-04 writers, TECH-05 resumable host recovery, TECH-06 version/equality metadata, TECH-07 race-free validation/commit, TECH-08 shared-reference/history integrity, TECH-09 immutable dependency closure, TECH-10 archive accounting and TECH-11 persistence/migrations apply. Resolve DEC-33 category-file/database/index layout and DEC-32 calendar-flag workflow before affected implementation; retain existing DEC-15/26\u201330 record/link/type/association gates. PLAN-04 covers whole-project preview, staged inactive state, conflicts/missing references, confirmation/cancel-resume, calendar flags and independent restore/ZIP outcomes. No later disaster-recovery, scheduler, close or retention story is required to restore against an available authority and create its reconciled ZIP.",
+      "calendarUpdateDecision": "DEC-32 resolved: explicit update display from preserved elapsed positions; clear on saved success; failed update flagged/retryable; writing allowed pending."
+    },
+    {
+      "id": "5.7",
+      "title": "Recover a project or standalone universe from one complete ZIP",
+      "ac_blocks": 12,
+      "has_story_format": true,
+      "requirements": "FR-23 independent project/standalone-universe disaster recovery; supporting FR-3/4/18/20/21/22/25 and current authority/category-folder/calendar-format contracts; CAP-9/10; AD-3/4/5/6/7/8/9/10/14/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Stories 5.1\u20135.6 only. Reuse complete ZIP validation/capture, current/retained manifest resolution, protected replacement and manual project/shared-record reconciliation. TECH-01 versioned import/manifest/comparison/identity/reference/category contracts, TECH-02/03 crash-safe capture/publication, TECH-04 writer/authority coordination, TECH-05 durable restart/cancel-resume, TECH-06 recency/equality/divergence metadata, TECH-07 race-free review/commit, TECH-08 retained/current shared integrity, TECH-09 immutable historical closure, TECH-10 archive identities and TECH-11 installed persistence/migrations apply. DEC-32/33 calendar flags/category layout remain implementation gates. Existing required maker/type/link/association validation remains applicable. PLAN-04 covers select/inspect ZIP, destination selection, missing-authority establishment, existing-authority conflict review, inactive staging, confirmation, resumable cancellation and independent recovery/backup errors. No later scheduler/close/cleanup story is needed to recover one valid ZIP.",
+      "calendarUpdateDecision": "DEC-32 resolved: explicit update display from preserved elapsed positions; clear on saved success; failed update flagged/retryable; writing allowed pending."
+    },
+    {
+      "id": "5.8",
+      "title": "Create complete backups on an independent configurable schedule",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-24 scheduled complete backups; FR-25 destination/alternative cancellation; supporting FR-19/21/23/28/29/43 and independent interval/category-folder/capture contracts; CAP-10/12; AD-3/5/6/8/9/10/14/15/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Stories 5.1\u20135.7 only. Reuse Story 5.5 ZIP creation/validation, settings import/export and common capture/publication/error contracts. DEC-34 must define scheduled-unit eligibility, cadence/start/reset, interval change, sleep/resume, overlap, pending destination prompts and retry/backlog behavior before affected implementation. DEC-35 supplies the shared ZIP filename/template/timezone/collision/volume representation rules. DEC-07 validates settings; DEC-15 protects pending writing. TECH-01 shared contracts, TECH-02/03 consistent capture/publication, TECH-04 writers, TECH-05 host recovery, TECH-09 protected manifests, TECH-10 archive discovery/accounting and TECH-11 persistence apply; DEC-33 category layout remains binding. PLAN-04 captures schedule configuration, status/progress, destination prompt, skipped-attempt/retry and error visibility. Autosave DEC-17 and revision DEC-31 do not automatically determine backup cadence. No later close/fallback or cleanup story is needed for this schedule.",
+      "scheduledBackupDecision": "DEC-34 resolved: jobs for open projects/independently opened standalone universes; independent 10-minute open/change timer, single overdue resume, no overlap, warning/next-interval/Retry-now and one destination prompt; attempt-only cancellation preserves destination/schedule."
+    },
+    {
+      "id": "5.9",
+      "title": "Finish normal close with complete revisions and backups, including fallback recovery",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-18 normal-close complete revisions; FR-24 normal-close complete backups; FR-25 unavailable-destination selection; FR-26 canceled-folder fallback and next-launch notification; supporting FR-19/20/21/22/23 and shared category-folder/naming/capture contracts; CAP-9/10/12; AD-3/5/6/8/9/10/14/15/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Stories 5.1\u20135.8 only. TECH-05 must define shutdown scope/draining, cross-session ownership, host restart and lifecycle state, incorporating DEC-08 close/fallback failure/retry and next-launch handling. TECH-01 typed lifecycle/manifest/location/error schemas, TECH-02/03 consistent capture/publication, TECH-04 writer coordination, TECH-09 protected immutable state, TECH-10 archive discovery/protection across fallback destinations and TECH-11 persistence apply. Reuse DEC-15 pending edits, DEC-33 category layout and DEC-35 archive naming, plus DEC-07 settings validation; DEC-34 scheduling does not silently decide close scope. PLAN-04 captures close progress/errors, alternate-folder prompt, fallback status and next-launch destination notification/selection. No later retention/manual-delete story is required for a successful normal close with complete captures.",
+      "closeFailureDecision": "DEC-08 resolved: remain open, retain edits/completed work; Retry/alternative backup folder/Cancel closing; close after required success."
+    },
+    {
+      "id": "5.10",
+      "title": "Apply time-based retention and safe manual deletion",
+      "ac_blocks": 8,
+      "has_story_format": true,
+      "requirements": "FR-19 time-only retention/ten protected ZIPs; FR-20 retained no-replay revisions and manual deletion; FR-22 current/retained reference protection; supporting FR-21/23/28/29 and category-folder/naming/authority contracts; CAP-9/10/12; AD-3/4/6/8/10/14/15/18; NFR-1/2/3/4/5/6/7/9.",
+      "dependencies": "Approved Epics 1\u20134 and Stories 5.1\u20135.9 only. TECH-08 shared-reference/history integrity, TECH-09 complete root/dependency graph, immutable identity/metadata and safe reclamation, and TECH-10 archive discovery/protection across locations must be settled before any deletion path. TECH-01 real elapsed timestamp/clock/schema/error contracts, TECH-02/04 coordinated serialized mutation, TECH-05 restart recovery and TECH-11 persistence/migrations apply. DEC-07 validates retention input; DEC-33 category layout and DEC-35 archive names are preserved. PLAN-04 specifies revision/archive selection, protection explanations, confirmation/cancel, cleanup outcome and unavailable-destination/error presentation. Cleanup cadence and clock-boundary/uncertain-location details must be documented in these shared contracts before implementation; this story does not silently choose them. No later export story is needed for safe retention."
+    },
+    {
+      "id": "6.1",
+      "title": "Export a whole story or selected chapters as DOCX, PDF, Markdown or text",
+      "ac_blocks": 6,
+      "has_story_format": true,
+      "requirements": "FR-27 all four formats and whole-story/selected-chapter scopes; supporting FR-1 manuscript content/formatting and adopted document/capture contracts; CAP-11; AD-1/3/11/12/13/18; NFR-1/2/3/6/7/8/9. DEC-11 governs quantitative performance acceptance.",
+      "dependencies": "Earlier approved manuscript/story/storage/settings/runtime capabilities, especially Stories 2.1\u20132.4 and the shared manuscript/capture contracts. No future database-export story is required. Resolve DEC-06 format-specific presentation and accepted open-source libraries, chapter selection/order, empty-scope behavior and destination/filename/overwrite interactions before affected implementation. TECH-01 defines manuscript versions, export command/result/errors and consistent snapshot identity; TECH-03 protects intended current-work capture and TECH-04/05 apply where persistence/host lifecycle is involved. DEC-15 protects pending edits. PLAN-04 captures export format/scope selection, destination, progress/result/error/cancel/retry interactions. DEC-09/10 and TECH-12 govern installed/runtime dependency acceptance; DEC-33 storage/category layout remains binding without prescribing manuscript-export packaging."
+    },
+    {
+      "id": "6.2",
+      "title": "Export local database content through a separate consistent-export workflow",
+      "ac_blocks": 7,
+      "has_story_format": true,
+      "requirements": "FR-49 separate local database export; CAP-11; AD-2/3/6/8/9/10/18 and category-folder contract; NFR-1/2/3/6/7/8/9. DEC-11 governs quantitative performance acceptance.",
+      "dependencies": "Earlier approved runtime, selected-unit identity/storage and shared consistent-capture capabilities; Story 6.1 may supply common local export UX/publication plumbing, but manuscript conversion adapters are not a prerequisite to database capture. TECH-13 must define source unit/scope selection, exact artifact format, capture/pending-edit semantics, database/index/category-file/reference/assets inclusion, validation and compatibility before implementation. The dedicated database subfolder within its owning data tree and automatic folder/database inclusion in complete ZIPs are settled; DEC-33 reconciles the remaining exact within-root category/database layout and authority responsibilities. TECH-01 versioned export/schema/error/identity contracts, TECH-03 consistent capture, TECH-04 writers and TECH-11 SQLite/native/migration strategy apply; TECH-02/05 govern affected publication/restart paths. DEC-15 protects pending writing; PLAN-04 defines source/destination selection, scope/dependency explanation, output naming/overwrite/progress/error/cancel/retry interactions. No future story is required to export the artifact once these explicit contracts are settled."
+    }
+  ],
+  "result": "concerns",
+  "openChecks": [
+    "V04",
+    "V05"
+  ],
+  "requirementCoverage": {
+    "1": "2.2",
+    "2": "5.1\u20135.4",
+    "3": "5.6\u20135.7",
+    "4": "5.2\u20135.4, 5.6\u20135.7",
+    "5": "2.3, 3.13, 5.2",
+    "6": "3.12\u20133.13, 5.2, 5.4",
+    "7": "1.9 and later dated-record integration",
+    "8": "1.6, 1.9",
+    "9": "1.6, 1.9",
+    "10": "1.6, 1.9",
+    "11": "1.6, 1.9",
+    "12": "1.6, 1.9",
+    "13": "1.6, 1.9",
+    "14": "3.5",
+    "15": "3.1\u20133.2",
+    "16": "3.1\u20133.4",
+    "17": "3.3",
+    "18": "5.1\u20135.4, 5.6, 5.9",
+    "19": "5.10",
+    "20": "5.1, 5.10",
+    "21": "5.1, 5.5, 5.10",
+    "22": "5.1\u20135.7, 5.10",
+    "23": "5.5, 5.7",
+    "24": "5.5, 5.8\u20135.9",
+    "25": "5.5, 5.8\u20135.9",
+    "26": "5.9",
+    "27": "6.1",
+    "28": "2.6\u20132.7",
+    "29": "2.6\u20132.7",
+    "30": "2.5, 2.7",
+    "31": "4.2, 4.5, 4.7",
+    "32": "4.3\u20134.5",
+    "33": "4.6",
+    "34": "4.1",
+    "35": "1.7, 4.3, 4.7, 5.4\u20135.5 (later maker/folder amendments)",
+    "36": "3.7\u20133.8",
+    "37": "3.9",
+    "38": "3.9",
+    "39": "3.6",
+    "40": "1.7\u20131.8, 3.5\u20133.6, 4.1\u20134.2",
+    "41": "1.8 and later canonical dated records",
+    "42": "2.1, 2.3",
+    "43": "2.4, 2.6\u20132.7",
+    "44": "1.2\u20131.3, 1.7 and later shared-record workflows",
+    "45": "3.14, 4.7",
+    "46": "3.11, 3.13",
+    "47": "3.10",
+    "48": "3.2\u20133.4, 3.9\u20133.10",
+    "49": "6.2"
+  },
+  "resolvedChecks": [
+    "V01",
+    "V02",
+    "V03"
+  ],
+  "targetedCorrections": {
+    "V02": {
+      "typeCreation": "4.2",
+      "categoryFilterIntegration": "4.7",
+      "eventOnlyLinks": "4.3",
+      "mixedResultLinkIntegration": "4.4",
+      "optionalEventMakerReferences": "4.2"
+    }
+  },
+  "storageDecision": {
+    "objectData": "JSON .json",
+    "writing": "plain-text .wrt",
+    "filenameStem": "permanent object ID",
+    "databaseRole": "ID/filename/location/relationship catalog",
+    "formattingDecision": "DEC-36 resolved: formatting in matching chapter-id.json, writing in chapter-id.wrt; paired capture/publication/versioning required.",
+    "locations": "One separate base-folder database record per owning root; object locations are root ID plus relative path; whole-root move updates only base record."
+  },
+  "currentProductDecision": "Paused at user request; DEC-29 visibility-filter proposal awaiting approval; DEC-28 resolved. Six DEC sections and thirteen TECH gates remain.",
+  "archiveNamingDecision": {
+    "project": "<ProjectName>_<UniverseName>_YYYY-MM-DD_HH-mm-ss.zip",
+    "universe": "<UniverseName>_YYYY-MM-DD_HH-mm-ss.zip",
+    "time": "local capture start, 24-hour seconds",
+    "collisions": "_2/_3 before .zip; no overwrite",
+    "volumes": "all volumes in project ZIP; not listed individually"
+  },
+  "dateNumberingDecision": "Unbounded arbitrary-precision signed whole years including zero, values as entered/no artificial epoch; preserve populated-calendar elapsed chronology.",
+  "resumeCheckpoint": {
+    "date": "2026-10-17",
+    "state": "paused_by_user",
+    "nextDecision": "DEC-29",
+    "proposalApproved": false,
+    "remainingDecisionIds": [
+      "DEC-29",
+      "DEC-30",
+      "DEC-06",
+      "DEC-09",
+      "DEC-10",
+      "DEC-11"
+    ],
+    "approvedStories": 49,
+    "openValidationChecks": [
+      "V04",
+      "V05"
+    ]
+  }
+}

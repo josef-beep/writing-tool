@@ -1,0 +1,41 @@
+{
+  "status": "all declared candidate pairs pass",
+  "candidate_sha256": "f7d7bb8f252e4f545b77c08262ed810a17ac39d84d27c88924bdbb2778b36e10",
+  "totalPairs": 304,
+  "results": [
+    {
+      "id": "preview-gray",
+      "name": "Preview gray",
+      "pairs": 76,
+      "minNormalText": 6.640581437963707,
+      "minEssentialGraphic": 4.643246740603559,
+      "allDeclaredPass": true
+    },
+    {
+      "id": "deep-gray",
+      "name": "Deep gray",
+      "pairs": 76,
+      "minNormalText": 5.763789834969283,
+      "minEssentialGraphic": 3.8565512453451625,
+      "allDeclaredPass": true
+    },
+    {
+      "id": "soft-gray",
+      "name": "Soft gray",
+      "pairs": 76,
+      "minNormalText": 5.4353721045656,
+      "minEssentialGraphic": 4.127227373317936,
+      "allDeclaredPass": true
+    },
+    {
+      "id": "graphite",
+      "name": "Graphite",
+      "pairs": 76,
+      "minNormalText": 6.33887248243703,
+      "minEssentialGraphic": 4.43228492386395,
+      "allDeclaredPass": true
+    }
+  ],
+  "limitations": "Specified flat-color pairs only; not runtime, full accessibility conformance, system-font, focus-order or assistive-technology verification.",
+  "reference": "contrast-reference.md"
+}

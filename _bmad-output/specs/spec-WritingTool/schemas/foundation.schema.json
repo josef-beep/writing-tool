@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:writingtool:proposed:foundation:1",
+  "title": "Proposed shared primitives, not complete entity validation",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![\\s\\S])"
+    },
+    "unsignedDecimal": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(?![\\s\\S])"
+    },
+    "signedDecimal": {
+      "type": "string",
+      "pattern": "^(0|-?[1-9][0-9]*)(?![\\s\\S])"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![\\s\\S]*[\\\\:\\u0000])(?![\\s\\S]*(?:^|/)\\.{1,2}(?:/|(?![\\s\\S])))[^/]+(?:/[^/]+)*(?![\\s\\S])"
+    },
+    "owner": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "project",
+            "universe"
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "universeRecordRef": {
+      "type": "object",
+      "properties": {
+        "universeId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "recordId": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "required": [
+        "universeId",
+        "recordId"
+      ],
+      "additionalProperties": false
+    },
+    "objectEnvelope": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "recordType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "universeId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "recordVersion": {
+          "$ref": "#/$defs/uuid"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "id",
+        "owner",
+        "universeId",
+        "recordVersion",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "saveReceipt": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "operationId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "unitGeneration": {
+          "$ref": "#/$defs/unsignedDecimal"
+        },
+        "recordId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "recordVersion": {
+          "$ref": "#/$defs/uuid"
+        },
+        "submittedEditorRevision": {
+          "$ref": "#/$defs/unsignedDecimal"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "operationId",
+        "owner",
+        "unitGeneration",
+        "recordId",
+        "recordVersion",
+        "submittedEditorRevision"
+      ],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "code": {
+          "enum": [
+            "VALIDATION",
+            "UNSUPPORTED_VERSION",
+            "GENERATION_CONFLICT",
+            "LEASE_UNAVAILABLE",
+            "IO_FAILURE",
+            "INTEGRITY_MISMATCH",
+            "RECOVERY_REQUIRED"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "enum": [
+            "not-committed",
+            "committed",
+            "unknown"
+          ]
+        },
+        "retry": {
+          "enum": [
+            "same-operation",
+            "new-request",
+            "after-recovery",
+            "not-retryable"
+          ]
+        },
+        "fieldIssues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "code",
+        "message",
+        "outcome",
+        "retry"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

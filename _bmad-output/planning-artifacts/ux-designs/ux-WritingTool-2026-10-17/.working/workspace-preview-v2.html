@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WritingTool · Discovery workspace wireframe</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; background: #e7e7e7; color: #222; font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 1320px; margin: auto; }
+    h1 { margin: 0 0 8px; font-size: 25px; font-weight: 600; }
+    p { margin: 6px 0 16px; }
+    .notice { border: 1px solid #777; border-left: 5px solid #555; padding: 14px 18px; background: #f2f2f2; }
+    .notice strong { display: block; margin-bottom: 4px; }
+    .scroll { overflow-x: auto; margin-top: 24px; padding-bottom: 8px; }
+    .workspace { width: 1280px; height: 760px; border: 1px solid #141414; color: #e1e1e1; background: #292929; font-size: 13px; display: grid; grid-template-rows: 56px 1fr; }
+    .top { background: #242424; border-bottom: 1px solid #555; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; gap: 16px; }
+    .top-title { font-weight: 600; white-space: nowrap; }
+    .command-menus { display: flex; gap: 4px; align-items: center; }
+    .command-menus button { padding: 7px 8px; font-size: 12px; white-space: nowrap; }
+    .badge { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border: 1px solid currentColor; border-radius: 50%; margin-right: 8px; font-size: 12px; font-weight: 600; }
+    button, select { font: inherit; border: 1px solid #777; border-radius: 3px; background: #3d3d3d; color: #eee; padding: 7px 10px; opacity: 1; }
+    button:disabled, select:disabled { color: #eee; -webkit-text-fill-color: #eee; opacity: 1; cursor: default; }
+    .body { display: grid; grid-template-columns: 224px 1fr 272px; grid-template-rows: 1fr 214px; min-height: 0; }
+    .panel { background: #303030; min-width: 0; min-height: 0; }
+    .panel-heading { height: 43px; padding: 10px 13px; background: #363636; border-bottom: 1px solid #535353; font-weight: 600; display: flex; align-items: center; }
+    .grip { color: #a9a9a9; font-size: 16px; margin-left: auto; letter-spacing: 2px; }
+    .navigation { grid-row: 1 / 3; border-right: 5px solid #4a4a4a; }
+    .tree { padding: 19px 14px; }
+    .tree div { margin: 0 0 12px; }
+    .tree .level-1 { margin-left: 18px; }
+    .tree .level-2 { margin-left: 36px; }
+    .tree .level-3 { margin-left: 47px; padding: 8px 10px; border: 1px solid #777; background: #444; }
+    .structure-note { margin: 10px 14px; color: #b7b7b7; font-size: 12px; }
+    .editor { display: flex; flex-direction: column; background: #b6b6b6; color: #202020; }
+    .editor .panel-heading { background: #363636; color: #e1e1e1; }
+    .font-toolbar { display: flex; align-items: center; gap: 9px; padding: 10px 13px; background: #424242; color: #eee; }
+    .font-toolbar label { display: flex; align-items: center; gap: 7px; }
+    .font-toolbar select { max-width: 205px; padding: 4px 7px; }
+    .font-toolbar small { margin-left: auto; color: #cfcfcf; font-size: 11px; }
+    .manuscript { flex: 1; position: relative; margin: 0; padding: 35px 42px; }
+    .blank-label { color: #505050; font: 14px/1.6 system-ui, sans-serif; border: 1px dashed #818181; padding: 12px 16px; display: inline-block; }
+    .manuscript-space { position: absolute; inset: 112px 42px 36px; border-left: 1px solid #969696; }
+    .context { grid-column: 3; grid-row: 1 / 3; border-left: 5px solid #4a4a4a; }
+    .tabs { padding: 12px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; border-bottom: 1px solid #555; }
+    .tabs span { padding: 6px 8px; text-align: center; border: 1px solid #686868; background: #383838; }
+    .context-placeholder { margin: 22px 16px; border: 1px dashed #777; padding: 17px 13px; color: #c4c4c4; }
+    .timeline { grid-column: 2; grid-row: 2; border-top: 5px solid #4a4a4a; }
+    .filters { display: flex; gap: 12px; align-items: center; padding: 10px 13px; border-bottom: 1px solid #4d4d4d; }
+    .filter { border: 1px solid #777; padding: 5px 9px; background: #3d3d3d; }
+    .all { color: #bfbfbf; margin-left: auto; }
+    .timeline-placeholder { margin: 15px 16px; padding: 13px; border: 1px dashed #777; color: #c4c4c4; }
+    .caption { font-size: 13px; color: #444; margin-top: 10px; }
+    .annotations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; margin-top: 24px; }
+    .annotation { border-top: 1px solid #999; padding-top: 12px; }
+    .annotation h2 { font-size: 15px; margin: 0 0 5px; }
+    .annotation p { font-size: 14px; margin: 0; }
+    footer { border-top: 1px solid #999; margin-top: 24px; padding-top: 14px; font-size: 13px; }
+    @media (max-width: 700px) { body { padding: 18px; } .annotations { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Main workspace — top command categories</h1>
+    <div class="notice">
+      <strong>Provisional illustration · static and noninteractive</strong>
+      The top category labels/grouping are approved. Exact grayscale values, system font, dimensions, spacing and control styling are illustrative; they are not adopted design tokens or a final screen specification. Darker overall chrome and a gray writing background reflect the requested direction. The blank example contains no manuscript, calendar, event or saved-state data.
+    </div>
+
+    <div class="scroll">
+      <section class="workspace" aria-label="Static main workspace diagram, initial docked arrangement">
+        <div class="top">
+          <span class="top-title">Main workspace</span>
+          <div class="command-menus" aria-label="Approved top command categories"><span class="badge">A</span><button disabled>Project ▾</button><button disabled>Writing ▾</button><button disabled>Universe ▾</button><button disabled>View ▾</button><button disabled>Revisions ▾</button><button disabled>Backup &amp; Recovery ▾</button><button disabled>Export ▾</button><button disabled>Settings ▾</button></div>
+        </div>
+        <div class="body">
+          <aside class="panel navigation" aria-label="Navigation panel">
+            <div class="panel-heading"><span class="badge">B</span>Navigation <span class="grip" aria-hidden="true">⋮</span></div>
+            <div class="tree" aria-label="Navigation hierarchy illustration">
+              <div>Project</div>
+              <div class="level-1">Volume</div>
+              <div class="level-2">Story</div>
+              <div class="level-3">Chapter</div>
+            </div>
+            <p class="structure-note">Hierarchy labels only;<br>no named records shown.</p>
+          </aside>
+
+          <section class="editor" aria-label="Manuscript writing panel">
+            <div class="panel-heading"><span class="badge">C</span>Manuscript editor</div>
+            <div class="font-toolbar">
+              <label>Font <select disabled aria-label="Illustrative font selector"><option>Choose font…</option></select></label>
+              <label>Size <select disabled aria-label="Illustrative size selector"><option>Choose size…</option></select></label>
+              <small>Writing display</small>
+            </div>
+            <div class="manuscript" aria-label="Blank gray manuscript area">
+              <span class="blank-label">Blank manuscript area</span>
+              <div class="manuscript-space" aria-hidden="true"></div>
+            </div>
+          </section>
+
+          <aside class="panel context" aria-label="Context panel">
+            <div class="panel-heading"><span class="badge">D</span>Context <span class="grip" aria-hidden="true">⋮</span></div>
+            <div class="tabs" aria-label="Illustrative context tab labels">
+              <span>Character</span><span>Faction</span><span>Plot</span><span>Decision</span>
+            </div>
+            <div class="context-placeholder">Context panel area<br><small>Content intentionally omitted.</small></div>
+          </aside>
+
+          <section class="panel timeline" aria-label="Universe timeline panel">
+            <div class="panel-heading"><span class="badge">E</span>Universe timeline <span class="grip" aria-hidden="true">⋮</span></div>
+            <div class="filters" aria-label="Illustrative visibility filter labels">
+              <span class="filter">Makers: All ▾</span>
+              <span class="filter">Categories: All ▾</span>
+              <span class="all">All shown</span>
+            </div>
+            <div class="timeline-placeholder">Timeline area — no dates or records shown</div>
+          </section>
+        </div>
+      </section>
+    </div>
+    <p class="caption">Initial docked arrangement, illustrated at 1280 × 760. Letters identify notes below; dotted boxes, border grips and generic labels are diagram annotations, not approved product components.</p>
+
+    <div class="annotations">
+      <section class="annotation">
+        <h2>A · All commands in top category dropdowns</h2>
+        <p>All commands are available in top dropdowns: Project, Writing, Universe, View, Revisions, Backup &amp; Recovery, Export and Settings. View includes hidden-panel reopening, layout and writing-display preferences. Categories/grouping are approved; exact item order, open-menu appearance and keyboard behavior remain provisional. Contextual links remain available.</p>
+      </section>
+      <section class="annotation">
+        <h2>B, D, E · Move, resize and hide panels</h2>
+        <p>The starting arrangement places navigation left, context right and timeline below writing. Panels support docking elsewhere and independent floating windows, including on another monitor, plus resizing and collapsing. Exact eligible panels and docking targets remain to define.</p>
+      </section>
+      <section class="annotation">
+        <h2>Floating panels · Close and monitor recovery</h2>
+        <p>Closing a floating panel hides it until reopened and preserves its content and pending edits. If its saved monitor is unavailable, dock it in the main window. Exact fallback position and later monitor reconnection behavior remain open.</p>
+      </section>
+      <section class="annotation">
+        <h2>Arrangement · One remembered application layout</h2>
+        <p>Remember panel arrangement across sessions for the whole application and share it across projects, including applicable docked/floating placement, size, collapse and visibility state. This illustration shows no detached window or live interaction.</p>
+      </section>
+      <section class="annotation">
+        <h2>C · Gray writing area, adjustable display font</h2>
+        <p>The writing background stays gray; its exact shade is open. Choose font family and size from installed fonts and a bundled collection, remembered application-wide. These preferences affect writing-panel display only; saved manuscript formatting and approved export typography keep their existing contracts. No default family, collection, size or fallback is selected here.</p>
+      </section>
+      <section class="annotation">
+        <h2>D, E · Context and synchronized visibility</h2>
+        <p>Context tabs cover character, faction, plot and decision. The universe timeline exposes maker/category filters, initially all shown. Accepted per-universe filter synchronization and existing save/navigation protections still apply; this diagram does not fabricate a populated context, calendar or filter interaction.</p>
+      </section>
+    </div>
+    <footer>Discovery artifact only. Darker UI preference does not replace approved light, dark and system theme support. This wireframe shows one provisional grayscale direction; no contrast verification, final component system or product implementation is claimed.</footer>
+  </main>
+</body>
+</html>

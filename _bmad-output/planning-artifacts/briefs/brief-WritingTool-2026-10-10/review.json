@@ -1,0 +1,62 @@
+[
+  {
+    "lens": "structure",
+    "location": "brief: First-release scope",
+    "change": "Move the full first-release commitment before the feature descriptions.",
+    "resolution": "Applied."
+  },
+  {
+    "lens": "structure",
+    "location": "brief: Fictional calendar",
+    "change": "Keep calendar overview in the brief and exact formats/example in the addendum.",
+    "resolution": "Applied with configurable year/month lengths retained in brief."
+  },
+  {
+    "lens": "structure",
+    "location": "brief: Universe timeline and story workflow",
+    "change": "Move detailed field and selector mechanics into the addendum.",
+    "resolution": "Condensed in brief; full mechanics retained in addendum."
+  },
+  {
+    "lens": "prose",
+    "location": "brief: Universe timeline and story workflow",
+    "change": "Clarify that changes to linked dates update the timeline.",
+    "resolution": "Applied."
+  },
+  {
+    "lens": "prose",
+    "location": "brief: Universe timeline and story workflow",
+    "change": "Replace cutout with detailed view.",
+    "resolution": "Applied."
+  },
+  {
+    "lens": "prose",
+    "location": "brief: Universe timeline and story workflow",
+    "change": "Clarify flashback event placement and chapter linkage.",
+    "resolution": "Applied while retaining explicit recording of historical period."
+  },
+  {
+    "lens": "structure",
+    "location": "addendum: Character creation and visibility",
+    "change": "Merge prompt rules and clarify expected prompt applicability before incomplete/waived states.",
+    "resolution": "Applied."
+  },
+  {
+    "lens": "structure",
+    "location": "addendum: Fictional calendar and time",
+    "change": "Explain configurable calendar rules before syntax and example.",
+    "resolution": "Applied."
+  },
+  {
+    "lens": "prose",
+    "location": "addendum: Character creation and visibility",
+    "change": "Clarify that answering prompts is optional.",
+    "resolution": "Applied."
+  },
+  {
+    "lens": "prose",
+    "location": "addendum: Timeline-linked creation",
+    "change": "Clarify birth display when only the year is known.",
+    "resolution": "Applied."
+  }
+]
