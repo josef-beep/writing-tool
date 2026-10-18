@@ -1,5 +1,7 @@
 # Story 1.2 implementation evidence
 
+Final status: **complete, verified on 2026-10-18**. The final verification below supersedes the earlier targeted-only checkpoint and earlier test counts.
+
 Implemented on 2026-10-17 on Linux x64 (kernel 7.0.0-38-generic). This evidence covers the universe folder/profile increment; it does not close the complete TECH schema, coordination, backup or platform gates.
 
 ## Delivered behavior
@@ -78,3 +80,22 @@ Storage regressions cover denied/missing initial reservation (`not-committed`), 
 Managed JSON reads, exclusive writes, replacement and marker publication now pin verified Linux directory handles and perform actual I/O relative to those descriptors. A regression retargets the parent directory during each real read/write/replace system call, confirms the race actually happened, and verifies the outside sentinel and namespace remain untouched. Unsupported directory-relative primitives fail safely. This proof applies to the managed file helpers: Node SQLite canonicalizes native VFS paths. Database/lease identities remain revalidated, but no descriptor-anchored SQLite VFS or adversarial VFS race proof is claimed.
 
 Targeted verification only: 31 universe/application/file-adapter tests passed; the two final creation regressions passed separately after the last reservation preflight adjustment; strict types and deny-warning lint passed; the focused healthy and definitely-exited-host Electron scenarios passed. Logs and parsed results are `review-fix-*` in the evidence directory. Final full verification remains the parent review workflow's responsibility.
+
+## Final verification — 2026-10-18
+
+All recorded review corrections were already present at source revision `7c2de9b10b1789e952e8a8ea2dacd25378c4fa90`; this continuation inspected them and completed the outstanding verification without further implementation changes.
+
+| Check | Final result |
+|---|---|
+| `npm run typecheck` | Passed |
+| `npm run lint` | Passed with warnings denied |
+| `npm test` | Passed: 11 readiness, 31 universe, 4 process-runner tests; no skips |
+| `npm run smoke` | All seven development scenarios passed |
+| `npm run package` | Linux x64 package built successfully |
+| `npm run smoke:packaged` | All seven packaged scenarios passed |
+
+The first sandboxed suite run passed readiness/universe tests but reproduced the documented subprocess-stdout restriction in the runner test. The four runner tests then passed outside that restriction, followed by a successful complete `npm test` run there. Real Electron development and packaged runs used desktop access outside the execution restriction while retaining Electron's production sandbox. All fourteen launches completed their production shutdown drain with zero unresolved operations.
+
+Both healthy runtime scenarios verified native window-close and app-quit cancellation, newer edits retained during ordinary and departure saves, exact description persistence, mouse commands, unknown-outcome recovery and utility restart. Actual versions remained Node 24.19.0 / SQLite 3.53.3 for integration tests and Electron 44.9.0 / bundled Node 24.22.0 / SQLite 3.53.4 for the desktop utility. The packaged application ran with PATH restricted to its executable directory.
+
+Committed evidence files: [complete automated test output](story-1-2-evidence/final-automated-tests.txt), [development results and drains](story-1-2-evidence/final-development-results.json), [packaged results and drains](story-1-2-evidence/final-packaged-results.json). Build output is `out/WritingTool-linux-x64/WritingTool`. The previously recorded performance measurement, Windows/macOS, native-dialog manual acceptance and physical-failure limits remain open; no full-release or complete TECH-gate acceptance is claimed.

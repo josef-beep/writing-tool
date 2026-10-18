@@ -2,7 +2,7 @@
 title: 'Story 1.2 — Create and reopen a universe in a chosen folder'
 type: feature
 created: 2026-10-17
-status: in-review
+status: done
 baseline_commit: NO_VCS
 baseline_snapshot: /tmp/writingtool-story-1-2-baseline.json
 route: dispatch
@@ -105,3 +105,5 @@ All retained defects concern demonstrated existing states and internal guards/pr
 ## Verification
 
 Run strict types, lint, registered unit/integration tests, real development smoke, package and packaged smoke sequentially. Use temporary user roots/profiles for interruption, stale generation/fence, retry, competing-process, corrupt/unsupported/unwritable and relocation fixtures. Compare preserved bytes/IDs/path rows, not just reported success. Document unavailable Windows/macOS evidence without inventing acceptance.
+
+Final verification completed on 2026-10-18 against source revision `7c2de9b10b1789e952e8a8ea2dacd25378c4fa90`. The saved implementation already contained every retained review correction; no further implementation patch was necessary. Typecheck, deny-warning lint, all 46 registered tests (11 readiness, 31 universe, 4 runner), seven development smoke scenarios, Linux packaging and seven packaged smoke scenarios passed. Both smoke runs acknowledged all seven production shutdown drains with no unresolved operations. The complete test suite passed outside the execution sandbox after its subprocess-output restriction reproduced the documented runner failure. Electron's application sandbox remained enabled. See `story-1-2-evidence.md` and the `final-*` evidence files. The unverified resource measurement and installed-platform/hardware limits remain deferred as recorded.

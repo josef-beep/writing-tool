@@ -8,7 +8,7 @@ Use stable task IDs when discussing work. Mark a task `[x]` only when complete, 
 
 Working mode: Jo approved the [single approval pack](_bmad-output/planning-artifacts/execution-approval.md) on 2026-10-17. Continue routine technical choices, story work, tests, internal reviews/fixes and phase transitions without repeated signoff. Data/publication foundations are adopted; technical/test gaps remain open until evidence closes them. Ask only for material changes, necessary unavailable facts or new cost/credential/external/environment-enforced actions.
 
-Implementation progress: **1 of49 stories complete** (Story1.1 secured desktop starter). Story1.2 universe creation/reopen next. Evidence: [starter verification](_bmad-output/implementation-artifacts/story-1-1-evidence.md). Full release/platform/technical gates remain open.
+Implementation progress: **2 of 49 stories complete** (Story 1.1 secured desktop starter and Story 1.2 universe creation/reopen/profile). Story 1.3 project creation/reopen linked to a universe is next. Evidence: [starter verification](_bmad-output/implementation-artifacts/story-1-1-evidence.md), [universe verification](_bmad-output/implementation-artifacts/story-1-2-evidence.md). Full release/platform/technical gates remain open.
 
 ## Existing planning
 

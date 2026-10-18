@@ -1,0 +1,74 @@
+
+> writingtool@0.1.0 test
+> node --import tsx tests/readiness.test.ts && node --import tsx tests/universe.test.ts && node tests/smoke.test.mjs
+
+✔ closed requests reject malformed input before application execution (0.803847ms)
+✔ non-mutating query preserves input and returns a closed correlated result (0.428741ms)
+✔ result validation rejects unknown fields, mismatched correlation and invalid errors (0.1588ms)
+✔ host round trip routes actual application query and cleans its pending entry (0.282502ms)
+✔ host startup, exit, invalid shape/correlation and timeout never report ready (9.99768ms)
+✔ pending requests are bounded, duplicate correlation cannot replace entries, destruction cleans all (0.173184ms)
+✔ sender authorization requires owned webContents, exact local URL, and main frame (0.108199ms)
+✔ inner application/domain layers import no frameworks or infrastructure (0.351808ms)
+✔ timeout followed by a valid late reply leaves the next query healthy (10.519939ms)
+✔ invalid late replies still fail and exit preserves the first terminal cause (9.472506ms)
+✔ throwing postMessage settles every pending request and clears their timers (0.863261ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 36.442674
+✔ persist profile JSON, catalog, exact receipts and reopen without a calendar (498.795947ms)
+✔ validation, unrelated content, invalid candidate preserve previous activation and bytes (400.435378ms)
+✔ duplicate JSON keys, malformed unicode, BOM and invalid UTF8 are rejected before decoding (0.517229ms)
+✔ folder relocation updates only root binding, rejects a copied live original (454.488303ms)
+✔ unsupported catalog and profile corruption do not initialize replacement authority (441.459217ms)
+✔ actual competing process cannot acquire the authoritative process lease (612.910547ms)
+✔ creation process death at creation-reserved never activates partial authority (81.142856ms)
+✔ creation process death at creation-schema never activates partial authority (639.780195ms)
+✔ creation process death at creation-files never activates partial authority (571.389096ms)
+✔ creation process death at creation-commit never activates partial authority (498.981061ms)
+✔ save process death at journal yields verified old/new and supports idempotent retry (740.667444ms)
+✔ save process death at file yields verified old/new and supports idempotent retry (737.810441ms)
+✔ save process death at commit yields verified old/new and supports idempotent retry (713.885207ms)
+✔ save process death at finalized yields verified old/new and supports idempotent retry (768.052863ms)
+✔ unknown live bytes or missing staged journal preserve bytes and block activation (506.194291ms)
+✔ lost lease inode and stale session fence stop writes before profile replacement (822.389119ms)
+✔ closed universe transport rejects path authority, wrong correlations and unknown keys (0.313956ms)
+✔ mutation timeout is unknown and late valid response does not poison later requests (5.743947ms)
+✔ interrupted undo repeats from immutable evidence (649.417991ms)
+✔ interrupted redo repeats from immutable evidence (682.550485ms)
+✔ missing journal, symbolic paths and hardlink aliases block activation preserving evidence (1309.77372ms)
+✔ permission-denied roots never activate or replace content (380.443131ms)
+✔ command-specific success validation cannot turn malformed acknowledgment into a save (454.705716ms)
+✔ supported SQLite hot journal recovers before application activation (501.604063ms)
+✔ known commands rejected before dispatch are not committed; original pending operations stay unknown (4.870387ms)
+✔ creation reservation failure is known not committed; a later partial creation remains unknown (7.505232ms)
+✔ torn finalized/aborted markers recover from journal and decision without replaying older generations (2266.193802ms)
+✔ reused former root path allows relocation while preserving exact content rows and bytes (1257.486899ms)
+✔ directory retarget during actual read/write/replace cannot touch or return an unrelated sentinel (27.581585ms)
+✔ private pending reconciliation accepts a physical alias and moved owner, rejects foreign/copy/payload mismatch (892.033023ms)
+✔ creation preflights old context and preserves committed receipt if later activation fails (778.08346ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17716.988216
+✔ smoke resolves native Forge JS launch and platform bundle paths (0.962472ms)
+✔ smoke result parsing rejects missing, duplicate, malformed and failed results deterministically (1.402567ms)
+✔ runner drains final stdout before parsing and handles malformed JSON without uncaught errors (45.548854ms)
+✔ timeout waits for a stubborn descendant to stop before returning (1250.064643ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2800.570451
