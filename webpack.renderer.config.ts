@@ -3,7 +3,7 @@ import type { Configuration } from 'webpack';
 import { rules } from './webpack.rules';
 import { plugins } from './webpack.plugins';
 
-const rendererRules = [...rules, {
+const rendererRules = [...rules, {test:/\.ttf$/,type:'asset/resource'}, {
   test: /\.css$/,
   use: [{ loader: 'style-loader' }, { loader: 'css-loader' }],
 }];

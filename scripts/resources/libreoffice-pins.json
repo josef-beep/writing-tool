@@ -1,0 +1,36 @@
+{
+  "version": "26.8.1",
+  "sourceMetadata": "Official .mirrorlist pages retrieved 2026-10-18; no application execution",
+  "platforms": {
+    "linux-x64": {
+      "url": "https://download.documentfoundation.org/libreoffice/stable/26.8.1/deb/x86_64/LibreOffice_26.8.1_Linux_x86-64_deb.tar.gz",
+      "sha256": "30903df3b9f61360d9660cd707de48cd2831469114492a5008ed58a0ac77d044",
+      "bytes": "219791834"
+    },
+    "win32-x64": {
+      "url": "https://download.documentfoundation.org/libreoffice/stable/26.8.1/win/x86_64/LibreOffice_26.8.1_Win_x86-64.msi",
+      "sha256": "c6298b10cfa1748bcbedad94c62ce771e240e5021bfd6d7a967cd571b04b5312",
+      "bytes": "374870016"
+    },
+    "darwin-x64": {
+      "url": "https://download.documentfoundation.org/libreoffice/stable/26.8.1/mac/x86_64/LibreOffice_26.8.1_MacOS_x86-64.dmg",
+      "sha256": "4c7464313a529e9074400cbcdc894fc40ac4ef9421ded03b16b5a78d12cb155e",
+      "bytes": "309092706"
+    },
+    "darwin-arm64": {
+      "url": "https://download.documentfoundation.org/libreoffice/stable/26.8.1/mac/aarch64/LibreOffice_26.8.1_MacOS_aarch64.dmg",
+      "sha256": "ca074e0b13571efb30a31fc531c5f95e997030637325e5d5de92d67aefdf0dfc",
+      "bytes": "298845477"
+    }
+  },
+  "linuxStaging": "/tmp/writingtool-libreoffice-sysroot/opt/libreoffice26.8",
+  "linuxArchive": "/tmp/writingtool-LibreOffice_26.8.1_Linux_x86-64_deb.tar.gz",
+  "licenseFiles": [
+    "LICENSE",
+    "LICENSE.html",
+    "NOTICE",
+    "readmes/README_en-US"
+  ],
+  "fontSources": "share/fonts/truetype/Liberation{Serif,Sans,Mono}-*.ttf",
+  "fontLicenseSource": "/usr/share/doc/fonts-liberation2/copyright"
+}

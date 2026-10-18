@@ -1,0 +1,13 @@
+# Presentation source map — coding pass
+
+Read-only investigation on 2026-10-18; no implementation/execution evidence.
+
+Keep the existing Shell in `src/presentation/index.tsx` as authority for project/universe transitions and native quit. Mount full workspace within it and install one shared guard that acknowledges pending manuscript saves, protects manual drafts and preserves chapter cursor/scroll and tree context before its existing departure paths.
+
+Use `writingTool.workspace(command)` and `WorkspaceSnapshot`, `WorkspaceUnitSnapshot`, `WorkspaceMutation`, `WorkspaceReceipt`, `WorkspaceChange`, `AppSettings`, `PanelLayout` from `application/contracts/workspace.ts`. Use the complete typed record union/helpers from `domain/workspace.ts`, `calendar.ts` and `manuscript.ts`. Inspect the final backend API map before implementation; files were evolving during this investigation.
+
+Mutation carries operation UUID, editor revision, owner, expected unit generation and expected record version. Retain the submitted operation on unknown outcome, reconcile exactly that UUID, requery canonical state and retain newer draft revisions. Chapter put supplies manuscript plus valid formatting shell; backend supplies final record version/hash/byte/scalar metadata. Use exact dates and `convertDate` to current configuration before `displayDate`; do not round years or use native numbers as chronology. Backend derives codes/creation order/birth synchronization/moved-date insertion and profile normalization.
+
+Build cohesive workspace navigation/forms/context, settings and reusable accessible dialogs plus a Lexical adapter/editor and scoped CSS. Install the Lexical package family at exact 0.52.0 and inspect the installed declarations. Editor state is transient; persist WRT text and domain paragraphs only. Preserve paragraph IDs, scalar marks, heading, indent, literal scene markers and undo/redo. Seven exact character prompts are in contracts.md:315 and the complete personality catalog is already exported.
+
+Missing native capabilities at investigation time: installed font discovery, monitor enumeration and secure floating-panel lifecycle. Add narrow native commands and share one controller/authority. Main currently authorizes only the primary webContents. Floating panels must be mirrored views/controller-backed selection, with no second writer. Bundled Liberation font sources/notices are staged in the runtime handoff; actual resources and packaging must be connected in the later export slice. Tree layout is UI work (acyclic graph validation exists). Revisions/backups/recovery/exports are the next slice and must be integrated before calling the coding pass complete.

@@ -1,0 +1,9 @@
+import {type WorkspaceHostRequest,type WorkspaceResult,validWorkspaceResult} from '../application/contracts/workspace';
+export function workspaceUnavailable(request:Pick<WorkspaceHostRequest,'requestId'|'command'>,sent=true):WorkspaceResult{return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',code:'HOST_UNAVAILABLE',message:'The host did not confirm this operation. Preserve pending edits and reconcile its original operation.',outcome:sent&&['workspace.mutate','workspace.asset.import','settings.save','settings.import','settings.select-backup'].includes(request.command)?'unknown':'not-committed',retry:'after-recovery',issues:[]};}
+export class WorkspaceHostClient {
+ private pending=new Map<string,{request:WorkspaceHostRequest;resolve:(result:WorkspaceResult)=>void;timer:ReturnType<typeof setTimeout>}>();private failed=false;
+ constructor(private host:{postMessage(data:unknown):void}|undefined){this.failed=!host;}
+ request(request:WorkspaceHostRequest):Promise<WorkspaceResult>{if(this.failed||this.pending.size>=32||this.pending.has(request.requestId))return Promise.resolve(workspaceUnavailable(request,false));return new Promise(resolve=>{const timer=setTimeout(()=>this.fail(),60000);this.pending.set(request.requestId,{request,resolve,timer});try{this.host!.postMessage(request);}catch{this.fail();}});}
+ receive(value:unknown):void{if(typeof value!=='object'||!value||!('requestId'in value)||typeof value.requestId!=='string'){this.fail();return;}const p=this.pending.get(value.requestId);if(!p)return;if(!validWorkspaceResult(value,p.request)){this.fail();return;}clearTimeout(p.timer);this.pending.delete(value.requestId);p.resolve(value);}
+ fail():void{this.failed=true;for(const p of this.pending.values()){clearTimeout(p.timer);p.resolve(workspaceUnavailable(p.request));}this.pending.clear();}
+}

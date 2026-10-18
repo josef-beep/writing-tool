@@ -1,12 +1,18 @@
+import {type ProjectSnapshot} from '../application/contracts/project';
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { type ReadinessResult, unavailable } from '../application/contracts/readiness';
 import { type CreateInput, type SaveInput, type UniverseResult, type UniverseSnapshot, type ProfileData } from '../application/contracts/universe';
 import './shell.css';
-type Departure = 'new' | 'open' | 'close' | 'quit' | 'dismiss';
+import {Workspace,type WorkspaceHandle} from './workspace/Workspace';
+import {FloatingPanel} from './workspace/FloatingPanel';
+type Departure = 'project-new' | 'project-open' | 'project-close' | 'new' | 'open' | 'close' | 'quit' | 'dismiss';
 function Shell() {
     const [result, setResult] = useState<ReadinessResult>();
+    const [utilityShown,setUtilityShown]=useState(false);
     const [snapshot, setSnapshot] = useState<UniverseSnapshot | null>(null);
+    const [projectSnapshot, setProjectSnapshot] = useState<ProjectSnapshot | null>(null);
+    const [projectUncertain, setProjectUncertain] = useState(false);
     const [editor, setEditor] = useState<'create' | 'profile' | null>(null);
     const [draft, setDraft] = useState<ProfileData>({ name: '', description: '' });
     const [busy, setBusy] = useState(false);
@@ -14,7 +20,8 @@ function Shell() {
     const [fieldError, setFieldError] = useState<string>();
     const [pendingDeparture, setPendingDeparture] = useState<Departure>();
     const [pending, setPending] = useState<CreateInput | SaveInput>();
-    const [status, setStatus] = useState('Choose or create a universe to begin.');
+    const [status, setStatus] = useState('Open a project or choose a universe to begin.');
+    const workspaceRef = useRef<WorkspaceHandle>(null);
     const revision = useRef(0n);
     const quitToken = useRef<string | undefined>(undefined);
     function finishQuit(approved: boolean): void {
@@ -67,7 +74,7 @@ function Shell() {
         return true;
     }
     async function save(): Promise<boolean> {
-        if (busy || pending)
+        if (busy || pending || projectUncertain)
             return false;
         if (!draft.name.trim()) {
             setFieldError('Enter a universe name.');
@@ -96,9 +103,29 @@ function Shell() {
         }
     }
     async function depart(action: Departure): Promise<void> {
-        if (busy || pending)
+        if (!await workspaceRef.current?.guard() && workspaceRef.current) {
+            if (action === 'quit') finishQuit(false);
+            return;
+        }
+        if (busy || pending || (projectUncertain && action !== 'project-open'))
             return;
         setPendingDeparture(undefined);
+        if (action === 'project-new' || action === 'project-open' || action === 'project-close') {
+            setBusy(true);
+            try {
+                const response = action === 'project-new' ? await window.writingTool.createProject({operationId:crypto.randomUUID()}) : action === 'project-open' ? await window.writingTool.openProject() : await window.writingTool.closeProject();
+                if(response.status==='canceled') return;
+                if(response.status==='error') {
+                    if(response.outcome!=='not-committed') setProjectUncertain(true);
+                    setError(response.message); return;
+                }
+                setProjectUncertain(false); setProjectSnapshot(response.snapshot);
+                if(response.snapshot) setSnapshot(response.snapshot.universe);
+                setEditor(null);
+                setStatus(action==='project-close'?'Project closed.': 'Project opened with its authoritative universe.');
+            } finally {setBusy(false);}
+            return;
+        }
         if (action === 'new') {
             setEditor('create');
             setDraft({ name: '', description: '' });
@@ -106,11 +133,13 @@ function Shell() {
             return;
         }
         if (action === 'quit') {
+            if(workspaceRef.current&&!await workspaceRef.current.closeProtection()){finishQuit(false);return;}
             finishQuit(true);
             return;
         }
         if (action === 'dismiss') {
             setEditor(null);
+            await workspaceRef.current?.refresh();
             return;
         }
         setBusy(true);
@@ -130,7 +159,7 @@ function Shell() {
             document.dispatchEvent(new Event('writingtool-request-quit'));
             return;
         }
-        if (pending || busy || error || pendingDeparture) {
+        if (pending || busy || error || pendingDeparture || (projectUncertain && action !== 'project-open')) {
             if (action === 'quit')
                 finishQuit(false);
             return;
@@ -160,6 +189,7 @@ function Shell() {
             if (!(event.ctrlKey || event.metaKey))
                 return;
             const key = event.key.toLowerCase();
+            if (key === 's' && editorRef.current) event.stopImmediatePropagation();
             if (document.querySelector('.blocking')) {
                 if (['n', 'o', 's', 'w'].includes(key))
                     event.preventDefault();
@@ -168,12 +198,12 @@ function Shell() {
             if (key === 'n' || key === 'o' || key === 's' || key === 'w') {
                 event.preventDefault();
                 if (key === 'n')
-                    departureRef.current('new');
+                    departureRef.current('project-new');
                 else if (key === 'o')
-                    departureRef.current('open');
+                    departureRef.current('project-open');
                 else if (key === 'w')
                     departureRef.current(editorRef.current && !event.shiftKey ? 'dismiss' : 'close');
-                else
+                else if (editorRef.current)
                     document.querySelector<HTMLButtonElement>('[data-profile-save]')?.click();
             }
         };
@@ -182,11 +212,14 @@ function Shell() {
             event.returnValue = false;
         };
         window.addEventListener('beforeunload', preventUnapprovedUnload);
+        const recovered=()=>{void window.writingTool.currentProject().then(result=>{if(result.status==='ok')setProjectSnapshot(result.snapshot);});void window.writingTool.currentUniverse().then(result=>{if(result.status==='ok')setSnapshot(result.snapshot);});};
+        document.addEventListener('writingtool-recovered-context',recovered);
         document.addEventListener('writingtool-window-close', quit);
         window.addEventListener('keydown', keys);
         return () => {
             window.removeEventListener('beforeunload', preventUnapprovedUnload);
             document.removeEventListener('writingtool-window-close', quit);
+            document.removeEventListener('writingtool-recovered-context',recovered);
             window.removeEventListener('keydown', keys);
         };
     }, []);
@@ -262,11 +295,15 @@ function Shell() {
             setBusy(false);
         }
     }
-    function editProfile(): void {
-        if (!snapshot || busy || pending || editor)
+    async function editProfile(): Promise<void> {
+        if (!snapshot || busy || pending || projectUncertain || editor)
             return;
+        if (workspaceRef.current && !await workspaceRef.current.guard()) return;
+        const response = await window.writingTool.currentUniverse();
+        if (response.status !== 'ok' || !response.snapshot) { if (response.status === 'error') setError(response.message); return; }
+        setSnapshot(response.snapshot);
         setEditor('profile');
-        setDraft(snapshot.profile);
+        setDraft(response.snapshot.profile);
         setFieldError(undefined);
     }
     return <main>
@@ -275,15 +312,19 @@ function Shell() {
         if (target.closest('button'))
             target.closest('details')?.removeAttribute('open');
     }}>
-      <details><summary>File</summary><div className="menu"><button disabled={busy || !!pending} onClick={() => requestDeparture('new')}>New universe <kbd>Ctrl+N</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('open')}>Open universe… <kbd>Ctrl+O</kbd></button><button disabled={busy || !!pending || !snapshot} onClick={() => requestDeparture('close')}>Close universe <kbd>Ctrl+Shift+W</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('quit')}>Exit</button></div></details>
-      <details><summary>Universe</summary><div className="menu"><button data-top-profile-edit disabled={!snapshot || !!editor || busy || !!pending} onClick={editProfile}>Edit profile</button><button data-top-profile-save disabled={!editor || busy || !!pending} onClick={() => void save()}>Save profile <kbd>Ctrl+S</kbd></button><button data-top-reconcile disabled={!pending || busy} onClick={() => void reconcile()}>Reopen and reconcile…</button><button data-top-profile-close disabled={!editor || busy || !!pending} onClick={() => requestDeparture('dismiss')}>Close profile <kbd>Ctrl+W</kbd></button></div></details>
+      <details><summary>Project</summary><div className="menu"><div id="project-workspace-menu"/><button disabled={busy || !!pending || projectUncertain} onClick={() => requestDeparture('project-new')}>New project… <kbd>Ctrl+N</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('project-open')}>Open project… <kbd>Ctrl+O</kbd></button><button disabled={busy || !!pending || projectUncertain || !projectSnapshot} onClick={() => requestDeparture('project-close')}>Close project</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot} onClick={() => requestDeparture('new')}>New universe</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot} onClick={() => requestDeparture('open')}>Open universe…</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot || !snapshot} onClick={() => requestDeparture('close')}>Close universe <kbd>Ctrl+Shift+W</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('quit')}>Exit</button></div></details>
+      <details><summary>Universe</summary><div className="menu"><div id="universe-workspace-menu"/><button data-top-profile-edit disabled={!snapshot || !!editor || busy || !!pending} onClick={editProfile}>Edit profile</button><button data-top-profile-save disabled={!editor || busy || !!pending} onClick={() => void save()}>Save profile <kbd>Ctrl+S</kbd></button><button data-top-reconcile disabled={!pending || busy} onClick={() => void reconcile()}>Reopen and reconcile…</button><button data-top-profile-close disabled={!editor || busy || !!pending} onClick={() => requestDeparture('dismiss')}>Close profile <kbd>Ctrl+W</kbd></button></div></details>
+      <span id="workspace-menus"/>
     </nav></header>
-    <section hidden={!!editor} inert={!!pendingDeparture || !!error} aria-labelledby="heading">
-      <p className="eyebrow">{snapshot ? 'UNIVERSE' : 'YOUR WRITING SPACE'}</p><h1 id="heading">{snapshot?.profile.name ?? 'Open your universe.'}</h1>
-      {snapshot ? <><p>{snapshot.profile.description || 'Your universe is ready. No calendar or project is needed.'}</p><p className="location">{snapshot.location}</p><button disabled={busy || !!pending} onClick={editProfile}>Edit universe profile</button></> : <><p>Create a shared setting in its own folder, or open an existing universe.</p><div className="actions"><button disabled={busy || !!pending || state !== 'ready'} onClick={() => requestDeparture('open')}>Open universe…</button><button disabled={busy || !!pending || state !== 'ready'} onClick={() => requestDeparture('new')}>Create universe</button></div></>}
+    <section hidden={!!editor || !!snapshot || utilityShown} inert={!!pendingDeparture || !!error} aria-labelledby="heading">
+      <p className="eyebrow">{projectSnapshot ? 'PROJECT' : snapshot ? 'UNIVERSE' : 'YOUR WRITING SPACE'}</p><h1 id="heading">{projectSnapshot ? 'Your project' : snapshot?.profile.name ?? 'Open your writing project.'}</h1>
+      {projectSnapshot && <div className="project-context"><p>Project <span className="location">{projectSnapshot.ownerId}</span></p><p className="location">{projectSnapshot.location}</p><p>Linked universe: <strong>{snapshot?.profile.name}</strong></p></div>}
+      {snapshot ? <><p>{snapshot.profile.description || (projectSnapshot ? 'Your project and its shared universe are ready.' : 'Your universe is ready. No calendar or project is needed.')}</p><p className="location">{snapshot.location}</p><button disabled={busy || !!pending} onClick={editProfile}>Edit universe profile</button></> : <><p>Open a project with its shared universe, or create a project in its own folder.</p><div className="actions"><button disabled={busy || !!pending || state !== 'ready'} onClick={() => requestDeparture('project-open')}>Open project…</button><button disabled={busy || !!pending || projectUncertain || state !== 'ready'} onClick={() => requestDeparture('project-new')}>Create project…</button></div><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Recover from backup / recent projects…</button><p>You can also work with a universe on its own.</p><div className="actions"><button disabled={busy || !!pending || projectUncertain || state !== 'ready'} onClick={() => requestDeparture('open')}>Open universe…</button><button disabled={busy || !!pending || projectUncertain || state !== 'ready'} onClick={() => requestDeparture('new')}>Create universe</button></div></>}
       <div className={`status ${state}`} role="status" aria-live="polite" data-readiness={state}><strong>{state === 'ready' ? 'Application ready' : state === 'unavailable' ? 'Application unavailable' : 'Checking application…'}</strong><span>{result?.status === 'unavailable' ? `Host connection failed (${result.code}).` : state === 'ready' ? 'The local application host responded successfully.' : 'Waiting for the local application host.'}</span></div>
+      {projectUncertain && <div className="status unavailable" role="alert"><strong>Project creation needs reconciliation</strong><p>Reopen the selected project folder to confirm its saved identity and matching universe.</p><button disabled={busy} onClick={() => requestDeparture('project-open')}>Reopen project…</button></div>}
       {pending && <div className="status unavailable" role="alert"><strong>Save outcome needs recovery</strong><p>Your submitted edits are retained. Reopen the same folder to determine whether it saved.</p><button disabled={busy} onClick={() => void reconcile()}>Reopen and reconcile…</button></div>}
     </section>
+    {<div hidden={!!editor} inert={!!pendingDeparture || !!error}><Workspace key={`${projectSnapshot?.ownerId??''}/${snapshot?.ownerId??'none'}`} ref={workspaceRef} identity={`${projectSnapshot?.ownerId??''}/${snapshot?.ownerId??'none'}`} universeName={snapshot?.profile.name??'No universe open'} onStatus={setStatus} onCenterChange={setUtilityShown}/></div>}
     {editor && <section className="profile workspace-editor" inert={!!pendingDeparture || !!error} aria-labelledby="profile-heading"><h2 id="profile-heading">{editor === 'create' ? 'Create universe' : 'Universe profile'}</h2><form onSubmit={event => {
                 event.preventDefault();
                 void save();
@@ -310,11 +351,11 @@ function Shell() {
                         finishQuit(false);
                 });
             }}>Save</button><button onClick={() => void depart(pendingDeparture)}>Discard</button><button autoFocus onClick={cancelDeparture}>Cancel</button></div></section></div>}
-    {error && <div className="scrim blocking"><section className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="error-heading"><h2 id="error-heading">Unable to complete operation</h2><p>{error}</p><div className="actions">{pending && <button onClick={() => void reconcile()} disabled={busy}>Reopen same folder…</button>}<button autoFocus onClick={() => setError(undefined)}>Return to editor</button></div></section></div>}
+    {error && <div className="scrim blocking"><section className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="error-heading"><h2 id="error-heading">Unable to complete operation</h2><p>{error}</p><div className="actions">{pending && <button onClick={() => void reconcile()} disabled={busy}>Reopen same folder…</button>}{projectUncertain && <button onClick={() => {setError(undefined); void depart('project-open');}} disabled={busy}>Reopen project…</button>}<button autoFocus onClick={() => setError(undefined)}>Return to editor</button></div></section></div>}
     <footer inert={!!pendingDeparture || !!error} role="status">{busy ? 'Working…' : status}</footer>
   </main>;
 }
 const root = document.getElementById('root');
 if (!root)
     throw new Error('Missing application root');
-createRoot(root).render(<Shell />);
+createRoot(root).render(location.hash.startsWith('#floating-') ? <FloatingPanel /> : <Shell />);

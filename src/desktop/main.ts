@@ -1,7 +1,17 @@
+import {RecentRoots} from '../infrastructure/recent-roots';
+import {nativeProtection} from './protection';
+import {PROTECTION_CHANNEL,validProtectionRequest,type ProtectionResult} from '../application/contracts/protection';
+import {ProtectionHostClient} from './protection-host-client';
+import {registerPresentation} from './presentation';
+import {WORKSPACE_CHANNEL,validWorkspaceRequest,type WorkspaceHostRequest,type WorkspaceResult,type WorkspaceRequest} from '../application/contracts/workspace';
+import {WorkspaceHostClient,workspaceUnavailable} from './workspace-host-client';
+import {decode,hash,publishManagedBytes,readManaged,ensureManagedDirectory,removeManagedBytes,jsonBytes} from '../infrastructure/universe-files';
+import { PROJECT_CHANNEL, validProjectRequest, type ProjectHostRequest, type ProjectResult } from '../application/contracts/project';
+import { ProjectHostClient, projectUnavailable } from './project-host-client';
 import { randomUUID } from 'node:crypto';
 import { UNIVERSE_CHANNEL, validUniverseRequest, closed, isUuid, type SaveReceipt, type ReconciliationExpectation, type UniverseSnapshot } from '../application/contracts/universe';
 import { UniverseHostClient, hostUnavailable } from './universe-host-client';
-import { app, BrowserWindow, dialog, ipcMain, utilityProcess, type IpcMainInvokeEvent, type UtilityProcess } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, utilityProcess, nativeImage, powerMonitor, type IpcMainInvokeEvent, type UtilityProcess } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import squirrelStartup from 'electron-squirrel-startup';
@@ -15,9 +25,22 @@ const fault = diagnostic ? process.env.WRITINGTOOL_HOST_FAULT : undefined;
 if (diagnostic && process.env.WRITINGTOOL_PROFILE)
     app.setPath('userData', process.env.WRITINGTOOL_PROFILE);
 let window: BrowserWindow | undefined;
+let disposePresentation:(()=>void)|undefined;
 let child: UtilityProcess | undefined;
 let client: HostClient | undefined;
 let universeClient: UniverseHostClient | undefined;
+let projectClient: ProjectHostClient | undefined;
+let workspaceClient:WorkspaceHostClient|undefined;
+let protectionClient:ProtectionHostClient|undefined;
+let protectionInFlight=false;
+const pendingProtection=new Map<string,{request:import('../application/contracts/protection').ProtectionHostRequest;project:string|null;universe:string|null;projectIdentity:{id:string;rootId:string}|null;universeIdentity:{id:string;rootId:string}|null}>();
+let activeProjectLocation:string|undefined;
+let activeProjectIdentity:{id:string;rootId:string}|undefined;
+let workspaceInFlight=false;
+const pendingWorkspace=new Map<string,{request:WorkspaceHostRequest;projectLocation:string|undefined;universeLocation:string|undefined;projectIdentity:{id:string;rootId:string}|undefined;universeIdentity:{id:string;rootId:string}|undefined}>();
+let projectInFlight = false;
+let universeInFlight = false;
+let pendingProjectCreation: {operationId: string; location: string} | undefined;
 let hostExited = false;
 let drained = false;
 let draining = false;
@@ -28,6 +51,11 @@ const mutationLocations = new Map<string, {
     expected: ReconciliationExpectation;
 }>();
 const unresolvedOperations = new Set<string>();
+function pendingProtectionPath(id:string){return `protection/native-pending/${id}.json`;}
+function savePendingProtection(id:string,value:{request:import('../application/contracts/protection').ProtectionHostRequest;project:string|null;universe:string|null;projectIdentity:{id:string;rootId:string}|null;universeIdentity:{id:string;rootId:string}|null}){const root=app.getPath('userData');ensureManagedDirectory(root,'protection/native-pending');const relative=pendingProtectionPath(id),old=fs.existsSync(path.join(root,relative))?hash(readManaged(root,relative)):null;publishManagedBytes(root,relative,Buffer.from(jsonBytes(value)),old);}
+function forgetPendingProtection(id:string){pendingProtection.delete(id);unresolvedOperations.delete(id);const root=app.getPath('userData'),relative=pendingProtectionPath(id);if(fs.existsSync(path.join(root,relative)))removeManagedBytes(root,relative,hash(readManaged(root,relative)));}
+function loadPendingProtection(){const root=app.getPath('userData');fs.mkdirSync(root,{recursive:true,mode:0o700});ensureManagedDirectory(root,'protection/native-pending');for(const name of fs.readdirSync(path.join(root,'protection/native-pending'))){const value=decode(readManaged(root,'protection/native-pending/'+name));if(!closed(value,['request','project','universe','projectIdentity','universeIdentity'])||!validProtectionRequest(value.request,true)||![value.projectIdentity,value.universeIdentity].every(identity=>identity===null||closed(identity,['id','rootId'])&&isUuid(identity.id)&&isUuid(identity.rootId))||(value.project!==null&&(typeof value.project!=='string'||!path.isAbsolute(value.project)))||(value.universe!==null&&(typeof value.universe!=='string'||!path.isAbsolute(value.universe))))throw new Error('Pending protection metadata is invalid. Preserve application data for recovery.');const pending={request:value.request,project:value.project as string|null,universe:value.universe as string|null,projectIdentity:value.projectIdentity as {id:string;rootId:string}|null,universeIdentity:value.universeIdentity as {id:string;rootId:string}|null};pendingProtection.set(value.request.requestId,pending);unresolvedOperations.add(value.request.requestId);}}
+
 function rememberMutation(id: string, location: string, expected: ReconciliationExpectation): void {
     mutationLocations.set(id, { location, expected });
     unresolvedOperations.add(id);
@@ -50,6 +78,26 @@ let invalidRequestsRejected = false;
 let permissionChecks = 0;
 let permissionRequests = 0;
 let hostErrors = 0;
+function launchApplicationHost(args: string[] = []): void {
+    fs.mkdirSync(app.getPath('userData'),{recursive:true,mode:0o700});
+    child = utilityProcess.fork(path.join(__dirname, 'utility-host.cjs'), [...args,'--user-data='+app.getPath('userData')], {serviceName:'WritingTool application host'});
+    client = new HostClient(child);
+    universeClient = new UniverseHostClient(child);
+    projectClient = new ProjectHostClient(child);
+    workspaceClient = new WorkspaceHostClient(child);
+    protectionClient=new ProtectionHostClient(child);
+    hostExited = false;
+    child.on('message', message => {
+        if(typeof message==='object'&&message!==null&&'kind'in message&&message.kind==='protection.progress'){window?.webContents.send('writingtool:protection-progress:v1',message);}
+        else if(typeof message==='object'&&message!==null&&'command'in message&&String(message.command).startsWith('protection.'))protectionClient?.receive(message);
+        else if(typeof message==='object' && message!==null && 'command' in message && (String(message.command).startsWith('workspace.')||String(message.command).startsWith('settings.'))) workspaceClient?.receive(message);
+        else if(typeof message==='object' && message!==null && 'command' in message && String(message.command).startsWith('project.')) projectClient?.receive(message);
+        else if(typeof message==='object' && message!==null && 'command' in message) universeClient?.receive(message);
+        else client?.receive(message);
+    });
+    child.on('exit',()=>{hostExited=true;client?.fail('HOST_EXITED');universeClient?.fail();projectClient?.fail();workspaceClient?.fail();protectionClient?.fail();});
+    child.on('error',()=>{hostErrors++;client?.fail('HOST_EXITED');universeClient?.fail();projectClient?.fail();workspaceClient?.fail();protectionClient?.fail();});
+}
 function authorized(event: Pick<IpcMainInvokeEvent, 'sender' | 'senderFrame'>): boolean {
     return !!window && !window.isDestroyed() && !!event.senderFrame && trustedSender(event.sender.id, window.webContents.id, event.senderFrame === window.webContents.mainFrame, event.senderFrame.url, MAIN_WINDOW_WEBPACK_ENTRY);
 }
@@ -60,32 +108,16 @@ else
         try {
             if (fault === 'start')
                 throw new Error('Diagnostic startup failure');
-            child = utilityProcess.fork(path.join(__dirname, 'utility-host.cjs'), fault ? [`--diagnostic-fault=${fault}`] : [], { serviceName: 'WritingTool application host' });
-            client = new HostClient(child);
-            universeClient = new UniverseHostClient(child);
-            child.on('message', message => {
-                if (typeof message === 'object' && message !== null && 'command' in message)
-                    universeClient?.receive(message);
-                else
-                    client?.receive(message);
-            });
-            child.on('exit', () => {
-                hostExited = true;
-                client?.fail('HOST_EXITED');
-                universeClient?.fail();
-            });
-            child.on('error', () => {
-                hostErrors++;
-                client?.fail('HOST_EXITED');
-                universeClient?.fail();
-            });
+            loadPendingProtection();
+            launchApplicationHost(fault ? [`--diagnostic-fault=${fault}`] : []);
             // Exercise Electron's documented FatalError event path without inducing a crash.
             if (fault === 'fatal-error')
-                child.emit('error', 'FatalError', 'diagnostic', '{}');
+                child!.emit('error', 'FatalError', 'diagnostic', '{}');
         }
         catch {
             client = new HostClient(undefined);
             universeClient = new UniverseHostClient(undefined);
+            projectClient = new ProjectHostClient(undefined);
             hostExited = true;
         }
         ipcMain.on('writingtool:quit-request:v1', (event, value: unknown) => {
@@ -97,33 +129,59 @@ else
                 throw new Error('Readiness request denied');
             return client!.request(request);
         });
+        ipcMain.handle(PROJECT_CHANNEL, async (event, value: unknown): Promise<ProjectResult> => {
+            if (!authorized(event) || !validProjectRequest(value) || draining)
+                throw new Error('Project request denied');
+            const request=value, base={protocolVersion:1 as const,requestId:request.requestId,command:request.command};
+            if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || unresolvedOperations.size || (pendingProjectCreation && !['project.open','project.current'].includes(request.command)))
+                return {...base,status:'error',code:'RECOVERY_REQUIRED',message:'Finish or reconcile the pending operation before changing projects.',outcome:pendingProjectCreation?'unknown':'not-committed',retry:'after-recovery'};
+            projectInFlight=true;
+            let sent=false;
+            try {
+                let basePath: string | undefined, universePath: string | undefined;
+                if(request.command==='project.create' || request.command==='project.open') {
+                    if(request.command==='project.create') {
+                        const universe=await dialog.showOpenDialog(window!,{title:'Choose the existing universe for this project',properties:['openDirectory']});
+                        if(universe.canceled || !universe.filePaths[0]) return {...base,status:'canceled'};
+                        universePath=universe.filePaths[0];
+                    }
+                    const selected=await dialog.showOpenDialog(window!,{title:request.command==='project.create'?'Choose an empty folder for the project':'Open project folder',properties:['openDirectory']});
+                    if(selected.canceled || !selected.filePaths[0]) return {...base,status:'canceled'};
+                    basePath=selected.filePaths[0];
+                }
+                if(request.command==='project.open' && hostExited && !fault) launchApplicationHost();
+                if(request.command==='project.open' && pendingProjectCreation && !hostExited) {projectClient?.fail(); projectClient=new ProjectHostClient(child);}
+                const hostRequest={...request,...(basePath?{basePath}:{}),...(universePath?{universePath}:{}),...(pendingProjectCreation && request.command==='project.open'?{expectedCreationOperationId:pendingProjectCreation.operationId}:{})} as ProjectHostRequest;
+                if(request.command==='project.create') pendingProjectCreation={operationId:request.input.operationId,location:basePath!};
+                sent=true;
+                let result=await projectClient!.request(hostRequest);
+                if(result.status==='locate') {
+                    const selected=await dialog.showOpenDialog(window!,{title:`Locate the project's universe (${result.universeId})`,properties:['openDirectory']});
+                    if(selected.canceled || !selected.filePaths[0]) return {...base,status:'canceled'};
+                    result=await projectClient!.request({...hostRequest,requestId:randomUUID(),universePath:selected.filePaths[0]});
+                    result={...result,requestId:request.requestId};
+                }
+                if(result.status==='locate') return {...base,status:'error',code:'INTEGRITY_MISMATCH',message:'The matching universe could not be resolved.',outcome:'not-committed',retry:'new-request'};
+                if(request.command==='project.create' && !(result.status==='error' && result.outcome!=='not-committed')) pendingProjectCreation=undefined;
+                if(request.command==='project.open' && result.status==='ok') pendingProjectCreation=undefined;
+                if(result.status==='ok') {activeProjectLocation=result.snapshot?.location;activeProjectIdentity=result.snapshot?{id:result.snapshot.ownerId,rootId:result.snapshot.rootId}:undefined;if(result.snapshot){activeSnapshot=result.snapshot.universe;activeLocation=activeSnapshot.location;}if(result.snapshot)new RecentRoots(app.getPath('userData')).remember({kind:'project',id:result.snapshot.ownerId},result.snapshot.rootId,path.basename(result.snapshot.location),result.snapshot.location);}
+                return result;
+            } catch {
+                if(!sent) return {...base,status:'error',code:'IO_FAILURE',message:'The project folder chooser could not complete. Try again.',outcome:'not-committed',retry:'new-request'};
+                return projectUnavailable(request);
+            } finally {projectInFlight=false;}
+        });
         ipcMain.handle(UNIVERSE_CHANNEL, async (event, value: unknown) => {
-            if (!authorized(event) || !validUniverseRequest(value) || draining)
+            if (!authorized(event) || !validUniverseRequest(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
                 throw new Error('Universe request denied');
+            universeInFlight=true;
+            try {
             const request = value;
             const reconcilesPending = request.command === 'universe.open' && request.reconcileOperationId && mutationLocations.has(request.reconcileOperationId);
-            if (unresolvedOperations.size > 0 && request.command !== 'universe.current' && !reconcilesPending)
+            if ((pendingProjectCreation || unresolvedOperations.size > 0) && request.command !== 'universe.current' && !reconcilesPending)
                 return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the pending operation in its original folder before another operation or close.', outcome: 'unknown', retry: 'after-recovery' };
             if (request.command === 'universe.open' && hostExited && !fault) {
-                child = utilityProcess.fork(path.join(__dirname, 'utility-host.cjs'), [], { serviceName: 'WritingTool application host' });
-                client = new HostClient(child);
-                universeClient = new UniverseHostClient(child);
-                hostExited = false;
-                child.on('message', message => {
-                    if (typeof message === 'object' && message !== null && 'command' in message)
-                        universeClient?.receive(message);
-                    else
-                        client?.receive(message);
-                });
-                child.on('exit', () => {
-                    hostExited = true;
-                    client?.fail('HOST_EXITED');
-                    universeClient?.fail();
-                });
-                child.on('error', () => {
-                    client?.fail('HOST_EXITED');
-                    universeClient?.fail();
-                });
+                launchApplicationHost();
             }
             if (request.command === 'universe.create' || request.command === 'universe.open') {
                 const injected = diagnostic ? process.env.WRITINGTOOL_UNIVERSE_FOLDER : undefined;
@@ -155,6 +213,7 @@ else
                 if (result.status === 'ok') {
                     activeLocation = result.snapshot?.location;
                     activeSnapshot = result.snapshot;
+                    if(result.snapshot)new RecentRoots(app.getPath('userData')).remember({kind:'universe',id:result.snapshot.ownerId},result.snapshot.rootId,result.snapshot.profile.name,result.snapshot.location);
                 }
                 if (request.command === 'universe.create' && !(result.status === 'error' && result.outcome === 'unknown'))
                     unresolvedOperations.delete(request.input.operationId);
@@ -182,8 +241,70 @@ else
             if (request.command === 'universe.profile.save' && !(result.status === 'error' && result.outcome === 'unknown'))
                 unresolvedOperations.delete(request.input.operationId);
             return result;
+            } finally {universeInFlight=false;}
         });
+        const runProtection=nativeProtection({openRoot:async(owner,location)=>{if(owner.kind==='project'){let result=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:location});if(result.status==='locate'){const chosen=await dialog.showOpenDialog(window!,{title:'Locate matching universe',properties:['openDirectory']});if(chosen.canceled||!chosen.filePaths[0])throw new Error('The matching universe is required.');result=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:location,universePath:chosen.filePaths[0]});}if(result.status!=='ok'||!result.snapshot)throw new Error(result.status==='error'?result.message:'Project opening was not acknowledged.');return{project:result.snapshot.location,universe:result.snapshot.universeLocation};}if(activeProjectLocation){const closed=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.close'});if(closed.status!=='ok')throw new Error('Close the active project before changing universes.');}const opened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:location});if(opened.status!=='ok'||!opened.snapshot)throw new Error(opened.status==='error'?opened.message:'Universe opening was not acknowledged.');return{project:null,universe:opened.snapshot.location};},window:()=>window!,roots:()=>[activeProjectLocation,activeLocation].filter((p):p is string=>!!p),sourceName:async r=>{if(r.command==='protection.export'&&r.storyId){const result=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'workspace.query'});if(result.status==='ok'){const story=result.snapshot.project?.records.find(record=>record.recordType==='story'&&record.id===r.storyId);if(story?.recordType==='story')return story.data.title;}}return r.command==='protection.export'&&r.owner.kind==='project'&&activeProjectLocation?path.basename(activeProjectLocation):activeSnapshot?.profile.name??'WritingTool';},settings:async()=>{const result=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'settings.get'});if(result.status!=='ok'||!result.settings)throw new Error('Read backup settings before continuing.');return result.settings;},send:r=>{const persist=!['protection.reconcile','protection.pending','protection.history','protection.inspect','protection.resume','protection.open','protection.cancel'].includes(r.command);if(persist){const entry={request:r,project:activeProjectLocation??null,universe:activeLocation??null,projectIdentity:activeProjectIdentity??null,universeIdentity:activeSnapshot?{id:activeSnapshot.ownerId,rootId:activeSnapshot.rootId}:null};pendingProtection.set(r.requestId,entry);savePendingProtection(r.requestId,entry);}return protectionClient!.request(r).then(result=>{if(persist&&!(result.status==='error'&&result.outcome==='unknown'))forgetPendingProtection(r.requestId);return result;});}});
+        ipcMain.handle(PROTECTION_CHANNEL,async(event,value:unknown):Promise<ProtectionResult>=>{
+            if(!authorized(event)||!validProtectionRequest(value)||draining)throw new Error('Protection request denied');
+            if(value.command==='protection.pending'){const result=await protectionClient!.request(value);return result.status==='ok'?{...result,value:{...result.value,pending:[...pendingProtection.keys()]}}:result;}
+            if(value.command==='protection.cancel')return protectionClient!.request(value);
+            if(value.command==='protection.reconcile'){if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight)throw new Error('Wait for the active authority operation before reconciliation.');protectionInFlight=true;try{const pending=pendingProtection.get(value.operationId);const hostRestarted=hostExited;if(hostRestarted)launchApplicationHost();else{protectionClient?.fail();protectionClient=new ProtectionHostClient(child);}if(pending?.project&&(hostRestarted||activeProjectLocation!==pending.project)){const opened=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:pending.project,universePath:pending.universe??undefined});if(opened.status!=='ok'||!opened.snapshot||opened.snapshot.ownerId!==pending.projectIdentity?.id||opened.snapshot.rootId!==pending.projectIdentity?.rootId||opened.snapshot.universe.ownerId!==pending.universeIdentity?.id||opened.snapshot.universe.rootId!==pending.universeIdentity?.rootId)throw new Error('Reopen the original participants before protection reconciliation.');activeProjectLocation=opened.snapshot.location;activeProjectIdentity={id:opened.snapshot.ownerId,rootId:opened.snapshot.rootId};activeLocation=opened.snapshot.universeLocation;activeSnapshot=opened.snapshot.universe;}else if(pending?.universe&&(hostRestarted||activeLocation!==pending.universe)){const opened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:pending.universe});if(opened.status!=='ok'||!opened.snapshot||opened.snapshot.ownerId!==pending.universeIdentity?.id||opened.snapshot.rootId!==pending.universeIdentity?.rootId)throw new Error('Reopen the original universe before protection reconciliation.');activeLocation=opened.snapshot.location;activeSnapshot=opened.snapshot;}const result=await runProtection(value);if(result.status==='ok'){forgetPendingProtection(value.operationId);const p=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.current'});if(p.status==='ok'&&p.snapshot){activeProjectLocation=p.snapshot.location;activeProjectIdentity={id:p.snapshot.ownerId,rootId:p.snapshot.rootId};activeLocation=p.snapshot.universeLocation;activeSnapshot=p.snapshot.universe;}else{const u=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.current'});if(u.status==='ok'&&u.snapshot){activeLocation=u.snapshot.location;activeSnapshot=u.snapshot;}}window?.webContents.send('writingtool:recovered-context:v1');}return result;}finally{protectionInFlight=false;}}
+
+            if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight||unresolvedOperations.size)return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Finish or reconcile the pending authority operation first.',outcome:'not-committed',operationId:null};
+            protectionInFlight=true;try{const result=await runProtection(value);if(result.status==='ok'&&result.value.activated){const roots=result.value.activated;activeProjectLocation=roots.project??undefined;activeLocation=roots.universe;const u=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.current'});if(u.status==='ok')activeSnapshot=u.snapshot;const p=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.current'});if(p.status==='ok'&&p.snapshot)activeProjectIdentity={id:p.snapshot.ownerId,rootId:p.snapshot.rootId};window?.webContents.send('writingtool:recovered-context:v1');}if(result.status==='error'&&result.outcome==='unknown')unresolvedOperations.add(value.requestId);return result;}finally{protectionInFlight=false;}
+        });
+        ipcMain.handle(WORKSPACE_CHANNEL,async(event,value:unknown):Promise<WorkspaceResult>=>{
+            if(!authorized(event)||!validWorkspaceRequest(value)||draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)throw new Error('Workspace request denied');
+            const request=value,base={protocolVersion:1 as const,requestId:request.requestId,command:request.command};
+            if((unresolvedOperations.size||pendingProjectCreation)&&request.command!=='workspace.reconcile'&&request.command!=='settings.get')return{...base,status:'error',code:'RECOVERY_REQUIRED',message:'Reconcile the original pending operation before continuing.',outcome:'unknown',retry:'after-recovery',issues:[]};
+            workspaceInFlight=true;let sent=false;
+            try{
+                if(request.command==='workspace.reconcile'&&!fault){
+                    const pending=pendingWorkspace.get(request.operationId);
+                    if(pending){
+                        const locate=async(original:string|undefined,identity:{id:string;rootId:string}|undefined,label:string):Promise<string|undefined>=>{if(!identity)return undefined;const valid=(folder:string|undefined):string|undefined=>{if(!folder)return;try{const resolved=fs.realpathSync(folder),d=decode(fs.readFileSync(path.join(resolved,'writingtool.json'))) as {id:string;rootId:string};if(d.id===identity.id&&d.rootId===identity.rootId)return resolved;}catch{}return;};const existing=valid(original);if(existing)return existing;const selected=await dialog.showOpenDialog(window!,{title:`Locate the original ${label} (${identity.id})`,properties:['openDirectory']});const chosen=valid(selected.filePaths[0]);if(selected.canceled||!chosen)throw new Error('The original owning identity is required for reconciliation');return chosen;};
+                        const projectLocation=await locate(pending.projectLocation,pending.projectIdentity,'project'),universeLocation=await locate(pending.universeLocation,pending.universeIdentity,'universe');
+                        const moved=projectLocation!==pending.projectLocation||universeLocation!==pending.universeLocation;
+                        pending.projectLocation=projectLocation;pending.universeLocation=universeLocation;
+                        if(moved&&!hostExited&&child){const original=child;await new Promise<void>(resolve=>{original.once('exit',()=>resolve());original.kill();});}
+                        if(hostExited){launchApplicationHost();if(projectLocation){const reopened=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:projectLocation,...(universeLocation?{universePath:universeLocation}:{})});if(reopened.status!=='ok'||!reopened.snapshot||reopened.snapshot.ownerId!==pending.projectIdentity?.id||reopened.snapshot.rootId!==pending.projectIdentity?.rootId)throw new Error('Original project participants could not be reopened');}else if(universeLocation){const reopened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:universeLocation});if(reopened.status!=='ok'||!reopened.snapshot||reopened.snapshot.ownerId!==pending.universeIdentity?.id||reopened.snapshot.rootId!==pending.universeIdentity?.rootId)throw new Error('Original universe could not be reopened');}}
+                    }else if(hostExited)throw new Error('Original operation locations are unavailable');
+                }
+                if(request.command==='workspace.reconcile'||request.command==='settings.get'){workspaceClient?.fail();workspaceClient=new WorkspaceHostClient(child);}
+                let internal:WorkspaceHostRequest=request;
+                if(request.command==='workspace.asset.import'){
+                    const frozen=pendingWorkspace.get(request.operationId);if(frozen)internal={...frozen.request,requestId:request.requestId};else{
+                        const selected=await dialog.showOpenDialog(window!,{title:'Choose profile image',properties:['openFile'],filters:[{name:'Images',extensions:['png','jpg','jpeg','webp']}]});if(selected.canceled||!selected.filePaths[0])return{...base,status:'canceled'};
+                        const bytes=fs.readFileSync(selected.filePaths[0]);const png=bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),jpeg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255,webp=bytes.subarray(0,4).toString('ascii')==='RIFF'&&bytes.subarray(8,12).toString('ascii')==='WEBP';if((!png&&!jpeg&&!webp)||nativeImage.createFromBuffer(bytes).isEmpty())return{...base,status:'error',code:'VALIDATION',message:'Choose a readable PNG, JPEG or WebP image. The previous image was retained.',outcome:'not-committed',retry:'new-request',issues:[]};
+                        internal={...request,nativeAsset:{id:randomUUID(),sha256:hash(bytes),mediaType:png?'image/png':jpeg?'image/jpeg':'image/webp',base64:bytes.toString('base64')}};
+                    }
+                }
+                if(request.command==='settings.import'){
+                    const selected=await dialog.showOpenDialog(window!,{title:'Import settings',properties:['openFile'],filters:[{name:'Settings',extensions:['json']}]});if(selected.canceled||!selected.filePaths[0])return{...base,status:'canceled'};internal={...request,nativeSettings:decode(fs.readFileSync(selected.filePaths[0]))};
+                }
+                if(request.command==='settings.select-backup'){
+                    const selected=await dialog.showOpenDialog(window!,{title:'Choose backup destination',properties:['openDirectory']});if(selected.canceled||!selected.filePaths[0])return{...base,status:'canceled'};internal={...request,nativeDestination:fs.realpathSync(selected.filePaths[0])};
+                }
+                let exportPath:string|undefined;
+                if(request.command==='settings.export'){
+                    const selected=await dialog.showSaveDialog(window!,{title:'Export settings',defaultPath:'WritingTool-settings.json',filters:[{name:'Settings',extensions:['json']}],properties:['showOverwriteConfirmation']});if(selected.canceled||!selected.filePath)return{...base,status:'canceled'};exportPath=selected.filePath;
+                    const parent=fs.realpathSync(path.dirname(exportPath)),target=path.join(parent,path.basename(exportPath));for(const root of [activeLocation,activeProjectLocation,app.getPath('userData')].filter((p):p is string=>!!p)){const relative=path.relative(fs.realpathSync(root),target);if(!relative||relative!=='..'&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative))throw new Error('Settings export cannot replace live application data');}
+                }
+                if(request.command==='workspace.mutate'||request.command==='workspace.asset.import'){const id=request.command==='workspace.mutate'?request.input.operationId:request.operationId;pendingWorkspace.set(id,{request:internal,projectLocation:activeProjectLocation,universeLocation:activeLocation,projectIdentity:activeProjectIdentity,universeIdentity:activeSnapshot?{id:activeSnapshot.ownerId,rootId:activeSnapshot.rootId}:undefined});unresolvedOperations.add(id);}
+                sent=true;let result=await workspaceClient!.request(internal);
+                if(result.status==='ok'&&exportPath&&result.settings){const parent=fs.realpathSync(path.dirname(exportPath)),name=path.basename(exportPath);let expected:string|null=null;try{const stat=fs.lstatSync(exportPath);if(!stat.isFile()||stat.isSymbolicLink()||stat.nlink!==1)throw new Error('Aliased export destination');expected=hash(fs.readFileSync(exportPath));}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}publishManagedBytes(parent,name,Buffer.from(JSON.stringify(result.settings,null,2)+'\n'),expected);result={...result,destination:exportPath};}
+                const id=request.command==='workspace.mutate'?request.input.operationId:request.command==='workspace.asset.import'||request.command==='workspace.reconcile'?request.operationId:undefined;
+                if(request.command==='workspace.reconcile'&&result.status==='ok'){const original=pendingWorkspace.get(request.operationId);if(original&&((original.projectIdentity&&(!result.snapshot.project||result.snapshot.project.owner.id!==original.projectIdentity.id||result.snapshot.project.rootId!==original.projectIdentity.rootId))||(original.universeIdentity&&(!result.snapshot.universe||result.snapshot.universe.owner.id!==original.universeIdentity.id||result.snapshot.universe.rootId!==original.universeIdentity.rootId))))return{...base,status:'error',code:'INTEGRITY_MISMATCH',message:'Reconciliation did not return the original owning identities. Preserve the pending operation.',outcome:'unknown',retry:'after-recovery',issues:[]};}
+                if(request.command==='workspace.reconcile'&&result.status==='ok'){const original=pendingWorkspace.get(request.operationId);if(original){activeProjectLocation=original.projectLocation;activeLocation=original.universeLocation;}}
+                if(id&&(request.command==='workspace.reconcile'?result.status==='ok':!(result.status==='error'&&result.outcome==='unknown'))){unresolvedOperations.delete(id);pendingWorkspace.delete(id);}
+                if(result.status==='ok'&&activeLocation){const current=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.current'});if(current.status==='ok'){activeSnapshot=current.snapshot;activeLocation=current.snapshot?.location;}}
+                return result;
+            }catch{return sent?workspaceUnavailable(request):{...base,status:'error',code:'IO_FAILURE',message:'The native workspace selection or file operation could not complete. Existing content was retained.',outcome:'not-committed',retry:'new-request',issues:[]};}
+            finally{workspaceInFlight=false;}
+        });
+        disposePresentation = registerPresentation(() => window, MAIN_WINDOW_WEBPACK_ENTRY, MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY);
         window = new BrowserWindow({ width: 960, height: 680, minWidth: 360, minHeight: 360, backgroundColor: '#292929', show: false, webPreferences: { preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY, sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false, additionalArguments: diagnostic ? ['--writingtool-smoke'] : [] } });
+        powerMonitor.on('resume',()=>{if(window&&!window.isDestroyed())window.webContents.send('writingtool:system-resume:v1');});
         window.webContents.on('console-message', (_event, _level, message) => {
             if (diagnostic && message === 'WRITINGTOOL_INVALID_REQUESTS true')
                 invalidRequestsRejected = true;
@@ -220,6 +341,9 @@ else
         });
         window.once('ready-to-show', () => window?.show());
         await window.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+        const fallbackRelative='protection/close-fallback.json',fallbackRoot=app.getPath('userData');
+        if(!diagnostic&&fs.existsSync(path.join(fallbackRoot,fallbackRelative))){const bytes=readManaged(fallbackRoot,fallbackRelative),notice=decode(bytes);if(closed(notice,['schemaVersion','folder','createdAt','used','actualPath'])&&notice.schemaVersion===1&&notice.used===true&&typeof notice.folder==='string'&&typeof notice.actualPath==='string'){const answer=await dialog.showMessageBox(window,{type:'info',title:'Closing backup saved in another folder',message:'Your required closing backup was saved at:\n'+notice.actualPath,detail:'Choose a new backup destination for future backups.',buttons:['Choose backup folder…','Remind me next launch'],defaultId:0,cancelId:1});if(answer.response===0){const chosen=await dialog.showOpenDialog(window,{title:'Choose future backup folder',properties:['openDirectory','createDirectory']});if(!chosen.canceled&&chosen.filePaths[0]){const saved=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'settings.select-backup',nativeDestination:fs.realpathSync(chosen.filePaths[0])});if(saved.status==='ok')removeManagedBytes(fallbackRoot,fallbackRelative,hash(bytes));}}}}
+
         if (diagnostic)
             void smoke();
     }).catch(error => {
@@ -387,7 +511,7 @@ async function smoke(): Promise<void> {
     const windowCount = BrowserWindow.getAllWindows().length;
     await window!.webContents.executeJavaScript(`window.open('https://example.invalid'); location.href='https://example.invalid';`);
     await new Promise(resolve => setTimeout(resolve, 150));
-    const security = observed.node === 'undefined' && observed.process === 'undefined' && JSON.stringify(observed.keys) === '["createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"]' && window!.webContents.getURL() === before && BrowserWindow.getAllWindows().length === windowCount;
+    const security = observed.node === 'undefined' && observed.process === 'undefined' && JSON.stringify(observed.keys) === '["createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"]' && window!.webContents.getURL() === before && BrowserWindow.getAllWindows().length === windowCount;
     const expectedCode = ({ start: 'HOST_START_FAILED', exit: 'HOST_EXITED', invalid: 'INVALID_RESPONSE', timeout: 'TIMEOUT', 'exit-after-ready': 'HOST_EXITED', 'fatal-error': 'HOST_EXITED' } as Record<string, string>)[fault ?? ''];
     const universePassed = !universeFlow || (universeFlow as {
         passed: boolean;
@@ -421,7 +545,7 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
             if (!approved)
                 return;
         }
-        if (unresolvedOperations.size) {
+        if (unresolvedOperations.size || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
             dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
             return;
         }
@@ -431,6 +555,13 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
             // failed readiness/transport client is not a shutdown acknowledgment.
             universeClient?.fail();
             universeClient = new UniverseHostClient(child);
+            projectClient?.fail();
+            projectClient = new ProjectHostClient(child);
+            const projectResult = await projectClient.request({protocolVersion:1,requestId:randomUUID(),command:'project.close'});
+            if(projectResult.status!=='ok' && !hostExited) {
+                dialog.showErrorBox('Unable to close project',projectResult.status==='error'?projectResult.message:'Shutdown was not acknowledged.');
+                return;
+            }
             const result = await universeClient.request({ protocolVersion: 1, requestId: randomUUID(), command: 'universe.close' });
             if (result.status !== 'ok' && !hostExited) {
                 dialog.showErrorBox('Unable to close universe', result.status === 'error' ? result.message : 'Shutdown was not acknowledged.');
@@ -439,6 +570,8 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
         }
         if (diagnostic)
             console.log('WRITINGTOOL_DRAIN ' + JSON.stringify({ kind, hostAlreadyExited: hostExited, unresolved: unresolvedOperations.size, drained: true }));
+        disposePresentation?.();
+        disposePresentation=undefined;
         quitPermit = kind;
         if (kind === 'window' && window && !window.isDestroyed())
             window.close();
@@ -461,6 +594,9 @@ app.on('before-quit', event => {
             shutdown = true;
             ipcMain.removeHandler(READINESS_CHANNEL);
             ipcMain.removeHandler(UNIVERSE_CHANNEL);
+            ipcMain.removeHandler(PROJECT_CHANNEL);
+            ipcMain.removeHandler(WORKSPACE_CHANNEL);
+            ipcMain.removeHandler(PROTECTION_CHANNEL);
             ipcMain.removeAllListeners('writingtool:quit-request:v1');
             client?.fail('UNAVAILABLE');
             child?.kill();

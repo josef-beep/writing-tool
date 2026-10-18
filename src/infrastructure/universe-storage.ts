@@ -1,3 +1,5 @@
+import {WorkspaceStore, type WorkspaceDecisionLedger} from './workspace-storage';
+import {validWorkspaceReceipt} from '../application/contracts/workspace';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -68,7 +70,7 @@ const requireValid = (condition: unknown, message = 'Universe integrity validati
     if (!condition)
         throw new UniverseFailure('INTEGRITY_MISMATCH', message);
 };
-function transaction(db: DatabaseSync, fn: () => void): void {
+export function transaction(db: DatabaseSync, fn: () => void): void {
     db.exec('BEGIN IMMEDIATE');
     try {
         fn();
@@ -84,12 +86,12 @@ function configure(db: DatabaseSync): void {
     db.exec('PRAGMA busy_timeout=0; PRAGMA foreign_keys=ON; PRAGMA journal_mode=DELETE; PRAGMA synchronous=EXTRA;');
     requireValid(db.prepare('PRAGMA journal_mode').get()?.journal_mode === 'delete' && db.prepare('PRAGMA synchronous').get()?.synchronous === 3 && db.prepare('PRAGMA foreign_keys').get()?.foreign_keys === 1, 'Required SQLite durability settings are unavailable.');
 }
-function supported(db: DatabaseSync): void {
-    if (db.prepare('PRAGMA user_version').get()?.user_version !== 1 || db.prepare('PRAGMA application_id').get()?.application_id !== 1465140300)
+function supported(db: DatabaseSync, applicationId = 1465140300): void {
+    if (db.prepare('PRAGMA user_version').get()?.user_version !== 1 || db.prepare('PRAGMA application_id').get()?.application_id !== applicationId)
         throw new UniverseFailure('UNSUPPORTED_VERSION', 'This universe database version is unsupported.');
     requireValid(db.prepare('PRAGMA quick_check').get()?.quick_check === 'ok', 'The universe database is corrupt.');
 }
-function connect(p: string, create = false): DatabaseSync {
+export function connect(p: string, create = false, applicationId = 1465140300): DatabaseSync {
     if (!create) {
         // Read format/version from the fixed SQLite header before a writable
         // connection can recover a hot journal. A read-only SQL probe itself
@@ -102,7 +104,7 @@ function connect(p: string, create = false): DatabaseSync {
         finally {
             fs.closeSync(fd);
         }
-        if (header.readUInt32BE(60) !== 1 || header.readUInt32BE(68) !== 1465140300 || header[18] !== 1 || header[19] !== 1)
+        if (header.readUInt32BE(60) !== 1 || header.readUInt32BE(68) !== applicationId || header[18] !== 1 || header[19] !== 1)
             throw new UniverseFailure('UNSUPPORTED_VERSION', 'This universe database format is unsupported.');
         // SQLite owns only the derived rollback sidecar. Never follow a linked
         // journal or interpret a foreign WAL as this rollback-only format.
@@ -125,7 +127,7 @@ function connect(p: string, create = false): DatabaseSync {
     try {
         configure(db);
         if (!create)
-            supported(db);
+            supported(db, applicationId);
         return db;
     }
     catch (e) {
@@ -159,7 +161,11 @@ function validRecord(v: unknown): v is RecordRow {
     return closed(v, ['id', 'rootId', 'recordType', 'relativePath', 'recordVersion', 'sha256']) && isUuid(v.id) && isUuid(v.rootId) && v.recordType === 'universe-profile' && v.relativePath === `profiles/${v.id}.json` && isUuid(v.recordVersion) && typeof v.sha256 === 'string' && /^[a-f0-9]{64}$/.test(v.sha256);
 }
 export class FileUniverseStorage implements UniverseStorage {
-    constructor(private fault?: FaultHook) {
+    constructor(private fault?: FaultHook, private coordinator?: WorkspaceDecisionLedger) {
+    }
+    identity(basePath: string): {ownerId: string; rootId: string} {
+        const d = descriptor(this.physicalPath(basePath));
+        return {ownerId: d.id, rootId: d.rootId};
     }
     physicalPath(basePath: string): string {
         const root = fs.realpathSync(basePath);
@@ -191,7 +197,7 @@ export class FileUniverseStorage implements UniverseStorage {
         const id = randomUUID(), rootId = randomUUID(), version = randomUUID(), digest = createDigest(input);
         const envelope: ProfileEnvelope = { schemaVersion: 1, recordType: 'universe-profile', id, owner: { kind: 'universe', id }, universeId: id, recordVersion: version, data };
         const d: Descriptor = { schemaVersion: 1, kind: 'universe', id, rootId, creationOperationId: input.operationId };
-        let db: DatabaseSync | undefined, lease: DatabaseSync | undefined;
+        let db: DatabaseSync | undefined, lease: DatabaseSync | undefined, store:FileUniverseStore|undefined;
         let reserved = false;
         try {
             writeExclusive(path.join(root, '.writingtool-creation.json'), jsonBytes({ schemaVersion: 1, operationId: input.operationId, ownerId: id, rootId, requestDigest: digest, profile: envelope }), () => {
@@ -228,11 +234,13 @@ export class FileUniverseStorage implements UniverseStorage {
             });
             syncDir(path.join(root, 'database'));
             this.fault?.('creation-commit');
-            const store = new FileUniverseStore(root, db, lease, d, session, this.fault);
+            store = new FileUniverseStore(root, db, lease, d, session, this.fault, this.coordinator);
             store.snapshot();
+            store.workspace.attach();
             return { store, receipt: r };
         }
         catch (e) {
+            store?.workspace.detach();
             try {
                 db?.close();
             }
@@ -250,7 +258,7 @@ export class FileUniverseStorage implements UniverseStorage {
     }
     open(basePath: string, expected?: ReconciliationExpectation): UniverseStore {
         const root = this.physicalPath(basePath);
-        let db: DatabaseSync | undefined, lease: DatabaseSync | undefined;
+        let db: DatabaseSync | undefined, lease: DatabaseSync | undefined, store:FileUniverseStore|undefined;
         try {
             const d = descriptor(root);
             if (expected)
@@ -276,10 +284,11 @@ export class FileUniverseStorage implements UniverseStorage {
             }
             requireValid(closed(lease.prepare('SELECT * FROM lease_identity').get(), ['singleton', 'schemaVersion', 'ownerId', 'rootId']) && lease.prepare('SELECT * FROM lease_identity').get()?.ownerId === d.id && lease.prepare('SELECT * FROM lease_identity').get()?.rootId === d.rootId && lease.prepare('SELECT * FROM lease_identity').get()?.schemaVersion === 1);
             db = connect(catalogPath);
-            const store = new FileUniverseStore(root, db, lease, d, undefined, this.fault);
+            store = new FileUniverseStore(root, db, lease, d, undefined, this.fault, this.coordinator);
             if (expected)
                 store.validateExpected(expected);
             store.checkBinding();
+            store.workspace.attach();
             store.recover();
             store.snapshot();
             store.rebind();
@@ -287,6 +296,7 @@ export class FileUniverseStorage implements UniverseStorage {
             return store;
         }
         catch (e) {
+            store?.workspace.detach();
             try {
                 db?.close();
             }
@@ -302,8 +312,11 @@ export class FileUniverseStorage implements UniverseStorage {
     }
 }
 class FileUniverseStore implements UniverseStore {
+    readonly workspace: WorkspaceStore;
     private failed = false;
     private released = false;
+    private databaseClosed = false;
+    private releaseStarted = false;
     private rootIdentity: {
         ino: number;
         dev: number;
@@ -313,9 +326,10 @@ class FileUniverseStore implements UniverseStore {
         ino: number;
         dev: number;
     }>;
-    constructor(readonly location: string, private db: DatabaseSync, private lease: DatabaseSync, private d: Descriptor, private session?: string, private fault?: FaultHook) {
+    constructor(readonly location: string, private db: DatabaseSync, private lease: DatabaseSync, private d: Descriptor, private session?: string, private fault?: FaultHook, coordinator?: WorkspaceDecisionLedger) {
         this.rootIdentity = fs.statSync(location);
         this.identities = ['database/catalog.sqlite', 'database/lease.sqlite'].map(relative => ({ relative, ...fs.statSync(checked(location, relative)) }));
+        this.workspace = new WorkspaceStore(location, db, () => {const m=this.meta();return {owner:{kind:'universe',id:m.ownerId},rootId:m.rootId,universeId:m.ownerId,generation:m.generation,sessionToken:m.sessionToken};}, () => this.health(), coordinator);
     }
     private meta(): Meta {
         const m = this.db.prepare('SELECT * FROM unit_meta').get() as unknown as Meta;
@@ -358,6 +372,7 @@ class FileUniverseStore implements UniverseStore {
         if (this.failed)
             throw new UniverseFailure('RECOVERY_REQUIRED', 'Reopen this universe to reconcile the interrupted operation.', 'unknown');
         this.health();
+        this.workspace.snapshot();
         const m = this.meta(), r = this.record();
         requireValid(r.id === m.ownerId && r.rootId === m.rootId);
         const bytes = readManaged(this.location, r.relativePath), p = decode(bytes);
@@ -366,8 +381,8 @@ class FileUniverseStore implements UniverseStore {
         requireValid(creation && creation.requestDigest === m.creationDigest && creation.generation === '1', 'Creation decision is missing.');
         const operations = this.db.prepare('SELECT operationId FROM committed_operations').all().map(row => this.operation(String(row.operationId))!).sort((a, b) => BigInt(a.generation) < BigInt(b.generation) ? -1 : 1);
         requireValid(operations.every((op, index) => op.generation === (BigInt(index) + 1n).toString()) && operations.at(-1)?.generation === m.generation, 'The catalog generation has no complete decision history.');
-        const latest = decode(Buffer.from(operations.at(-1)!.receiptData)) as SaveReceipt;
-        requireValid(latest.recordVersion === r.recordVersion, 'The current profile version has no matching receipt.');
+        const profileReceipts = operations.map(op => decode(Buffer.from(op.receiptData))).filter(validReceipt);
+        requireValid(profileReceipts.at(-1)?.recordVersion === r.recordVersion, 'The current profile version has no matching receipt.');
         return { ownerId: m.ownerId, rootId: m.rootId, generation: m.generation, recordVersion: r.recordVersion, profile: (p as ProfileEnvelope).data, location: this.location };
     }
     checkBinding(): void {
@@ -414,7 +429,7 @@ class FileUniverseStore implements UniverseStore {
         if (row) {
             requireValid(isUuid(row.operationId) && isGeneration(row.generation) && /^[a-f0-9]{64}$/.test(row.requestDigest));
             const r = decode(Buffer.from(row.receiptData));
-            requireValid(validReceipt(r) && r.operationId === id && r.owner.id === this.d.id && r.unitGeneration === row.generation && hash(row.receiptData) === row.resultDigest);
+            requireValid(hash(row.receiptData) === row.resultDigest && (validReceipt(r) && r.operationId === id && r.owner.id === this.d.id && r.unitGeneration === row.generation || validWorkspaceReceipt(r) && r.operationId === id && r.units.some(u => u.owner.kind === 'universe' && u.owner.id === this.d.id && u.unitGeneration === row.generation)));
         }
         return row;
     }
@@ -564,12 +579,14 @@ class FileUniverseStore implements UniverseStore {
     recover(): void {
         try {
             this.health();
+            this.workspace.recover();
             const m = this.meta();
             for (const opId of fs.readdirSync(checked(this.location, 'database/operations', true)).sort()) {
                 requireValid(isUuid(opId), 'Unknown operation workspace.');
                 const rel = `database/operations/${opId}`;
                 checked(this.location, rel, true);
                 const j = decode(readManaged(this.location, `${rel}/journal.json`));
+                if (typeof j === 'object' && j !== null && 'command' in j && j.command === 'workspace.publish') continue;
                 this.validateJournal(j, opId);
                 const journal = j as Journal;
                 const op = this.operation(opId);
@@ -665,12 +682,15 @@ class FileUniverseStore implements UniverseStore {
     close(): void {
         if (this.released)
             return;
-        if (this.failed)
-            this.recover();
-        this.snapshot();
-        this.db.close();
+        if (!this.releaseStarted) {
+            if (this.failed) this.recover();
+            this.snapshot();
+            this.releaseStarted = true;
+        }
+        if (!this.databaseClosed) { this.workspace.detach(); this.db.close(); this.databaseClosed = true; }
         if (this.lease.isTransaction)
             this.lease.exec('ROLLBACK');
         this.lease.close();
+        this.released = true;
     }
 }
