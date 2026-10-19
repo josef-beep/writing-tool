@@ -19,11 +19,12 @@
     "lint": "oxlint --deny-warnings src tests scripts",
     "lint:fix": "oxlint --fix src tests scripts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx tests/readiness.test.ts && node --import tsx tests/universe.test.ts && node tests/smoke.test.mjs",
+    "test": "node --import tsx tests/readiness.test.ts && node --import tsx tests/universe.test.ts && node --import tsx tests/project.test.ts && node --import tsx tests/workspace-coordinator.test.ts && node --import tsx tests/workspace-domain.test.ts && node --import tsx tests/recovery-activation.test.ts && node tests/smoke.test.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:packaged": "node scripts/smoke.mjs --packaged",
     "postinstall": "node node_modules/electron/install.js",
-    "setup:resources": "node scripts/setup-resources.mjs"
+    "setup:resources": "node scripts/setup-resources.mjs",
+    "build:native": "node scripts/build-native.mjs"
   },
   "devDependencies": {
     "@electron-forge/cli": "^8.0.1",
@@ -43,6 +44,7 @@
     "css-loader": "^6.11.0",
     "electron": "44.9.0",
     "fork-ts-checker-webpack-plugin": "^9.1.0",
+    "node-gyp": "12.4.0",
     "node-loader": "^2.1.0",
     "oxlint": "^1.88.0",
     "style-loader": "^3.3.4",

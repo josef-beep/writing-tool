@@ -987,6 +987,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   CATALOG_NOTICE: () => (/* binding */ CATALOG_NOTICE),
 /* harmony export */   PROTECTION_CHANNEL: () => (/* binding */ PROTECTION_CHANNEL),
 /* harmony export */   digest: () => (/* binding */ digest),
+/* harmony export */   protectionHasDurableEffects: () => (/* binding */ protectionHasDurableEffects),
+/* harmony export */   protectionOperationId: () => (/* binding */ protectionOperationId),
 /* harmony export */   validArchiveRecord: () => (/* binding */ validArchiveRecord),
 /* harmony export */   validCapturedUnit: () => (/* binding */ validCapturedUnit),
 /* harmony export */   validObjectRef: () => (/* binding */ validObjectRef),
@@ -1008,6 +1010,10 @@ __webpack_require__.r(__webpack_exports__);
 
 const PROTECTION_CHANNEL = 'writingtool:protection:v1';
 const CATALOG_NOTICE = 'Database catalog only. Writing, object files and images are not included. Use a complete ZIP backup for independent recovery.';
+/** Reconciliation retains the operation being reconciled, even if its transport attempt fails. */
+function protectionOperationId(request) { return request.command === 'protection.reconcile' ? request.operationId : request.requestId; }
+/** Read failures and cancellation signals do not create a new uncertain mutation. */
+function protectionHasDurableEffects(request) { return !['protection.history', 'protection.inspect', 'protection.pending', 'protection.recents', 'protection.open', 'protection.cancel'].includes(request.command); }
 function validProtectionRequest(v, internal = false) {
     if (typeof v !== 'object' || !v)
         return false;
@@ -1103,6 +1109,16 @@ function validProtectionRequest(v, internal = false) {
     if (keys.includes('reason') && !['Manual', 'Automatic', 'Close', 'Replaced', 'Recovered'].includes(String(x.reason)))
         return false;
     if (internal) {
+        if (Object.hasOwn(x, 'nativeActivationLocations')) {
+            if (x.command !== 'protection.reconcile' || !Array.isArray(x.nativeActivationLocations) || x.nativeActivationLocations.length > 2 || !x.nativeActivationLocations.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(p, ['owner', 'rootId', 'location', ...(Object.hasOwn(p, 'destination') ? ['destination'] : [])]) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(p.rootId) && nativePath(p.location) && (!Object.hasOwn(p, 'destination') || nativePath(p.destination))))
+                return false;
+            keys.push('nativeActivationLocations');
+        }
+        if (Object.hasOwn(x, 'nativePrepareOnly')) {
+            if (x.nativePrepareOnly !== true)
+                return false;
+            keys.push('nativePrepareOnly');
+        }
         if (Object.hasOwn(x, 'nativeDestination') && (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.nativeDestination, ['path', 'expectedHash']) || !nativePath(x.nativeDestination.path) || x.nativeDestination.expectedHash !== null && !digest(x.nativeDestination.expectedHash)))
             return false;
         if (Object.hasOwn(x, 'nativeBackupFolder') && !nativePath(x.nativeBackupFolder))
@@ -1116,20 +1132,22 @@ function validProtectionRequest(v, internal = false) {
     return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, ['protocolVersion', 'requestId', 'command', ...keys]);
 }
 function validProtectionResult(v, r) { if (typeof v !== 'object' || !v)
-    return false; const x = v, base = ['protocolVersion', 'requestId', 'command', 'status']; return x.protocolVersion === 1 && x.requestId === r.requestId && x.command === r.command && (x.status === 'ok' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'value']) && validProtectionValue(x.value) : x.status === 'canceled' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, base) : x.status === 'error' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'message', 'outcome', 'operationId']) && typeof x.message === 'string' && ['not-committed', 'unknown'].includes(String(x.outcome)) && (x.operationId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.operationId))); }
+    return false; const x = v, base = ['protocolVersion', 'requestId', 'command', 'status']; return x.protocolVersion === 1 && x.requestId === r.requestId && x.command === r.command && (x.status === 'ok' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'value']) && validProtectionValue(x.value) && (!x.value.reconciliation || r.command === 'protection.reconcile' && x.value.reconciliation.operationId === r.operationId) : x.status === 'canceled' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, base) : x.status === 'error' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'message', 'outcome', 'operationId']) && typeof x.message === 'string' && ['not-committed', 'unknown'].includes(String(x.outcome)) && (x.outcome === 'unknown' ? x.operationId === protectionOperationId(r) : x.operationId === null)); }
 const digest = (v) => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
 const nativePath = (v) => (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v) && !!v && !v.includes('\0') && (/^(?:\/|[A-Za-z]:[\\/])/.test(v));
 const uuidList = (v) => Array.isArray(v) && v.every(_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid) && new Set(v).size === v.length;
 const validObjectRef = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['sha256', 'byteLength']) && digest(v.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(v.byteLength);
 const validCapturedUnit = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['snapshot', 'files']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v.snapshot, ['owner', 'rootId', 'universeId', 'generation', 'assets', 'counters', 'recordIds']) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(Object.fromEntries([...Object.entries(v.snapshot).filter(([k]) => k !== 'recordIds'), ['records', []], ['manuscripts', {}]])) && uuidList(v.snapshot.recordIds) && Array.isArray(v.files) && v.files.every(f => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(f, ['relativePath', 'object']) && safePath(f.relativePath) && validObjectRef(f.object)) && new Set(v.files.map(f => f.relativePath.toLowerCase())).size === v.files.length;
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 const safePath = (v) => typeof v === 'string' && !!v && !v.startsWith('/') && !v.split('/').some(p => !p || p === '.' || p === '..' || /[\\\0:\x00-\x1f]/.test(p) || /[. ]$/.test(p));
-function validRevisionManifest(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'kind', 'id', 'owner', 'reason', 'capturedAt', 'completedAt', 'localCaptureStart', 'offsetMinutes', 'timeZone', 'displayName', 'universeDisplayName', 'units', 'retainedRevisionIds']) && v.schemaVersion === 1 && v.kind === 'complete-revision' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['Manual', 'Automatic', 'Close', 'Replaced', 'Recovered'].includes(String(v.reason)) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.localCaptureStart) && typeof v.offsetMinutes === 'string' && /^-?(0|[1-9][0-9]*)$/.test(v.offsetMinutes) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.timeZone) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.displayName) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.universeDisplayName) && Array.isArray(v.units) && v.units.every(validCapturedUnit) && v.units.length === (v.owner.kind === 'project' ? 2 : 1) && v.units.some(u => u.snapshot.owner.kind === v.owner.kind && u.snapshot.owner.id === v.owner.id) && new Set(v.units.map(u => u.snapshot.owner.kind + u.snapshot.owner.id)).size === v.units.length && uuidList(v.retainedRevisionIds) && (v.owner.kind === 'universe' || v.units.some(u => u.snapshot.owner.kind === 'universe' && u.snapshot.owner.id === v.units.find(p => p.snapshot.owner.kind === 'project')?.snapshot.universeId)); }
+function validRevisionManifest(v) { if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'kind', 'id', 'owner', 'reason', 'capturedAt', 'completedAt', 'localCaptureStart', 'offsetMinutes', 'timeZone', 'displayName', 'universeDisplayName', 'units', 'retainedRevisionIds']) || !Array.isArray(v.units))
+    return false; const units = v.units; return v.schemaVersion === 1 && v.kind === 'complete-revision' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['Manual', 'Automatic', 'Close', 'Replaced', 'Recovered'].includes(String(v.reason)) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.localCaptureStart) && typeof v.offsetMinutes === 'string' && /^-?(0|[1-9][0-9]*)$/.test(v.offsetMinutes) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.timeZone) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.displayName) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.universeDisplayName) && units.every(validCapturedUnit) && units.length === (v.owner.kind === 'project' ? 2 : 1) && units.some(u => u.snapshot.owner.kind === v.owner.kind && u.snapshot.owner.id === v.owner.id) && new Set(units.map(u => u.snapshot.owner.kind + u.snapshot.owner.id)).size === units.length && uuidList(v.retainedRevisionIds) && (v.owner.kind === 'universe' || units.some(u => u.snapshot.owner.kind === 'universe' && u.snapshot.owner.id === units.find(p => p.snapshot.owner.kind === 'project')?.snapshot.universeId)); }
 function validResolution(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['recordId', 'liveFingerprint', 'recoveredFingerprint', 'choice', 'record', 'manuscript']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.recordId) && (v.liveFingerprint === null || digest(v.liveFingerprint)) && digest(v.recoveredFingerprint) && ['keep-live', 'use-recovered', 'combined'].includes(String(v.choice)) && (v.choice === 'combined' ? (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(v.record) && v.record.id === v.recordId && (v.record.recordType === 'chapter' ? (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.manuscript) : v.manuscript === null) : v.record === null && v.manuscript === null); }
 function validProposal(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'revisionId', 'owner', 'status', 'scope', 'expected', 'choices', 'operationId', 'replacedRevisionId']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.revisionId) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['review', 'canceled', 'applied', 'backup-required'].includes(String(v.status)) && (v.scope === null || uuidList(v.scope)) && Array.isArray(v.expected) && v.expected.length <= 2 && v.expected.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['owner', 'generation']) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(e.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.generation)) && Array.isArray(v.choices) && v.choices.every(validResolution) && new Set(v.choices.map(c => c.recordId)).size === v.choices.length && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.operationId) && (v.replacedRevisionId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.replacedRevisionId)); }
 function validRecoveryView(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['proposal', 'conflicts', 'issues', 'missing']) && validProposal(v.proposal) && Array.isArray(v.conflicts) && v.conflicts.every(c => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(c, ['id', 'live', 'recovered', 'liveText', 'recoveredText', 'resolved', 'liveFingerprint', 'recoveredFingerprint']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(c.id) && (c.live === null || (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.live) && c.live.id === c.id) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.recovered) && c.recovered.id === c.id && (c.liveText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.liveText)) && (c.recoveredText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.recoveredText)) && typeof c.resolved === 'boolean' && (c.liveFingerprint === null || digest(c.liveFingerprint)) && digest(c.recoveredFingerprint)) && Array.isArray(v.issues) && v.issues.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText) && Array.isArray(v.missing) && v.missing.every(m => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(m, ['sourceId', 'targetId', 'label', 'canRemove']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.sourceId) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.targetId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(m.label) && typeof m.canRemove === 'boolean'); }
 function validProtectionValue(v) { if (typeof v !== 'object' || !v || Array.isArray(v))
-    return false; const x = v, keys = ['assets', 'archives', 'recents', 'pending', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
-    return false; return (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
+    return false; const x = v, keys = ['reconciliation', 'warnings', 'assets', 'archives', 'recents', 'pending', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
+    return false; return (!Object.hasOwn(x, 'reconciliation') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.reconciliation, ['operationId', 'outcome']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.reconciliation.operationId) && x.reconciliation.outcome === 'not-committed') && (!Object.hasOwn(x, 'warnings') || Array.isArray(x.warnings) && x.warnings.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)) && (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
 function validArchiveRecord(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'owner', 'sha256', 'capturedAt', 'completedAt', 'locations', 'evidence', 'revisionIds', 'state']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && digest(v.sha256) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && Array.isArray(v.locations) && v.locations.every(nativePath) && Array.isArray(v.evidence) && v.evidence.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['path', 'device', 'inode']) && nativePath(e.path) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.device) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.inode)) && uuidList(v.revisionIds) && ['valid', 'uncertain'].includes(String(v.state)); }
 
 
@@ -1554,7 +1572,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../application/contracts/presentation */ "./src/application/contracts/presentation.ts");
 /* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
 /* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
-/* harmony import */ var _security__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./security */ "./src/desktop/security.ts");
+/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
+/* harmony import */ var _domain_calendar__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../domain/calendar */ "./src/domain/calendar.ts");
+/* harmony import */ var _security__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./security */ "./src/desktop/security.ts");
+
+
 
 
 
@@ -1564,18 +1586,20 @@ __webpack_require__.r(__webpack_exports__);
 const EVENT = 'writingtool:presentation-event:v1';
 /** Floating windows receive read-only projections; only the primary controller can publish. */
 function registerPresentation(owner, entry, preload) {
-    const windows = new Map();
-    let mirror = null, fonts = null, syncing = false;
+    const windows = new Map(), appliedBounds = new Map();
+    let mirror = null, fonts = null, syncing = false, disposed = false, syncTail = Promise.resolve();
     const childId = (event) => { for (const [id, w] of windows)
-        if (!w.isDestroyed() && event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_5__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, `${entry}#floating-${id}`))
+        if (!w.isDestroyed() && event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_7__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, `${entry}#floating-${id}`))
             return id; return null; };
-    const primary = (event) => { const w = owner(); return !!w && !w.isDestroyed() && !!event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_5__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, entry); };
+    const primary = (event) => { const w = owner(); return !!w && !w.isDestroyed() && !!event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_7__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, entry); };
     const send = (event) => { const w = owner(); if (w && !w.isDestroyed())
         w.webContents.send(EVENT, event); };
-    function validAction(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'id']) && v.kind === 'select' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.id) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'recordType']) && v.kind === 'create' && ['story', 'volume', 'chapter', 'event', 'character', 'faction', 'decision', 'plot'].includes(String(v.recordType)) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind']) && v.kind === 'tree'; }
+    function validAction(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'id']) && v.kind === 'select' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.id) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'recordType']) && v.kind === 'create' && ['story', 'volume', 'chapter', 'event', 'character', 'faction', 'decision', 'plot'].includes(String(v.recordType)) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'date']) && v.kind === 'create-event' && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_6__.validDatePosition)(v.date) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'value']) && v.kind === 'filters' && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.validWorkspaceData)('view', v.value) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind']) && v.kind === 'tree'; }
     const monitors = () => electron__WEBPACK_IMPORTED_MODULE_0__.screen.getAllDisplays().map(d => ({ id: String(d.id), ...d.workArea }));
     function validMirror(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['snapshot', 'settings', 'universeName', 'storyId', 'chapterId', 'blocked']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v.snapshot, ['project', 'universe']) && (v.snapshot.project === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(v.snapshot.project)) && (v.snapshot.universe === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(v.snapshot.universe)) && (v.settings === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validAppSettings)(v.settings)) && typeof v.universeName === 'string' && (v.storyId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.storyId)) && (v.chapterId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.chapterId)) && typeof v.blocked === 'boolean'; }
     electron__WEBPACK_IMPORTED_MODULE_0__.ipcMain.handle(_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.PRESENTATION_CHANNEL, async (event, value) => {
+        if (disposed)
+            return { status: 'error', message: 'The writing workspace is closing.' };
         const main = primary(event), id = childId(event);
         if (!main && !id)
             throw new Error('Presentation request denied');
@@ -1591,16 +1615,29 @@ function registerPresentation(owner, entry, preload) {
                 return { status: 'error', message: 'Finish the active operation in the main window.' };
             if (value.action.kind === 'select' && ![...(mirror.snapshot.project?.records ?? []), ...(mirror.snapshot.universe?.records ?? [])].some(r => r.id === value.action.id))
                 return { status: 'error', message: 'This record is no longer active.' };
+            if (value.action.kind === 'create-event') {
+                const calendar = mirror.snapshot.universe?.records.find(r => r.recordType === 'calendar');
+                try {
+                    if (!calendar || calendar.recordType !== 'calendar')
+                        throw new Error('Calendar unavailable.');
+                    (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_6__.elapsedPosition)(value.action.date, calendar.data);
+                }
+                catch {
+                    return { status: 'error', message: 'This date is no longer available in the active universe calendar.' };
+                }
+            }
             send({ kind: 'action', action: value.action });
             owner()?.focus();
             return result();
         }
         if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(value, ['command', 'layouts', 'mirror']) && value.command === 'panel.sync' && main && validMirror(value.mirror) && Array.isArray(value.layouts) && value.mirror.settings && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validAppSettings)({ ...value.mirror.settings, panels: value.layouts })) {
-            mirror = value.mirror;
-            syncing = true;
-            try {
+            const projection = value.mirror, layouts = value.layouts;
+            const synchronize = async () => { if (disposed)
+                return { status: 'error', message: 'The writing workspace is closing.' }; mirror = projection; syncing = true; try {
                 for (const panelId of _application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.PANEL_IDS) {
-                    const layout = value.layouts.find(p => p.id === panelId), existing = windows.get(panelId);
+                    if (disposed)
+                        return { status: 'error', message: 'The writing workspace is closing.' };
+                    const layout = layouts.find(p => p.id === panelId), existing = windows.get(panelId);
                     if (!layout || !layout.visible || layout.placement !== 'floating') {
                         if (existing && !existing.isDestroyed())
                             existing.hide();
@@ -1643,6 +1680,15 @@ function registerPresentation(owner, entry, preload) {
                         child.on('closed', () => { clearTimeout(timer); windows.delete(panelId); });
                         await child.loadURL(`${entry}#floating-${panelId}`);
                     }
+                    if (disposed || child.isDestroyed())
+                        return { status: 'error', message: 'The writing workspace is closing.' };
+                    const previousBounds = appliedBounds.get(panelId), currentBounds = child.getBounds(), targetBounds = { x: rect.x, y: rect.y, width: Math.max(240, rect.width), height: Math.max(240, rect.height) };
+                    if (existing && previousBounds && Object.entries(targetBounds).some(([key, value]) => previousBounds[key] !== value) && Object.entries(targetBounds).some(([key, value]) => currentBounds[key] !== value)) {
+                        const visible = monitors().some(m => targetBounds.x < m.x + m.width && targetBounds.x + targetBounds.width > m.x && targetBounds.y < m.y + m.height && targetBounds.y + targetBounds.height > m.y);
+                        if (visible)
+                            child.setBounds(targetBounds);
+                    }
+                    appliedBounds.set(panelId, targetBounds);
                     child.webContents.send(EVENT, { kind: 'mirror', mirror });
                     if (!child.isVisible())
                         child.showInactive();
@@ -1651,7 +1697,10 @@ function registerPresentation(owner, entry, preload) {
             }
             finally {
                 syncing = false;
-            }
+            } };
+            const response = syncTail.then(synchronize, synchronize);
+            syncTail = response.then(() => undefined, () => undefined);
+            return response;
         }
         return { status: 'error', message: 'Invalid presentation command.' };
     });
@@ -1665,9 +1714,13 @@ function registerPresentation(owner, entry, preload) {
         }
     } };
     electron__WEBPACK_IMPORTED_MODULE_0__.screen.on('display-removed', displayRemoved);
-    return () => { electron__WEBPACK_IMPORTED_MODULE_0__.screen.removeListener('display-removed', displayRemoved); electron__WEBPACK_IMPORTED_MODULE_0__.ipcMain.removeHandler(_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.PRESENTATION_CHANNEL); for (const child of windows.values())
+    return () => { if (disposed)
+        return; disposed = true; electron__WEBPACK_IMPORTED_MODULE_0__.screen.removeListener('display-removed', displayRemoved); for (const child of windows.values())
         if (!child.isDestroyed())
-            child.destroy(); windows.clear(); mirror = null; };
+            child.destroy(); windows.clear(); appliedBounds.clear(); mirror = null; const primaryWindow = owner(); if (primaryWindow && !primaryWindow.isDestroyed())
+        primaryWindow.once('closed', () => electron__WEBPACK_IMPORTED_MODULE_0__.ipcMain.removeHandler(_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.PRESENTATION_CHANNEL));
+    else
+        electron__WEBPACK_IMPORTED_MODULE_0__.ipcMain.removeHandler(_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.PRESENTATION_CHANNEL); };
 }
 function installedFonts() { const command = process.platform === 'win32' ? 'powershell.exe' : process.platform === 'darwin' ? '/usr/sbin/system_profiler' : 'fc-list'; const args = process.platform === 'win32' ? ['-NoProfile', '-NonInteractive', '-Command', "(Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts').PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' } | ForEach-Object { $_.Name -replace ' \\(.*$','' }"] : process.platform === 'darwin' ? ['SPFontsDataType', '-json'] : ['--format', '%{family}\n']; return new Promise(resolve => (0,node_child_process__WEBPACK_IMPORTED_MODULE_1__.execFile)(command, args, { timeout: 15000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, output) => { if (error) {
     resolve([]);
@@ -1776,7 +1829,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
 
-const protectionUnavailable = (r) => ({ protocolVersion: 1, requestId: r.requestId, command: r.command, status: 'error', message: 'The protection outcome is unconfirmed. Retain this operation and reconcile before closing.', outcome: 'unknown', operationId: r.requestId });
+const protectionUnavailable = (r) => ({ protocolVersion: 1, requestId: r.requestId, command: r.command, status: 'error', message: (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_0__.protectionHasDurableEffects)(r) ? 'The protection outcome is unconfirmed. Retain this operation and reconcile before closing.' : 'The protection service did not answer. Retry the read or reopen the saved owning roots.', outcome: (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_0__.protectionHasDurableEffects)(r) ? 'unknown' : 'not-committed', operationId: (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_0__.protectionHasDurableEffects)(r) ? (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_0__.protectionOperationId)(r) : null });
 class ProtectionHostClient {
     host;
     pending = new Map();
@@ -1823,7 +1876,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var electron__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(electron__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../infrastructure/recent-roots */ "./src/infrastructure/recent-roots.ts");
 /* harmony import */ var _domain_capture_time__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../domain/capture-time */ "./src/domain/capture-time.ts");
-/* harmony import */ var _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../infrastructure/universe-files */ "./src/infrastructure/universe-files.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../infrastructure/recovery-activation */ "./src/infrastructure/recovery-activation.ts");
+/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
+/* harmony import */ var _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../infrastructure/universe-files */ "./src/infrastructure/universe-files.ts");
+
+
+
 
 
 
@@ -1833,19 +1892,31 @@ __webpack_require__.r(__webpack_exports__);
 function nativeProtection(deps) {
     const recents = new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_3__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData'));
     const outputs = new Map();
+    const verifyOutput = (operationId, output) => {
+        const job = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData'), `protection/jobs/${operationId}.json`));
+        if (!job || typeof job !== 'object' || !('state' in job) || job.state !== 'complete' || !('destination' in job) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_5__.closed)(job.destination, ['path', 'expectedHash']) || job.destination.path !== output.path || !('digest' in job) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_7__.digest)(job.digest))
+            throw new Error('The completed output has no matching durable publication proof. Reconcile the original operation.');
+        const observed = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.hashFile)(output.path);
+        if (observed !== job.digest)
+            throw new Error('The completed output changed before acknowledgement. Preserve it and reconcile the original operation.');
+        return observed;
+    };
+    const inside = (file, root) => { const relative = node_path__WEBPACK_IMPORTED_MODULE_1___default().relative(root, file); return !relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_1___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(relative); };
+    function checkBackupFolder(folder, roots) { if (roots.some(root => inside(folder, root)))
+        throw new Error('Choose a backup folder outside active writing roots.'); return folder; }
     async function chooseFile(title, extension, suggested, roots) { for (;;) {
         const result = await electron__WEBPACK_IMPORTED_MODULE_2__.dialog.showSaveDialog(deps.window(), { title, defaultPath: suggested, filters: [{ name: extension.toUpperCase(), extensions: [extension] }], properties: ['showOverwriteConfirmation', 'createDirectory'] });
         if (result.canceled || !result.filePath)
             return null;
         const file = node_path__WEBPACK_IMPORTED_MODULE_1___default().resolve(result.filePath.toLowerCase().endsWith('.' + extension) ? result.filePath : result.filePath + '.' + extension), parent = node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(file)), resolved = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(parent, node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(file));
-        if (roots.some(root => resolved === root || resolved.startsWith(root + (node_path__WEBPACK_IMPORTED_MODULE_1___default().sep))))
+        if (roots.some(root => inside(resolved, root)))
             throw new Error('Choose an output outside all active writing roots.');
         let expectedHash = null;
         try {
             const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().lstatSync(resolved);
             if (!stat.isFile() || stat.nlink !== 1 || stat.isSymbolicLink())
                 throw new Error('Choose a regular unaliased output.');
-            expectedHash = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.readManaged)(parent, node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(file)));
+            expectedHash = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.hashFile)(resolved);
         }
         catch (e) {
             if (e.code !== 'ENOENT')
@@ -1862,13 +1933,13 @@ function nativeProtection(deps) {
         return node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(selected.filePaths[0]); if (!closing)
         return null; for (const root of [node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('exe')), electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData')]) {
         try {
-            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.ensureManagedDirectory)(root, 'Backups');
+            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.ensureManagedDirectory)(root, 'Backups');
             folder = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, 'Backups');
-            const notice = Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.jsonBytes)({ schemaVersion: 1, folder, createdAt: new Date().toISOString(), used: false, actualPath: null }));
+            const notice = Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.jsonBytes)({ schemaVersion: 1, folder, createdAt: new Date().toISOString(), used: false, actualPath: null }));
             const userData = electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData'), relative = 'protection/close-fallback.json';
-            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.ensureManagedDirectory)(userData, 'protection');
-            const old = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(userData, relative)) ? (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.readManaged)(userData, relative)) : null;
-            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.publishManagedBytes)(userData, relative, notice, old);
+            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.ensureManagedDirectory)(userData, 'protection');
+            const old = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(userData, relative)) ? (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(userData, relative)) : null;
+            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.publishManagedBytes)(userData, relative, notice, old);
             return folder;
         }
         catch { }
@@ -1898,12 +1969,18 @@ function nativeProtection(deps) {
                 if (!recents.available(candidate))
                     throw new Error('Locate the matching permanent root identity or recover a complete ZIP.');
                 const activated = await deps.openRoot(recent.owner, location);
-                recents.remember(recent.owner, recent.rootId, recent.name, location);
-                return { ...base, status: 'ok', value: { activated } };
+                const warnings = [];
+                try {
+                    recents.remember(recent.owner, recent.rootId, recent.name, location);
+                }
+                catch {
+                    warnings.push('The owning roots opened, but the recent-root list could not be updated.');
+                }
+                return { ...base, status: 'ok', value: { activated, warnings } };
             }
             if (request.command === 'protection.open') {
                 const output = outputs.get(request.outputId);
-                if (!output || (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.readManaged)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(output.path), node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(output.path))) !== output.hash)
+                if (!output || (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.hashFile)(output.path) !== output.hash)
                     throw new Error('This completed output is unavailable or changed.');
                 if (request.folder)
                     electron__WEBPACK_IMPORTED_MODULE_2__.shell.showItemInFolder(output.path);
@@ -1914,13 +1991,66 @@ function nativeProtection(deps) {
                 }
                 return { ...base, status: 'ok', value: {} };
             }
+            const original = request.command === 'protection.reconcile' ? deps.originalRequest(request.operationId) : request;
             let host = { ...request };
             const roots = deps.roots().map(root => node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(root));
+            if (request.command === 'protection.reconcile' && original?.command === 'protection.apply') {
+                const relative = (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__.activationPath)(request.operationId), userData = electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData');
+                if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(userData, relative))) {
+                    const decision = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(userData, relative));
+                    if (!(0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__.validActivationDecision)(decision) || decision.requestId !== request.operationId || decision.proposalId !== original.proposalId)
+                        throw new Error('The original activation evidence is invalid.');
+                    const locations = [];
+                    for (const participant of decision.participants) {
+                        const staged = (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__.activationRootAt)(participant.stage, participant), published = (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__.activationRootAt)(participant.destination, participant);
+                        if (staged && published)
+                            throw new Error('Both recovery locations contain the original identity. Preserve both roots before reconciliation.');
+                        if (published)
+                            continue;
+                        if (staged && (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__.activationDestinationAvailable)(participant.destination, staged))
+                            continue;
+                        let location = staged;
+                        if (!location) {
+                            const selected = await electron__WEBPACK_IMPORTED_MODULE_2__.dialog.showOpenDialog(deps.window(), { title: `Locate the original recovered ${participant.owner.kind} (${participant.owner.id})`, properties: ['openDirectory'] });
+                            if (selected.canceled || !selected.filePaths[0])
+                                return { ...base, status: 'canceled' };
+                            location = (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__.activationRootAt)(node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(selected.filePaths[0]), participant);
+                            if (!location)
+                                throw new Error('Locate the matching permanent recovery root identity.');
+                        }
+                        let destination;
+                        if (staged || decision.state === 'await-coordinator') {
+                            const selectedDestination = await electron__WEBPACK_IMPORTED_MODULE_2__.dialog.showOpenDialog(deps.window(), { title: `Choose an empty folder for publishing the recovered ${participant.owner.kind}`, defaultPath: node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(location), properties: ['openDirectory', 'createDirectory'] });
+                            if (selectedDestination.canceled || !selectedDestination.filePaths[0])
+                                return { ...base, status: 'canceled' };
+                            destination = node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(selectedDestination.filePaths[0]);
+                            if (!(0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_6__.activationDestinationAvailable)(destination, location))
+                                throw new Error('Choose an empty publication folder on the same filesystem as the staged recovery root.');
+                        }
+                        locations.push({ owner: participant.owner, rootId: participant.rootId, location, ...(destination ? { destination } : {}) });
+                    }
+                    const universe = deps.originalUniverse(request.operationId);
+                    if (universe && !decision.participants.some(p => p.owner.kind === 'universe'))
+                        locations.push(universe);
+                    if (locations.length)
+                        host = { ...host, nativeActivationLocations: locations };
+                }
+            }
             if (request.command === 'protection.reconcile' && request.chooseLocation) {
-                const folder = await backupFolder(false, true);
-                if (!folder)
-                    return { ...base, status: 'canceled' };
-                host = { ...host, nativeBackupFolder: folder };
+                if (original?.command === 'protection.export') {
+                    const destination = await chooseFile('Retry saved ' + (original.format === 'sqlite' ? 'catalog' : 'manuscript') + ' export', original.format, `${(0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_4__.safeDisplayName)(await deps.sourceName(original))}.${original.format}`, [...roots, electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData')]);
+                    if (!destination)
+                        return { ...base, status: 'canceled' };
+                    host = { ...host, nativeDestination: destination, nativeRuntime: runtimePath() };
+                }
+                else {
+                    if (original?.command !== 'protection.backup' && original?.command !== 'protection.apply')
+                        throw new Error('Only an original backup, recovery or export operation can choose another output location.');
+                    const folder = await backupFolder(original.command === 'protection.backup' && original.closing, true);
+                    if (!folder)
+                        return { ...base, status: 'canceled' };
+                    host = { ...host, nativeBackupFolder: checkBackupFolder(folder, roots) };
+                }
             }
             if (request.command === 'protection.export') {
                 const destination = await chooseFile('Export saved ' + (request.format === 'sqlite' ? 'catalog' : 'manuscript'), request.format, `${(0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_4__.safeDisplayName)(await deps.sourceName(request))}${request.format === 'sqlite' ? '_catalog' : request.chapterIds !== null ? '_selected_chapters' : ''}.${request.format}`, [...roots, electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData')]);
@@ -1932,9 +2062,7 @@ function nativeProtection(deps) {
                 const folder = await backupFolder(request.closing, request.chooseLocation);
                 if (!folder)
                     return { ...base, status: 'canceled' };
-                if (roots.some(root => folder === root || folder.startsWith(root + (node_path__WEBPACK_IMPORTED_MODULE_1___default().sep))))
-                    throw new Error('Choose a backup folder outside active writing roots.');
-                host = { ...host, nativeBackupFolder: folder };
+                host = { ...host, nativeBackupFolder: checkBackupFolder(folder, roots) };
             }
             if (request.command === 'protection.archive-locate' || request.command === 'protection.recover' && !request.revisionId) {
                 const selected = await electron__WEBPACK_IMPORTED_MODULE_2__.dialog.showOpenDialog(deps.window(), { title: 'Recover independent complete ZIP', properties: ['openFile'], filters: [{ name: 'Complete WritingTool backup', extensions: ['zip'] }] });
@@ -1943,42 +2071,50 @@ function nativeProtection(deps) {
                 host = { ...host, nativeArchive: node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(selected.filePaths[0]) };
             }
             if (request.command === 'protection.apply') {
-                if (!roots.some(root => node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, 'projects')))) {
+                const proposal = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData'), `protection/proposals/${request.proposalId}.json`));
+                if (!(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_7__.validProposal)(proposal) || proposal.id !== request.proposalId)
+                    throw new Error('The recovery proposal is unavailable or invalid.');
+                if (!deps.activeOwners().some(owner => owner.kind === proposal.owner.kind && owner.id === proposal.owner.id)) {
                     const chosen = await electron__WEBPACK_IMPORTED_MODULE_2__.dialog.showOpenDialog(deps.window(), { title: 'Choose an empty folder for recovered owning roots', properties: ['openDirectory', 'createDirectory'] });
                     if (chosen.canceled || !chosen.filePaths[0])
                         return { ...base, status: 'canceled' };
                     const root = node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(chosen.filePaths[0]);
+                    if (roots.some(live => inside(root, live) || inside(live, root)))
+                        throw new Error('Choose a recovery folder separate from the active writing roots.');
                     if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(root).length)
                         throw new Error('Choose an empty recovery folder.');
                     host = { ...host, nativeActivation: { project: node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, 'Project'), universe: node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, 'Universe') } };
                     const folder = await backupFolder(false, false);
                     if (!folder)
                         return { ...base, status: 'canceled' };
-                    host = { ...host, nativeBackupFolder: folder };
+                    host = { ...host, nativeBackupFolder: checkBackupFolder(folder, roots) };
                 }
                 else {
                     const folder = await backupFolder(false, false);
                     if (!folder)
                         return { ...base, status: 'canceled' };
-                    host = { ...host, nativeBackupFolder: folder };
+                    host = { ...host, nativeBackupFolder: checkBackupFolder(folder, roots) };
                 }
             }
             sent = true;
             const result = await deps.send(host);
-            if (result.status === 'ok' && result.value.output && request.command === 'protection.backup' && request.closing) {
+            const outputDigest = result.status === 'ok' && result.value.output ? verifyOutput((0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_7__.protectionOperationId)(request), result.value.output) : undefined;
+            if (result.status === 'ok' && result.value.output && original?.command === 'protection.backup' && original.closing) {
                 const root = electron__WEBPACK_IMPORTED_MODULE_2__.app.getPath('userData'), relative = 'protection/close-fallback.json';
                 if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative))) {
-                    const bytes = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.readManaged)(root, relative), notice = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.decode)(bytes);
-                    if (notice.folder === node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(result.value.output.path))
-                        (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.publishManagedBytes)(root, relative, Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.jsonBytes)({ schemaVersion: 1, folder: notice.folder, createdAt: new Date().toISOString(), used: true, actualPath: result.value.output.path })), (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.hash)(bytes));
+                    const bytes = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(root, relative), notice = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)(bytes);
+                    if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_5__.closed)(notice, ['schemaVersion', 'folder', 'createdAt', 'used', 'actualPath']) || notice.schemaVersion !== 1 || typeof notice.folder !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(notice.folder) || typeof notice.createdAt !== 'string' || !Number.isFinite(Date.parse(notice.createdAt)) || typeof notice.used !== 'boolean' || notice.actualPath !== null && typeof notice.actualPath !== 'string')
+                        throw new Error('Closing backup location evidence is invalid. Reconcile before closing.');
+                    if (node_path__WEBPACK_IMPORTED_MODULE_1___default().relative(notice.folder, node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(result.value.output.path)) === '')
+                        (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.publishManagedBytes)(root, relative, Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.jsonBytes)({ schemaVersion: 1, folder: notice.folder, createdAt: new Date().toISOString(), used: true, actualPath: result.value.output.path })), (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_8__.hash)(bytes));
                 }
             }
             if (result.status === 'ok' && result.value.output)
-                outputs.set(result.value.output.id, { path: result.value.output.path, hash: (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_5__.readManaged)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(result.value.output.path), node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(result.value.output.path))) });
+                outputs.set(result.value.output.id, { path: result.value.output.path, hash: outputDigest });
             return result;
         }
         catch (e) {
-            return { ...base, status: 'error', message: e instanceof Error ? e.message : 'Native protection selection failed.', outcome: sent ? 'unknown' : 'not-committed', operationId: sent ? request.requestId : null };
+            return { ...base, status: 'error', message: e instanceof Error ? e.message : 'Native protection selection failed.', outcome: sent ? 'unknown' : 'not-committed', operationId: sent ? (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_7__.protectionOperationId)(request) : null };
         }
     };
 }
@@ -2310,6 +2446,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   safeDisplayName: () => (/* binding */ safeDisplayName)
 /* harmony export */ });
 function captureTime(date = new Date()) { const two = (n) => String(n).padStart(2, '0'); return { utc: date.toISOString(), local: `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}_${two(date.getHours())}-${two(date.getMinutes())}-${two(date.getSeconds())}`, offsetMinutes: String(-date.getTimezoneOffset()), zone: Intl.DateTimeFormat().resolvedOptions().timeZone }; }
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 function safeDisplayName(name) { const value = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/g, '').trim(); return value && !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value) ? value : 'WritingTool'; }
 
 
@@ -2332,6 +2469,7 @@ __webpack_require__.r(__webpack_exports__);
 // Unicode License V3: resources/licenses/Unicode-LICENSE.txt
 // Full default case folding, Unicode 17.0.0 CaseFolding.txt (C/F; Turkic excluded).
 const FOLD = { "A": "a", "B": "b", "C": "c", "D": "d", "E": "e", "F": "f", "G": "g", "H": "h", "I": "i", "J": "j", "K": "k", "L": "l", "M": "m", "N": "n", "O": "o", "P": "p", "Q": "q", "R": "r", "S": "s", "T": "t", "U": "u", "V": "v", "W": "w", "X": "x", "Y": "y", "Z": "z", "\u00b5": "\u03bc", "\u00c0": "\u00e0", "\u00c1": "\u00e1", "\u00c2": "\u00e2", "\u00c3": "\u00e3", "\u00c4": "\u00e4", "\u00c5": "\u00e5", "\u00c6": "\u00e6", "\u00c7": "\u00e7", "\u00c8": "\u00e8", "\u00c9": "\u00e9", "\u00ca": "\u00ea", "\u00cb": "\u00eb", "\u00cc": "\u00ec", "\u00cd": "\u00ed", "\u00ce": "\u00ee", "\u00cf": "\u00ef", "\u00d0": "\u00f0", "\u00d1": "\u00f1", "\u00d2": "\u00f2", "\u00d3": "\u00f3", "\u00d4": "\u00f4", "\u00d5": "\u00f5", "\u00d6": "\u00f6", "\u00d8": "\u00f8", "\u00d9": "\u00f9", "\u00da": "\u00fa", "\u00db": "\u00fb", "\u00dc": "\u00fc", "\u00dd": "\u00fd", "\u00de": "\u00fe", "\u00df": "ss", "\u0100": "\u0101", "\u0102": "\u0103", "\u0104": "\u0105", "\u0106": "\u0107", "\u0108": "\u0109", "\u010a": "\u010b", "\u010c": "\u010d", "\u010e": "\u010f", "\u0110": "\u0111", "\u0112": "\u0113", "\u0114": "\u0115", "\u0116": "\u0117", "\u0118": "\u0119", "\u011a": "\u011b", "\u011c": "\u011d", "\u011e": "\u011f", "\u0120": "\u0121", "\u0122": "\u0123", "\u0124": "\u0125", "\u0126": "\u0127", "\u0128": "\u0129", "\u012a": "\u012b", "\u012c": "\u012d", "\u012e": "\u012f", "\u0130": "i\u0307", "\u0132": "\u0133", "\u0134": "\u0135", "\u0136": "\u0137", "\u0139": "\u013a", "\u013b": "\u013c", "\u013d": "\u013e", "\u013f": "\u0140", "\u0141": "\u0142", "\u0143": "\u0144", "\u0145": "\u0146", "\u0147": "\u0148", "\u0149": "\u02bcn", "\u014a": "\u014b", "\u014c": "\u014d", "\u014e": "\u014f", "\u0150": "\u0151", "\u0152": "\u0153", "\u0154": "\u0155", "\u0156": "\u0157", "\u0158": "\u0159", "\u015a": "\u015b", "\u015c": "\u015d", "\u015e": "\u015f", "\u0160": "\u0161", "\u0162": "\u0163", "\u0164": "\u0165", "\u0166": "\u0167", "\u0168": "\u0169", "\u016a": "\u016b", "\u016c": "\u016d", "\u016e": "\u016f", "\u0170": "\u0171", "\u0172": "\u0173", "\u0174": "\u0175", "\u0176": "\u0177", "\u0178": "\u00ff", "\u0179": "\u017a", "\u017b": "\u017c", "\u017d": "\u017e", "\u017f": "s", "\u0181": "\u0253", "\u0182": "\u0183", "\u0184": "\u0185", "\u0186": "\u0254", "\u0187": "\u0188", "\u0189": "\u0256", "\u018a": "\u0257", "\u018b": "\u018c", "\u018e": "\u01dd", "\u018f": "\u0259", "\u0190": "\u025b", "\u0191": "\u0192", "\u0193": "\u0260", "\u0194": "\u0263", "\u0196": "\u0269", "\u0197": "\u0268", "\u0198": "\u0199", "\u019c": "\u026f", "\u019d": "\u0272", "\u019f": "\u0275", "\u01a0": "\u01a1", "\u01a2": "\u01a3", "\u01a4": "\u01a5", "\u01a6": "\u0280", "\u01a7": "\u01a8", "\u01a9": "\u0283", "\u01ac": "\u01ad", "\u01ae": "\u0288", "\u01af": "\u01b0", "\u01b1": "\u028a", "\u01b2": "\u028b", "\u01b3": "\u01b4", "\u01b5": "\u01b6", "\u01b7": "\u0292", "\u01b8": "\u01b9", "\u01bc": "\u01bd", "\u01c4": "\u01c6", "\u01c5": "\u01c6", "\u01c7": "\u01c9", "\u01c8": "\u01c9", "\u01ca": "\u01cc", "\u01cb": "\u01cc", "\u01cd": "\u01ce", "\u01cf": "\u01d0", "\u01d1": "\u01d2", "\u01d3": "\u01d4", "\u01d5": "\u01d6", "\u01d7": "\u01d8", "\u01d9": "\u01da", "\u01db": "\u01dc", "\u01de": "\u01df", "\u01e0": "\u01e1", "\u01e2": "\u01e3", "\u01e4": "\u01e5", "\u01e6": "\u01e7", "\u01e8": "\u01e9", "\u01ea": "\u01eb", "\u01ec": "\u01ed", "\u01ee": "\u01ef", "\u01f0": "j\u030c", "\u01f1": "\u01f3", "\u01f2": "\u01f3", "\u01f4": "\u01f5", "\u01f6": "\u0195", "\u01f7": "\u01bf", "\u01f8": "\u01f9", "\u01fa": "\u01fb", "\u01fc": "\u01fd", "\u01fe": "\u01ff", "\u0200": "\u0201", "\u0202": "\u0203", "\u0204": "\u0205", "\u0206": "\u0207", "\u0208": "\u0209", "\u020a": "\u020b", "\u020c": "\u020d", "\u020e": "\u020f", "\u0210": "\u0211", "\u0212": "\u0213", "\u0214": "\u0215", "\u0216": "\u0217", "\u0218": "\u0219", "\u021a": "\u021b", "\u021c": "\u021d", "\u021e": "\u021f", "\u0220": "\u019e", "\u0222": "\u0223", "\u0224": "\u0225", "\u0226": "\u0227", "\u0228": "\u0229", "\u022a": "\u022b", "\u022c": "\u022d", "\u022e": "\u022f", "\u0230": "\u0231", "\u0232": "\u0233", "\u023a": "\u2c65", "\u023b": "\u023c", "\u023d": "\u019a", "\u023e": "\u2c66", "\u0241": "\u0242", "\u0243": "\u0180", "\u0244": "\u0289", "\u0245": "\u028c", "\u0246": "\u0247", "\u0248": "\u0249", "\u024a": "\u024b", "\u024c": "\u024d", "\u024e": "\u024f", "\u0345": "\u03b9", "\u0370": "\u0371", "\u0372": "\u0373", "\u0376": "\u0377", "\u037f": "\u03f3", "\u0386": "\u03ac", "\u0388": "\u03ad", "\u0389": "\u03ae", "\u038a": "\u03af", "\u038c": "\u03cc", "\u038e": "\u03cd", "\u038f": "\u03ce", "\u0390": "\u03b9\u0308\u0301", "\u0391": "\u03b1", "\u0392": "\u03b2", "\u0393": "\u03b3", "\u0394": "\u03b4", "\u0395": "\u03b5", "\u0396": "\u03b6", "\u0397": "\u03b7", "\u0398": "\u03b8", "\u0399": "\u03b9", "\u039a": "\u03ba", "\u039b": "\u03bb", "\u039c": "\u03bc", "\u039d": "\u03bd", "\u039e": "\u03be", "\u039f": "\u03bf", "\u03a0": "\u03c0", "\u03a1": "\u03c1", "\u03a3": "\u03c3", "\u03a4": "\u03c4", "\u03a5": "\u03c5", "\u03a6": "\u03c6", "\u03a7": "\u03c7", "\u03a8": "\u03c8", "\u03a9": "\u03c9", "\u03aa": "\u03ca", "\u03ab": "\u03cb", "\u03b0": "\u03c5\u0308\u0301", "\u03c2": "\u03c3", "\u03cf": "\u03d7", "\u03d0": "\u03b2", "\u03d1": "\u03b8", "\u03d5": "\u03c6", "\u03d6": "\u03c0", "\u03d8": "\u03d9", "\u03da": "\u03db", "\u03dc": "\u03dd", "\u03de": "\u03df", "\u03e0": "\u03e1", "\u03e2": "\u03e3", "\u03e4": "\u03e5", "\u03e6": "\u03e7", "\u03e8": "\u03e9", "\u03ea": "\u03eb", "\u03ec": "\u03ed", "\u03ee": "\u03ef", "\u03f0": "\u03ba", "\u03f1": "\u03c1", "\u03f4": "\u03b8", "\u03f5": "\u03b5", "\u03f7": "\u03f8", "\u03f9": "\u03f2", "\u03fa": "\u03fb", "\u03fd": "\u037b", "\u03fe": "\u037c", "\u03ff": "\u037d", "\u0400": "\u0450", "\u0401": "\u0451", "\u0402": "\u0452", "\u0403": "\u0453", "\u0404": "\u0454", "\u0405": "\u0455", "\u0406": "\u0456", "\u0407": "\u0457", "\u0408": "\u0458", "\u0409": "\u0459", "\u040a": "\u045a", "\u040b": "\u045b", "\u040c": "\u045c", "\u040d": "\u045d", "\u040e": "\u045e", "\u040f": "\u045f", "\u0410": "\u0430", "\u0411": "\u0431", "\u0412": "\u0432", "\u0413": "\u0433", "\u0414": "\u0434", "\u0415": "\u0435", "\u0416": "\u0436", "\u0417": "\u0437", "\u0418": "\u0438", "\u0419": "\u0439", "\u041a": "\u043a", "\u041b": "\u043b", "\u041c": "\u043c", "\u041d": "\u043d", "\u041e": "\u043e", "\u041f": "\u043f", "\u0420": "\u0440", "\u0421": "\u0441", "\u0422": "\u0442", "\u0423": "\u0443", "\u0424": "\u0444", "\u0425": "\u0445", "\u0426": "\u0446", "\u0427": "\u0447", "\u0428": "\u0448", "\u0429": "\u0449", "\u042a": "\u044a", "\u042b": "\u044b", "\u042c": "\u044c", "\u042d": "\u044d", "\u042e": "\u044e", "\u042f": "\u044f", "\u0460": "\u0461", "\u0462": "\u0463", "\u0464": "\u0465", "\u0466": "\u0467", "\u0468": "\u0469", "\u046a": "\u046b", "\u046c": "\u046d", "\u046e": "\u046f", "\u0470": "\u0471", "\u0472": "\u0473", "\u0474": "\u0475", "\u0476": "\u0477", "\u0478": "\u0479", "\u047a": "\u047b", "\u047c": "\u047d", "\u047e": "\u047f", "\u0480": "\u0481", "\u048a": "\u048b", "\u048c": "\u048d", "\u048e": "\u048f", "\u0490": "\u0491", "\u0492": "\u0493", "\u0494": "\u0495", "\u0496": "\u0497", "\u0498": "\u0499", "\u049a": "\u049b", "\u049c": "\u049d", "\u049e": "\u049f", "\u04a0": "\u04a1", "\u04a2": "\u04a3", "\u04a4": "\u04a5", "\u04a6": "\u04a7", "\u04a8": "\u04a9", "\u04aa": "\u04ab", "\u04ac": "\u04ad", "\u04ae": "\u04af", "\u04b0": "\u04b1", "\u04b2": "\u04b3", "\u04b4": "\u04b5", "\u04b6": "\u04b7", "\u04b8": "\u04b9", "\u04ba": "\u04bb", "\u04bc": "\u04bd", "\u04be": "\u04bf", "\u04c0": "\u04cf", "\u04c1": "\u04c2", "\u04c3": "\u04c4", "\u04c5": "\u04c6", "\u04c7": "\u04c8", "\u04c9": "\u04ca", "\u04cb": "\u04cc", "\u04cd": "\u04ce", "\u04d0": "\u04d1", "\u04d2": "\u04d3", "\u04d4": "\u04d5", "\u04d6": "\u04d7", "\u04d8": "\u04d9", "\u04da": "\u04db", "\u04dc": "\u04dd", "\u04de": "\u04df", "\u04e0": "\u04e1", "\u04e2": "\u04e3", "\u04e4": "\u04e5", "\u04e6": "\u04e7", "\u04e8": "\u04e9", "\u04ea": "\u04eb", "\u04ec": "\u04ed", "\u04ee": "\u04ef", "\u04f0": "\u04f1", "\u04f2": "\u04f3", "\u04f4": "\u04f5", "\u04f6": "\u04f7", "\u04f8": "\u04f9", "\u04fa": "\u04fb", "\u04fc": "\u04fd", "\u04fe": "\u04ff", "\u0500": "\u0501", "\u0502": "\u0503", "\u0504": "\u0505", "\u0506": "\u0507", "\u0508": "\u0509", "\u050a": "\u050b", "\u050c": "\u050d", "\u050e": "\u050f", "\u0510": "\u0511", "\u0512": "\u0513", "\u0514": "\u0515", "\u0516": "\u0517", "\u0518": "\u0519", "\u051a": "\u051b", "\u051c": "\u051d", "\u051e": "\u051f", "\u0520": "\u0521", "\u0522": "\u0523", "\u0524": "\u0525", "\u0526": "\u0527", "\u0528": "\u0529", "\u052a": "\u052b", "\u052c": "\u052d", "\u052e": "\u052f", "\u0531": "\u0561", "\u0532": "\u0562", "\u0533": "\u0563", "\u0534": "\u0564", "\u0535": "\u0565", "\u0536": "\u0566", "\u0537": "\u0567", "\u0538": "\u0568", "\u0539": "\u0569", "\u053a": "\u056a", "\u053b": "\u056b", "\u053c": "\u056c", "\u053d": "\u056d", "\u053e": "\u056e", "\u053f": "\u056f", "\u0540": "\u0570", "\u0541": "\u0571", "\u0542": "\u0572", "\u0543": "\u0573", "\u0544": "\u0574", "\u0545": "\u0575", "\u0546": "\u0576", "\u0547": "\u0577", "\u0548": "\u0578", "\u0549": "\u0579", "\u054a": "\u057a", "\u054b": "\u057b", "\u054c": "\u057c", "\u054d": "\u057d", "\u054e": "\u057e", "\u054f": "\u057f", "\u0550": "\u0580", "\u0551": "\u0581", "\u0552": "\u0582", "\u0553": "\u0583", "\u0554": "\u0584", "\u0555": "\u0585", "\u0556": "\u0586", "\u0587": "\u0565\u0582", "\u10a0": "\u2d00", "\u10a1": "\u2d01", "\u10a2": "\u2d02", "\u10a3": "\u2d03", "\u10a4": "\u2d04", "\u10a5": "\u2d05", "\u10a6": "\u2d06", "\u10a7": "\u2d07", "\u10a8": "\u2d08", "\u10a9": "\u2d09", "\u10aa": "\u2d0a", "\u10ab": "\u2d0b", "\u10ac": "\u2d0c", "\u10ad": "\u2d0d", "\u10ae": "\u2d0e", "\u10af": "\u2d0f", "\u10b0": "\u2d10", "\u10b1": "\u2d11", "\u10b2": "\u2d12", "\u10b3": "\u2d13", "\u10b4": "\u2d14", "\u10b5": "\u2d15", "\u10b6": "\u2d16", "\u10b7": "\u2d17", "\u10b8": "\u2d18", "\u10b9": "\u2d19", "\u10ba": "\u2d1a", "\u10bb": "\u2d1b", "\u10bc": "\u2d1c", "\u10bd": "\u2d1d", "\u10be": "\u2d1e", "\u10bf": "\u2d1f", "\u10c0": "\u2d20", "\u10c1": "\u2d21", "\u10c2": "\u2d22", "\u10c3": "\u2d23", "\u10c4": "\u2d24", "\u10c5": "\u2d25", "\u10c7": "\u2d27", "\u10cd": "\u2d2d", "\u13f8": "\u13f0", "\u13f9": "\u13f1", "\u13fa": "\u13f2", "\u13fb": "\u13f3", "\u13fc": "\u13f4", "\u13fd": "\u13f5", "\u1c80": "\u0432", "\u1c81": "\u0434", "\u1c82": "\u043e", "\u1c83": "\u0441", "\u1c84": "\u0442", "\u1c85": "\u0442", "\u1c86": "\u044a", "\u1c87": "\u0463", "\u1c88": "\ua64b", "\u1c89": "\u1c8a", "\u1c90": "\u10d0", "\u1c91": "\u10d1", "\u1c92": "\u10d2", "\u1c93": "\u10d3", "\u1c94": "\u10d4", "\u1c95": "\u10d5", "\u1c96": "\u10d6", "\u1c97": "\u10d7", "\u1c98": "\u10d8", "\u1c99": "\u10d9", "\u1c9a": "\u10da", "\u1c9b": "\u10db", "\u1c9c": "\u10dc", "\u1c9d": "\u10dd", "\u1c9e": "\u10de", "\u1c9f": "\u10df", "\u1ca0": "\u10e0", "\u1ca1": "\u10e1", "\u1ca2": "\u10e2", "\u1ca3": "\u10e3", "\u1ca4": "\u10e4", "\u1ca5": "\u10e5", "\u1ca6": "\u10e6", "\u1ca7": "\u10e7", "\u1ca8": "\u10e8", "\u1ca9": "\u10e9", "\u1caa": "\u10ea", "\u1cab": "\u10eb", "\u1cac": "\u10ec", "\u1cad": "\u10ed", "\u1cae": "\u10ee", "\u1caf": "\u10ef", "\u1cb0": "\u10f0", "\u1cb1": "\u10f1", "\u1cb2": "\u10f2", "\u1cb3": "\u10f3", "\u1cb4": "\u10f4", "\u1cb5": "\u10f5", "\u1cb6": "\u10f6", "\u1cb7": "\u10f7", "\u1cb8": "\u10f8", "\u1cb9": "\u10f9", "\u1cba": "\u10fa", "\u1cbd": "\u10fd", "\u1cbe": "\u10fe", "\u1cbf": "\u10ff", "\u1e00": "\u1e01", "\u1e02": "\u1e03", "\u1e04": "\u1e05", "\u1e06": "\u1e07", "\u1e08": "\u1e09", "\u1e0a": "\u1e0b", "\u1e0c": "\u1e0d", "\u1e0e": "\u1e0f", "\u1e10": "\u1e11", "\u1e12": "\u1e13", "\u1e14": "\u1e15", "\u1e16": "\u1e17", "\u1e18": "\u1e19", "\u1e1a": "\u1e1b", "\u1e1c": "\u1e1d", "\u1e1e": "\u1e1f", "\u1e20": "\u1e21", "\u1e22": "\u1e23", "\u1e24": "\u1e25", "\u1e26": "\u1e27", "\u1e28": "\u1e29", "\u1e2a": "\u1e2b", "\u1e2c": "\u1e2d", "\u1e2e": "\u1e2f", "\u1e30": "\u1e31", "\u1e32": "\u1e33", "\u1e34": "\u1e35", "\u1e36": "\u1e37", "\u1e38": "\u1e39", "\u1e3a": "\u1e3b", "\u1e3c": "\u1e3d", "\u1e3e": "\u1e3f", "\u1e40": "\u1e41", "\u1e42": "\u1e43", "\u1e44": "\u1e45", "\u1e46": "\u1e47", "\u1e48": "\u1e49", "\u1e4a": "\u1e4b", "\u1e4c": "\u1e4d", "\u1e4e": "\u1e4f", "\u1e50": "\u1e51", "\u1e52": "\u1e53", "\u1e54": "\u1e55", "\u1e56": "\u1e57", "\u1e58": "\u1e59", "\u1e5a": "\u1e5b", "\u1e5c": "\u1e5d", "\u1e5e": "\u1e5f", "\u1e60": "\u1e61", "\u1e62": "\u1e63", "\u1e64": "\u1e65", "\u1e66": "\u1e67", "\u1e68": "\u1e69", "\u1e6a": "\u1e6b", "\u1e6c": "\u1e6d", "\u1e6e": "\u1e6f", "\u1e70": "\u1e71", "\u1e72": "\u1e73", "\u1e74": "\u1e75", "\u1e76": "\u1e77", "\u1e78": "\u1e79", "\u1e7a": "\u1e7b", "\u1e7c": "\u1e7d", "\u1e7e": "\u1e7f", "\u1e80": "\u1e81", "\u1e82": "\u1e83", "\u1e84": "\u1e85", "\u1e86": "\u1e87", "\u1e88": "\u1e89", "\u1e8a": "\u1e8b", "\u1e8c": "\u1e8d", "\u1e8e": "\u1e8f", "\u1e90": "\u1e91", "\u1e92": "\u1e93", "\u1e94": "\u1e95", "\u1e96": "h\u0331", "\u1e97": "t\u0308", "\u1e98": "w\u030a", "\u1e99": "y\u030a", "\u1e9a": "a\u02be", "\u1e9b": "\u1e61", "\u1e9e": "ss", "\u1ea0": "\u1ea1", "\u1ea2": "\u1ea3", "\u1ea4": "\u1ea5", "\u1ea6": "\u1ea7", "\u1ea8": "\u1ea9", "\u1eaa": "\u1eab", "\u1eac": "\u1ead", "\u1eae": "\u1eaf", "\u1eb0": "\u1eb1", "\u1eb2": "\u1eb3", "\u1eb4": "\u1eb5", "\u1eb6": "\u1eb7", "\u1eb8": "\u1eb9", "\u1eba": "\u1ebb", "\u1ebc": "\u1ebd", "\u1ebe": "\u1ebf", "\u1ec0": "\u1ec1", "\u1ec2": "\u1ec3", "\u1ec4": "\u1ec5", "\u1ec6": "\u1ec7", "\u1ec8": "\u1ec9", "\u1eca": "\u1ecb", "\u1ecc": "\u1ecd", "\u1ece": "\u1ecf", "\u1ed0": "\u1ed1", "\u1ed2": "\u1ed3", "\u1ed4": "\u1ed5", "\u1ed6": "\u1ed7", "\u1ed8": "\u1ed9", "\u1eda": "\u1edb", "\u1edc": "\u1edd", "\u1ede": "\u1edf", "\u1ee0": "\u1ee1", "\u1ee2": "\u1ee3", "\u1ee4": "\u1ee5", "\u1ee6": "\u1ee7", "\u1ee8": "\u1ee9", "\u1eea": "\u1eeb", "\u1eec": "\u1eed", "\u1eee": "\u1eef", "\u1ef0": "\u1ef1", "\u1ef2": "\u1ef3", "\u1ef4": "\u1ef5", "\u1ef6": "\u1ef7", "\u1ef8": "\u1ef9", "\u1efa": "\u1efb", "\u1efc": "\u1efd", "\u1efe": "\u1eff", "\u1f08": "\u1f00", "\u1f09": "\u1f01", "\u1f0a": "\u1f02", "\u1f0b": "\u1f03", "\u1f0c": "\u1f04", "\u1f0d": "\u1f05", "\u1f0e": "\u1f06", "\u1f0f": "\u1f07", "\u1f18": "\u1f10", "\u1f19": "\u1f11", "\u1f1a": "\u1f12", "\u1f1b": "\u1f13", "\u1f1c": "\u1f14", "\u1f1d": "\u1f15", "\u1f28": "\u1f20", "\u1f29": "\u1f21", "\u1f2a": "\u1f22", "\u1f2b": "\u1f23", "\u1f2c": "\u1f24", "\u1f2d": "\u1f25", "\u1f2e": "\u1f26", "\u1f2f": "\u1f27", "\u1f38": "\u1f30", "\u1f39": "\u1f31", "\u1f3a": "\u1f32", "\u1f3b": "\u1f33", "\u1f3c": "\u1f34", "\u1f3d": "\u1f35", "\u1f3e": "\u1f36", "\u1f3f": "\u1f37", "\u1f48": "\u1f40", "\u1f49": "\u1f41", "\u1f4a": "\u1f42", "\u1f4b": "\u1f43", "\u1f4c": "\u1f44", "\u1f4d": "\u1f45", "\u1f50": "\u03c5\u0313", "\u1f52": "\u03c5\u0313\u0300", "\u1f54": "\u03c5\u0313\u0301", "\u1f56": "\u03c5\u0313\u0342", "\u1f59": "\u1f51", "\u1f5b": "\u1f53", "\u1f5d": "\u1f55", "\u1f5f": "\u1f57", "\u1f68": "\u1f60", "\u1f69": "\u1f61", "\u1f6a": "\u1f62", "\u1f6b": "\u1f63", "\u1f6c": "\u1f64", "\u1f6d": "\u1f65", "\u1f6e": "\u1f66", "\u1f6f": "\u1f67", "\u1f80": "\u1f00\u03b9", "\u1f81": "\u1f01\u03b9", "\u1f82": "\u1f02\u03b9", "\u1f83": "\u1f03\u03b9", "\u1f84": "\u1f04\u03b9", "\u1f85": "\u1f05\u03b9", "\u1f86": "\u1f06\u03b9", "\u1f87": "\u1f07\u03b9", "\u1f88": "\u1f00\u03b9", "\u1f89": "\u1f01\u03b9", "\u1f8a": "\u1f02\u03b9", "\u1f8b": "\u1f03\u03b9", "\u1f8c": "\u1f04\u03b9", "\u1f8d": "\u1f05\u03b9", "\u1f8e": "\u1f06\u03b9", "\u1f8f": "\u1f07\u03b9", "\u1f90": "\u1f20\u03b9", "\u1f91": "\u1f21\u03b9", "\u1f92": "\u1f22\u03b9", "\u1f93": "\u1f23\u03b9", "\u1f94": "\u1f24\u03b9", "\u1f95": "\u1f25\u03b9", "\u1f96": "\u1f26\u03b9", "\u1f97": "\u1f27\u03b9", "\u1f98": "\u1f20\u03b9", "\u1f99": "\u1f21\u03b9", "\u1f9a": "\u1f22\u03b9", "\u1f9b": "\u1f23\u03b9", "\u1f9c": "\u1f24\u03b9", "\u1f9d": "\u1f25\u03b9", "\u1f9e": "\u1f26\u03b9", "\u1f9f": "\u1f27\u03b9", "\u1fa0": "\u1f60\u03b9", "\u1fa1": "\u1f61\u03b9", "\u1fa2": "\u1f62\u03b9", "\u1fa3": "\u1f63\u03b9", "\u1fa4": "\u1f64\u03b9", "\u1fa5": "\u1f65\u03b9", "\u1fa6": "\u1f66\u03b9", "\u1fa7": "\u1f67\u03b9", "\u1fa8": "\u1f60\u03b9", "\u1fa9": "\u1f61\u03b9", "\u1faa": "\u1f62\u03b9", "\u1fab": "\u1f63\u03b9", "\u1fac": "\u1f64\u03b9", "\u1fad": "\u1f65\u03b9", "\u1fae": "\u1f66\u03b9", "\u1faf": "\u1f67\u03b9", "\u1fb2": "\u1f70\u03b9", "\u1fb3": "\u03b1\u03b9", "\u1fb4": "\u03ac\u03b9", "\u1fb6": "\u03b1\u0342", "\u1fb7": "\u03b1\u0342\u03b9", "\u1fb8": "\u1fb0", "\u1fb9": "\u1fb1", "\u1fba": "\u1f70", "\u1fbb": "\u1f71", "\u1fbc": "\u03b1\u03b9", "\u1fbe": "\u03b9", "\u1fc2": "\u1f74\u03b9", "\u1fc3": "\u03b7\u03b9", "\u1fc4": "\u03ae\u03b9", "\u1fc6": "\u03b7\u0342", "\u1fc7": "\u03b7\u0342\u03b9", "\u1fc8": "\u1f72", "\u1fc9": "\u1f73", "\u1fca": "\u1f74", "\u1fcb": "\u1f75", "\u1fcc": "\u03b7\u03b9", "\u1fd2": "\u03b9\u0308\u0300", "\u1fd3": "\u03b9\u0308\u0301", "\u1fd6": "\u03b9\u0342", "\u1fd7": "\u03b9\u0308\u0342", "\u1fd8": "\u1fd0", "\u1fd9": "\u1fd1", "\u1fda": "\u1f76", "\u1fdb": "\u1f77", "\u1fe2": "\u03c5\u0308\u0300", "\u1fe3": "\u03c5\u0308\u0301", "\u1fe4": "\u03c1\u0313", "\u1fe6": "\u03c5\u0342", "\u1fe7": "\u03c5\u0308\u0342", "\u1fe8": "\u1fe0", "\u1fe9": "\u1fe1", "\u1fea": "\u1f7a", "\u1feb": "\u1f7b", "\u1fec": "\u1fe5", "\u1ff2": "\u1f7c\u03b9", "\u1ff3": "\u03c9\u03b9", "\u1ff4": "\u03ce\u03b9", "\u1ff6": "\u03c9\u0342", "\u1ff7": "\u03c9\u0342\u03b9", "\u1ff8": "\u1f78", "\u1ff9": "\u1f79", "\u1ffa": "\u1f7c", "\u1ffb": "\u1f7d", "\u1ffc": "\u03c9\u03b9", "\u2126": "\u03c9", "\u212a": "k", "\u212b": "\u00e5", "\u2132": "\u214e", "\u2160": "\u2170", "\u2161": "\u2171", "\u2162": "\u2172", "\u2163": "\u2173", "\u2164": "\u2174", "\u2165": "\u2175", "\u2166": "\u2176", "\u2167": "\u2177", "\u2168": "\u2178", "\u2169": "\u2179", "\u216a": "\u217a", "\u216b": "\u217b", "\u216c": "\u217c", "\u216d": "\u217d", "\u216e": "\u217e", "\u216f": "\u217f", "\u2183": "\u2184", "\u24b6": "\u24d0", "\u24b7": "\u24d1", "\u24b8": "\u24d2", "\u24b9": "\u24d3", "\u24ba": "\u24d4", "\u24bb": "\u24d5", "\u24bc": "\u24d6", "\u24bd": "\u24d7", "\u24be": "\u24d8", "\u24bf": "\u24d9", "\u24c0": "\u24da", "\u24c1": "\u24db", "\u24c2": "\u24dc", "\u24c3": "\u24dd", "\u24c4": "\u24de", "\u24c5": "\u24df", "\u24c6": "\u24e0", "\u24c7": "\u24e1", "\u24c8": "\u24e2", "\u24c9": "\u24e3", "\u24ca": "\u24e4", "\u24cb": "\u24e5", "\u24cc": "\u24e6", "\u24cd": "\u24e7", "\u24ce": "\u24e8", "\u24cf": "\u24e9", "\u2c00": "\u2c30", "\u2c01": "\u2c31", "\u2c02": "\u2c32", "\u2c03": "\u2c33", "\u2c04": "\u2c34", "\u2c05": "\u2c35", "\u2c06": "\u2c36", "\u2c07": "\u2c37", "\u2c08": "\u2c38", "\u2c09": "\u2c39", "\u2c0a": "\u2c3a", "\u2c0b": "\u2c3b", "\u2c0c": "\u2c3c", "\u2c0d": "\u2c3d", "\u2c0e": "\u2c3e", "\u2c0f": "\u2c3f", "\u2c10": "\u2c40", "\u2c11": "\u2c41", "\u2c12": "\u2c42", "\u2c13": "\u2c43", "\u2c14": "\u2c44", "\u2c15": "\u2c45", "\u2c16": "\u2c46", "\u2c17": "\u2c47", "\u2c18": "\u2c48", "\u2c19": "\u2c49", "\u2c1a": "\u2c4a", "\u2c1b": "\u2c4b", "\u2c1c": "\u2c4c", "\u2c1d": "\u2c4d", "\u2c1e": "\u2c4e", "\u2c1f": "\u2c4f", "\u2c20": "\u2c50", "\u2c21": "\u2c51", "\u2c22": "\u2c52", "\u2c23": "\u2c53", "\u2c24": "\u2c54", "\u2c25": "\u2c55", "\u2c26": "\u2c56", "\u2c27": "\u2c57", "\u2c28": "\u2c58", "\u2c29": "\u2c59", "\u2c2a": "\u2c5a", "\u2c2b": "\u2c5b", "\u2c2c": "\u2c5c", "\u2c2d": "\u2c5d", "\u2c2e": "\u2c5e", "\u2c2f": "\u2c5f", "\u2c60": "\u2c61", "\u2c62": "\u026b", "\u2c63": "\u1d7d", "\u2c64": "\u027d", "\u2c67": "\u2c68", "\u2c69": "\u2c6a", "\u2c6b": "\u2c6c", "\u2c6d": "\u0251", "\u2c6e": "\u0271", "\u2c6f": "\u0250", "\u2c70": "\u0252", "\u2c72": "\u2c73", "\u2c75": "\u2c76", "\u2c7e": "\u023f", "\u2c7f": "\u0240", "\u2c80": "\u2c81", "\u2c82": "\u2c83", "\u2c84": "\u2c85", "\u2c86": "\u2c87", "\u2c88": "\u2c89", "\u2c8a": "\u2c8b", "\u2c8c": "\u2c8d", "\u2c8e": "\u2c8f", "\u2c90": "\u2c91", "\u2c92": "\u2c93", "\u2c94": "\u2c95", "\u2c96": "\u2c97", "\u2c98": "\u2c99", "\u2c9a": "\u2c9b", "\u2c9c": "\u2c9d", "\u2c9e": "\u2c9f", "\u2ca0": "\u2ca1", "\u2ca2": "\u2ca3", "\u2ca4": "\u2ca5", "\u2ca6": "\u2ca7", "\u2ca8": "\u2ca9", "\u2caa": "\u2cab", "\u2cac": "\u2cad", "\u2cae": "\u2caf", "\u2cb0": "\u2cb1", "\u2cb2": "\u2cb3", "\u2cb4": "\u2cb5", "\u2cb6": "\u2cb7", "\u2cb8": "\u2cb9", "\u2cba": "\u2cbb", "\u2cbc": "\u2cbd", "\u2cbe": "\u2cbf", "\u2cc0": "\u2cc1", "\u2cc2": "\u2cc3", "\u2cc4": "\u2cc5", "\u2cc6": "\u2cc7", "\u2cc8": "\u2cc9", "\u2cca": "\u2ccb", "\u2ccc": "\u2ccd", "\u2cce": "\u2ccf", "\u2cd0": "\u2cd1", "\u2cd2": "\u2cd3", "\u2cd4": "\u2cd5", "\u2cd6": "\u2cd7", "\u2cd8": "\u2cd9", "\u2cda": "\u2cdb", "\u2cdc": "\u2cdd", "\u2cde": "\u2cdf", "\u2ce0": "\u2ce1", "\u2ce2": "\u2ce3", "\u2ceb": "\u2cec", "\u2ced": "\u2cee", "\u2cf2": "\u2cf3", "\ua640": "\ua641", "\ua642": "\ua643", "\ua644": "\ua645", "\ua646": "\ua647", "\ua648": "\ua649", "\ua64a": "\ua64b", "\ua64c": "\ua64d", "\ua64e": "\ua64f", "\ua650": "\ua651", "\ua652": "\ua653", "\ua654": "\ua655", "\ua656": "\ua657", "\ua658": "\ua659", "\ua65a": "\ua65b", "\ua65c": "\ua65d", "\ua65e": "\ua65f", "\ua660": "\ua661", "\ua662": "\ua663", "\ua664": "\ua665", "\ua666": "\ua667", "\ua668": "\ua669", "\ua66a": "\ua66b", "\ua66c": "\ua66d", "\ua680": "\ua681", "\ua682": "\ua683", "\ua684": "\ua685", "\ua686": "\ua687", "\ua688": "\ua689", "\ua68a": "\ua68b", "\ua68c": "\ua68d", "\ua68e": "\ua68f", "\ua690": "\ua691", "\ua692": "\ua693", "\ua694": "\ua695", "\ua696": "\ua697", "\ua698": "\ua699", "\ua69a": "\ua69b", "\ua722": "\ua723", "\ua724": "\ua725", "\ua726": "\ua727", "\ua728": "\ua729", "\ua72a": "\ua72b", "\ua72c": "\ua72d", "\ua72e": "\ua72f", "\ua732": "\ua733", "\ua734": "\ua735", "\ua736": "\ua737", "\ua738": "\ua739", "\ua73a": "\ua73b", "\ua73c": "\ua73d", "\ua73e": "\ua73f", "\ua740": "\ua741", "\ua742": "\ua743", "\ua744": "\ua745", "\ua746": "\ua747", "\ua748": "\ua749", "\ua74a": "\ua74b", "\ua74c": "\ua74d", "\ua74e": "\ua74f", "\ua750": "\ua751", "\ua752": "\ua753", "\ua754": "\ua755", "\ua756": "\ua757", "\ua758": "\ua759", "\ua75a": "\ua75b", "\ua75c": "\ua75d", "\ua75e": "\ua75f", "\ua760": "\ua761", "\ua762": "\ua763", "\ua764": "\ua765", "\ua766": "\ua767", "\ua768": "\ua769", "\ua76a": "\ua76b", "\ua76c": "\ua76d", "\ua76e": "\ua76f", "\ua779": "\ua77a", "\ua77b": "\ua77c", "\ua77d": "\u1d79", "\ua77e": "\ua77f", "\ua780": "\ua781", "\ua782": "\ua783", "\ua784": "\ua785", "\ua786": "\ua787", "\ua78b": "\ua78c", "\ua78d": "\u0265", "\ua790": "\ua791", "\ua792": "\ua793", "\ua796": "\ua797", "\ua798": "\ua799", "\ua79a": "\ua79b", "\ua79c": "\ua79d", "\ua79e": "\ua79f", "\ua7a0": "\ua7a1", "\ua7a2": "\ua7a3", "\ua7a4": "\ua7a5", "\ua7a6": "\ua7a7", "\ua7a8": "\ua7a9", "\ua7aa": "\u0266", "\ua7ab": "\u025c", "\ua7ac": "\u0261", "\ua7ad": "\u026c", "\ua7ae": "\u026a", "\ua7b0": "\u029e", "\ua7b1": "\u0287", "\ua7b2": "\u029d", "\ua7b3": "\uab53", "\ua7b4": "\ua7b5", "\ua7b6": "\ua7b7", "\ua7b8": "\ua7b9", "\ua7ba": "\ua7bb", "\ua7bc": "\ua7bd", "\ua7be": "\ua7bf", "\ua7c0": "\ua7c1", "\ua7c2": "\ua7c3", "\ua7c4": "\ua794", "\ua7c5": "\u0282", "\ua7c6": "\u1d8e", "\ua7c7": "\ua7c8", "\ua7c9": "\ua7ca", "\ua7cb": "\u0264", "\ua7cc": "\ua7cd", "\ua7ce": "\ua7cf", "\ua7d0": "\ua7d1", "\ua7d2": "\ua7d3", "\ua7d4": "\ua7d5", "\ua7d6": "\ua7d7", "\ua7d8": "\ua7d9", "\ua7da": "\ua7db", "\ua7dc": "\u019b", "\ua7f5": "\ua7f6", "\uab70": "\u13a0", "\uab71": "\u13a1", "\uab72": "\u13a2", "\uab73": "\u13a3", "\uab74": "\u13a4", "\uab75": "\u13a5", "\uab76": "\u13a6", "\uab77": "\u13a7", "\uab78": "\u13a8", "\uab79": "\u13a9", "\uab7a": "\u13aa", "\uab7b": "\u13ab", "\uab7c": "\u13ac", "\uab7d": "\u13ad", "\uab7e": "\u13ae", "\uab7f": "\u13af", "\uab80": "\u13b0", "\uab81": "\u13b1", "\uab82": "\u13b2", "\uab83": "\u13b3", "\uab84": "\u13b4", "\uab85": "\u13b5", "\uab86": "\u13b6", "\uab87": "\u13b7", "\uab88": "\u13b8", "\uab89": "\u13b9", "\uab8a": "\u13ba", "\uab8b": "\u13bb", "\uab8c": "\u13bc", "\uab8d": "\u13bd", "\uab8e": "\u13be", "\uab8f": "\u13bf", "\uab90": "\u13c0", "\uab91": "\u13c1", "\uab92": "\u13c2", "\uab93": "\u13c3", "\uab94": "\u13c4", "\uab95": "\u13c5", "\uab96": "\u13c6", "\uab97": "\u13c7", "\uab98": "\u13c8", "\uab99": "\u13c9", "\uab9a": "\u13ca", "\uab9b": "\u13cb", "\uab9c": "\u13cc", "\uab9d": "\u13cd", "\uab9e": "\u13ce", "\uab9f": "\u13cf", "\uaba0": "\u13d0", "\uaba1": "\u13d1", "\uaba2": "\u13d2", "\uaba3": "\u13d3", "\uaba4": "\u13d4", "\uaba5": "\u13d5", "\uaba6": "\u13d6", "\uaba7": "\u13d7", "\uaba8": "\u13d8", "\uaba9": "\u13d9", "\uabaa": "\u13da", "\uabab": "\u13db", "\uabac": "\u13dc", "\uabad": "\u13dd", "\uabae": "\u13de", "\uabaf": "\u13df", "\uabb0": "\u13e0", "\uabb1": "\u13e1", "\uabb2": "\u13e2", "\uabb3": "\u13e3", "\uabb4": "\u13e4", "\uabb5": "\u13e5", "\uabb6": "\u13e6", "\uabb7": "\u13e7", "\uabb8": "\u13e8", "\uabb9": "\u13e9", "\uabba": "\u13ea", "\uabbb": "\u13eb", "\uabbc": "\u13ec", "\uabbd": "\u13ed", "\uabbe": "\u13ee", "\uabbf": "\u13ef", "\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl", "\ufb03": "ffi", "\ufb04": "ffl", "\ufb05": "st", "\ufb06": "st", "\ufb13": "\u0574\u0576", "\ufb14": "\u0574\u0565", "\ufb15": "\u0574\u056b", "\ufb16": "\u057e\u0576", "\ufb17": "\u0574\u056d", "\uff21": "\uff41", "\uff22": "\uff42", "\uff23": "\uff43", "\uff24": "\uff44", "\uff25": "\uff45", "\uff26": "\uff46", "\uff27": "\uff47", "\uff28": "\uff48", "\uff29": "\uff49", "\uff2a": "\uff4a", "\uff2b": "\uff4b", "\uff2c": "\uff4c", "\uff2d": "\uff4d", "\uff2e": "\uff4e", "\uff2f": "\uff4f", "\uff30": "\uff50", "\uff31": "\uff51", "\uff32": "\uff52", "\uff33": "\uff53", "\uff34": "\uff54", "\uff35": "\uff55", "\uff36": "\uff56", "\uff37": "\uff57", "\uff38": "\uff58", "\uff39": "\uff59", "\uff3a": "\uff5a", "\ud801\udc00": "\ud801\udc28", "\ud801\udc01": "\ud801\udc29", "\ud801\udc02": "\ud801\udc2a", "\ud801\udc03": "\ud801\udc2b", "\ud801\udc04": "\ud801\udc2c", "\ud801\udc05": "\ud801\udc2d", "\ud801\udc06": "\ud801\udc2e", "\ud801\udc07": "\ud801\udc2f", "\ud801\udc08": "\ud801\udc30", "\ud801\udc09": "\ud801\udc31", "\ud801\udc0a": "\ud801\udc32", "\ud801\udc0b": "\ud801\udc33", "\ud801\udc0c": "\ud801\udc34", "\ud801\udc0d": "\ud801\udc35", "\ud801\udc0e": "\ud801\udc36", "\ud801\udc0f": "\ud801\udc37", "\ud801\udc10": "\ud801\udc38", "\ud801\udc11": "\ud801\udc39", "\ud801\udc12": "\ud801\udc3a", "\ud801\udc13": "\ud801\udc3b", "\ud801\udc14": "\ud801\udc3c", "\ud801\udc15": "\ud801\udc3d", "\ud801\udc16": "\ud801\udc3e", "\ud801\udc17": "\ud801\udc3f", "\ud801\udc18": "\ud801\udc40", "\ud801\udc19": "\ud801\udc41", "\ud801\udc1a": "\ud801\udc42", "\ud801\udc1b": "\ud801\udc43", "\ud801\udc1c": "\ud801\udc44", "\ud801\udc1d": "\ud801\udc45", "\ud801\udc1e": "\ud801\udc46", "\ud801\udc1f": "\ud801\udc47", "\ud801\udc20": "\ud801\udc48", "\ud801\udc21": "\ud801\udc49", "\ud801\udc22": "\ud801\udc4a", "\ud801\udc23": "\ud801\udc4b", "\ud801\udc24": "\ud801\udc4c", "\ud801\udc25": "\ud801\udc4d", "\ud801\udc26": "\ud801\udc4e", "\ud801\udc27": "\ud801\udc4f", "\ud801\udcb0": "\ud801\udcd8", "\ud801\udcb1": "\ud801\udcd9", "\ud801\udcb2": "\ud801\udcda", "\ud801\udcb3": "\ud801\udcdb", "\ud801\udcb4": "\ud801\udcdc", "\ud801\udcb5": "\ud801\udcdd", "\ud801\udcb6": "\ud801\udcde", "\ud801\udcb7": "\ud801\udcdf", "\ud801\udcb8": "\ud801\udce0", "\ud801\udcb9": "\ud801\udce1", "\ud801\udcba": "\ud801\udce2", "\ud801\udcbb": "\ud801\udce3", "\ud801\udcbc": "\ud801\udce4", "\ud801\udcbd": "\ud801\udce5", "\ud801\udcbe": "\ud801\udce6", "\ud801\udcbf": "\ud801\udce7", "\ud801\udcc0": "\ud801\udce8", "\ud801\udcc1": "\ud801\udce9", "\ud801\udcc2": "\ud801\udcea", "\ud801\udcc3": "\ud801\udceb", "\ud801\udcc4": "\ud801\udcec", "\ud801\udcc5": "\ud801\udced", "\ud801\udcc6": "\ud801\udcee", "\ud801\udcc7": "\ud801\udcef", "\ud801\udcc8": "\ud801\udcf0", "\ud801\udcc9": "\ud801\udcf1", "\ud801\udcca": "\ud801\udcf2", "\ud801\udccb": "\ud801\udcf3", "\ud801\udccc": "\ud801\udcf4", "\ud801\udccd": "\ud801\udcf5", "\ud801\udcce": "\ud801\udcf6", "\ud801\udccf": "\ud801\udcf7", "\ud801\udcd0": "\ud801\udcf8", "\ud801\udcd1": "\ud801\udcf9", "\ud801\udcd2": "\ud801\udcfa", "\ud801\udcd3": "\ud801\udcfb", "\ud801\udd70": "\ud801\udd97", "\ud801\udd71": "\ud801\udd98", "\ud801\udd72": "\ud801\udd99", "\ud801\udd73": "\ud801\udd9a", "\ud801\udd74": "\ud801\udd9b", "\ud801\udd75": "\ud801\udd9c", "\ud801\udd76": "\ud801\udd9d", "\ud801\udd77": "\ud801\udd9e", "\ud801\udd78": "\ud801\udd9f", "\ud801\udd79": "\ud801\udda0", "\ud801\udd7a": "\ud801\udda1", "\ud801\udd7c": "\ud801\udda3", "\ud801\udd7d": "\ud801\udda4", "\ud801\udd7e": "\ud801\udda5", "\ud801\udd7f": "\ud801\udda6", "\ud801\udd80": "\ud801\udda7", "\ud801\udd81": "\ud801\udda8", "\ud801\udd82": "\ud801\udda9", "\ud801\udd83": "\ud801\uddaa", "\ud801\udd84": "\ud801\uddab", "\ud801\udd85": "\ud801\uddac", "\ud801\udd86": "\ud801\uddad", "\ud801\udd87": "\ud801\uddae", "\ud801\udd88": "\ud801\uddaf", "\ud801\udd89": "\ud801\uddb0", "\ud801\udd8a": "\ud801\uddb1", "\ud801\udd8c": "\ud801\uddb3", "\ud801\udd8d": "\ud801\uddb4", "\ud801\udd8e": "\ud801\uddb5", "\ud801\udd8f": "\ud801\uddb6", "\ud801\udd90": "\ud801\uddb7", "\ud801\udd91": "\ud801\uddb8", "\ud801\udd92": "\ud801\uddb9", "\ud801\udd94": "\ud801\uddbb", "\ud801\udd95": "\ud801\uddbc", "\ud803\udc80": "\ud803\udcc0", "\ud803\udc81": "\ud803\udcc1", "\ud803\udc82": "\ud803\udcc2", "\ud803\udc83": "\ud803\udcc3", "\ud803\udc84": "\ud803\udcc4", "\ud803\udc85": "\ud803\udcc5", "\ud803\udc86": "\ud803\udcc6", "\ud803\udc87": "\ud803\udcc7", "\ud803\udc88": "\ud803\udcc8", "\ud803\udc89": "\ud803\udcc9", "\ud803\udc8a": "\ud803\udcca", "\ud803\udc8b": "\ud803\udccb", "\ud803\udc8c": "\ud803\udccc", "\ud803\udc8d": "\ud803\udccd", "\ud803\udc8e": "\ud803\udcce", "\ud803\udc8f": "\ud803\udccf", "\ud803\udc90": "\ud803\udcd0", "\ud803\udc91": "\ud803\udcd1", "\ud803\udc92": "\ud803\udcd2", "\ud803\udc93": "\ud803\udcd3", "\ud803\udc94": "\ud803\udcd4", "\ud803\udc95": "\ud803\udcd5", "\ud803\udc96": "\ud803\udcd6", "\ud803\udc97": "\ud803\udcd7", "\ud803\udc98": "\ud803\udcd8", "\ud803\udc99": "\ud803\udcd9", "\ud803\udc9a": "\ud803\udcda", "\ud803\udc9b": "\ud803\udcdb", "\ud803\udc9c": "\ud803\udcdc", "\ud803\udc9d": "\ud803\udcdd", "\ud803\udc9e": "\ud803\udcde", "\ud803\udc9f": "\ud803\udcdf", "\ud803\udca0": "\ud803\udce0", "\ud803\udca1": "\ud803\udce1", "\ud803\udca2": "\ud803\udce2", "\ud803\udca3": "\ud803\udce3", "\ud803\udca4": "\ud803\udce4", "\ud803\udca5": "\ud803\udce5", "\ud803\udca6": "\ud803\udce6", "\ud803\udca7": "\ud803\udce7", "\ud803\udca8": "\ud803\udce8", "\ud803\udca9": "\ud803\udce9", "\ud803\udcaa": "\ud803\udcea", "\ud803\udcab": "\ud803\udceb", "\ud803\udcac": "\ud803\udcec", "\ud803\udcad": "\ud803\udced", "\ud803\udcae": "\ud803\udcee", "\ud803\udcaf": "\ud803\udcef", "\ud803\udcb0": "\ud803\udcf0", "\ud803\udcb1": "\ud803\udcf1", "\ud803\udcb2": "\ud803\udcf2", "\ud803\udd50": "\ud803\udd70", "\ud803\udd51": "\ud803\udd71", "\ud803\udd52": "\ud803\udd72", "\ud803\udd53": "\ud803\udd73", "\ud803\udd54": "\ud803\udd74", "\ud803\udd55": "\ud803\udd75", "\ud803\udd56": "\ud803\udd76", "\ud803\udd57": "\ud803\udd77", "\ud803\udd58": "\ud803\udd78", "\ud803\udd59": "\ud803\udd79", "\ud803\udd5a": "\ud803\udd7a", "\ud803\udd5b": "\ud803\udd7b", "\ud803\udd5c": "\ud803\udd7c", "\ud803\udd5d": "\ud803\udd7d", "\ud803\udd5e": "\ud803\udd7e", "\ud803\udd5f": "\ud803\udd7f", "\ud803\udd60": "\ud803\udd80", "\ud803\udd61": "\ud803\udd81", "\ud803\udd62": "\ud803\udd82", "\ud803\udd63": "\ud803\udd83", "\ud803\udd64": "\ud803\udd84", "\ud803\udd65": "\ud803\udd85", "\ud806\udca0": "\ud806\udcc0", "\ud806\udca1": "\ud806\udcc1", "\ud806\udca2": "\ud806\udcc2", "\ud806\udca3": "\ud806\udcc3", "\ud806\udca4": "\ud806\udcc4", "\ud806\udca5": "\ud806\udcc5", "\ud806\udca6": "\ud806\udcc6", "\ud806\udca7": "\ud806\udcc7", "\ud806\udca8": "\ud806\udcc8", "\ud806\udca9": "\ud806\udcc9", "\ud806\udcaa": "\ud806\udcca", "\ud806\udcab": "\ud806\udccb", "\ud806\udcac": "\ud806\udccc", "\ud806\udcad": "\ud806\udccd", "\ud806\udcae": "\ud806\udcce", "\ud806\udcaf": "\ud806\udccf", "\ud806\udcb0": "\ud806\udcd0", "\ud806\udcb1": "\ud806\udcd1", "\ud806\udcb2": "\ud806\udcd2", "\ud806\udcb3": "\ud806\udcd3", "\ud806\udcb4": "\ud806\udcd4", "\ud806\udcb5": "\ud806\udcd5", "\ud806\udcb6": "\ud806\udcd6", "\ud806\udcb7": "\ud806\udcd7", "\ud806\udcb8": "\ud806\udcd8", "\ud806\udcb9": "\ud806\udcd9", "\ud806\udcba": "\ud806\udcda", "\ud806\udcbb": "\ud806\udcdb", "\ud806\udcbc": "\ud806\udcdc", "\ud806\udcbd": "\ud806\udcdd", "\ud806\udcbe": "\ud806\udcde", "\ud806\udcbf": "\ud806\udcdf", "\ud81b\ude40": "\ud81b\ude60", "\ud81b\ude41": "\ud81b\ude61", "\ud81b\ude42": "\ud81b\ude62", "\ud81b\ude43": "\ud81b\ude63", "\ud81b\ude44": "\ud81b\ude64", "\ud81b\ude45": "\ud81b\ude65", "\ud81b\ude46": "\ud81b\ude66", "\ud81b\ude47": "\ud81b\ude67", "\ud81b\ude48": "\ud81b\ude68", "\ud81b\ude49": "\ud81b\ude69", "\ud81b\ude4a": "\ud81b\ude6a", "\ud81b\ude4b": "\ud81b\ude6b", "\ud81b\ude4c": "\ud81b\ude6c", "\ud81b\ude4d": "\ud81b\ude6d", "\ud81b\ude4e": "\ud81b\ude6e", "\ud81b\ude4f": "\ud81b\ude6f", "\ud81b\ude50": "\ud81b\ude70", "\ud81b\ude51": "\ud81b\ude71", "\ud81b\ude52": "\ud81b\ude72", "\ud81b\ude53": "\ud81b\ude73", "\ud81b\ude54": "\ud81b\ude74", "\ud81b\ude55": "\ud81b\ude75", "\ud81b\ude56": "\ud81b\ude76", "\ud81b\ude57": "\ud81b\ude77", "\ud81b\ude58": "\ud81b\ude78", "\ud81b\ude59": "\ud81b\ude79", "\ud81b\ude5a": "\ud81b\ude7a", "\ud81b\ude5b": "\ud81b\ude7b", "\ud81b\ude5c": "\ud81b\ude7c", "\ud81b\ude5d": "\ud81b\ude7d", "\ud81b\ude5e": "\ud81b\ude7e", "\ud81b\ude5f": "\ud81b\ude7f", "\ud81b\udea0": "\ud81b\udebb", "\ud81b\udea1": "\ud81b\udebc", "\ud81b\udea2": "\ud81b\udebd", "\ud81b\udea3": "\ud81b\udebe", "\ud81b\udea4": "\ud81b\udebf", "\ud81b\udea5": "\ud81b\udec0", "\ud81b\udea6": "\ud81b\udec1", "\ud81b\udea7": "\ud81b\udec2", "\ud81b\udea8": "\ud81b\udec3", "\ud81b\udea9": "\ud81b\udec4", "\ud81b\udeaa": "\ud81b\udec5", "\ud81b\udeab": "\ud81b\udec6", "\ud81b\udeac": "\ud81b\udec7", "\ud81b\udead": "\ud81b\udec8", "\ud81b\udeae": "\ud81b\udec9", "\ud81b\udeaf": "\ud81b\udeca", "\ud81b\udeb0": "\ud81b\udecb", "\ud81b\udeb1": "\ud81b\udecc", "\ud81b\udeb2": "\ud81b\udecd", "\ud81b\udeb3": "\ud81b\udece", "\ud81b\udeb4": "\ud81b\udecf", "\ud81b\udeb5": "\ud81b\uded0", "\ud81b\udeb6": "\ud81b\uded1", "\ud81b\udeb7": "\ud81b\uded2", "\ud81b\udeb8": "\ud81b\uded3", "\ud83a\udd00": "\ud83a\udd22", "\ud83a\udd01": "\ud83a\udd23", "\ud83a\udd02": "\ud83a\udd24", "\ud83a\udd03": "\ud83a\udd25", "\ud83a\udd04": "\ud83a\udd26", "\ud83a\udd05": "\ud83a\udd27", "\ud83a\udd06": "\ud83a\udd28", "\ud83a\udd07": "\ud83a\udd29", "\ud83a\udd08": "\ud83a\udd2a", "\ud83a\udd09": "\ud83a\udd2b", "\ud83a\udd0a": "\ud83a\udd2c", "\ud83a\udd0b": "\ud83a\udd2d", "\ud83a\udd0c": "\ud83a\udd2e", "\ud83a\udd0d": "\ud83a\udd2f", "\ud83a\udd0e": "\ud83a\udd30", "\ud83a\udd0f": "\ud83a\udd31", "\ud83a\udd10": "\ud83a\udd32", "\ud83a\udd11": "\ud83a\udd33", "\ud83a\udd12": "\ud83a\udd34", "\ud83a\udd13": "\ud83a\udd35", "\ud83a\udd14": "\ud83a\udd36", "\ud83a\udd15": "\ud83a\udd37", "\ud83a\udd16": "\ud83a\udd38", "\ud83a\udd17": "\ud83a\udd39", "\ud83a\udd18": "\ud83a\udd3a", "\ud83a\udd19": "\ud83a\udd3b", "\ud83a\udd1a": "\ud83a\udd3c", "\ud83a\udd1b": "\ud83a\udd3d", "\ud83a\udd1c": "\ud83a\udd3e", "\ud83a\udd1d": "\ud83a\udd3f", "\ud83a\udd1e": "\ud83a\udd40", "\ud83a\udd1f": "\ud83a\udd41", "\ud83a\udd20": "\ud83a\udd42", "\ud83a\udd21": "\ud83a\udd43" };
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 const SPACE = /^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g;
 const trimmedCode = (code) => code.replace(SPACE, "");
 function canonicalCodeKey(code) { return (0,_unicode_normalization__WEBPACK_IMPORTED_MODULE_0__.unicode17NFC)((0,_unicode_normalization__WEBPACK_IMPORTED_MODULE_0__.unicode17NFD)(Array.from((0,_unicode_normalization__WEBPACK_IMPORTED_MODULE_0__.unicode17NFD)(code), c => FOLD[c] ?? c).join(""))); }
@@ -2368,7 +2506,8 @@ function validParagraph(v) {
     for (const m of v.marks) {
         if (!(0,_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(m, ['start', 'end', 'styles']) || !(0,_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(m.start) || !(0,_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(m.end) || BigInt(m.start) < BigInt(v.start) || BigInt(m.end) > BigInt(v.end) || BigInt(m.start) >= BigInt(m.end) || !Array.isArray(m.styles) || m.styles.length < 1 || m.styles.length > 2 || new Set(m.styles).size !== m.styles.length || !m.styles.every(s => s === 'bold' || s === 'italic'))
             return false;
-        if (previous && (BigInt(previous.end) > BigInt(m.start) || (previous.end === m.start && previous.styles.length === m.styles.length && previous.styles.every(s => m.styles.includes(s)))))
+        const styles = m.styles;
+        if (previous && (BigInt(previous.end) > BigInt(m.start) || (previous.end === m.start && previous.styles.length === m.styles.length && previous.styles.every(s => styles.includes(s)))))
             return false;
         previous = m;
     }
@@ -2890,10 +3029,29 @@ function assertWorkspaceState(records) {
         void d;
     }
     const done = new Set(), visiting = new Set();
-    const visit = (id) => { if (visiting.has(id))
-        fail('Decision result graph contains a cycle.'); if (done.has(id))
-        return; visiting.add(id); const r = map.get(id); r.data.followingDecisionIds.forEach(visit); visiting.delete(id); done.add(id); };
-    records.filter(r => r.recordType === 'decision').forEach(r => visit(r.id));
+    // Author-sized graphs must not depend on the JavaScript recursion limit.
+    for (const record of records) {
+        if (record.recordType !== 'decision' || done.has(record.id))
+            continue;
+        const stack = [{ id: record.id, next: 0 }];
+        visiting.add(record.id);
+        while (stack.length) {
+            const frame = stack[stack.length - 1], decision = map.get(frame.id);
+            if (frame.next === decision.data.followingDecisionIds.length) {
+                visiting.delete(frame.id);
+                done.add(frame.id);
+                stack.pop();
+                continue;
+            }
+            const id = decision.data.followingDecisionIds[frame.next++];
+            if (visiting.has(id))
+                fail('Decision result graph contains a cycle.');
+            if (!done.has(id)) {
+                visiting.add(id);
+                stack.push({ id, next: 0 });
+            }
+        }
+    }
 }
 const decisionResolved = (d) => d.eventIds.length + d.followingDecisionIds.length > 0;
 const exactCompare = (a, b) => BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0;
@@ -2916,8 +3074,8 @@ function factionCompleteness(f) { const fields = ['name', ...FACTION_TEXT.filter
     missing.push('image'); if (!f.leaderImage)
     missing.push('leaderImage'); return { complete: !missing.length, missing }; }
 function normalizeFaction(f) { return { ...f, military: f.military.filter(m => m.name.trim() || m.role.trim() || m.description.trim() || m.baseStrength !== null || m.movementPoints !== null || m.baseModifierPoints !== null) }; }
-function synchronizedBirth(character, event, calendar, direction) { if (event.data.kind !== 'birth' || event.data.characterId !== character.id || character.data.birthEventId !== event.id || !character.data.birth)
-    fail('Birth synchronization requires the canonical association.'); return direction === 'character-to-event' ? { character, event: { ...event, data: { ...event.data, date: (0,_calendar__WEBPACK_IMPORTED_MODULE_1__.birthPosition)(character.data.birth, calendar) } } } : { character: { ...character, data: { ...character.data, birth: { ...character.data.birth, year: event.data.date.year } } }, event }; }
+function synchronizedBirth(character, event, calendar, direction) { const birth = character.data.birth; if (event.data.kind !== 'birth' || event.data.characterId !== character.id || character.data.birthEventId !== event.id || !birth)
+    return fail('Birth synchronization requires the canonical association.'); return direction === 'character-to-event' ? { character, event: { ...event, data: { ...event.data, date: (0,_calendar__WEBPACK_IMPORTED_MODULE_1__.birthPosition)(birth, calendar) } } } : { character: { ...character, data: { ...character.data, birth: { ...birth, year: event.data.date.year } } }, event }; }
 const BUILTIN_DECISION_TYPES = [
     { name: 'Personal Decisions', makerRequired: true, builtin: 'personal' },
     { name: 'Story Decisions', makerRequired: false, builtin: 'story' },
@@ -2939,6 +3097,325 @@ function updateRecordCalendar(record, calendar, convert) {
     }
 }
 const CHARACTER_PROMPTS = { rankTitle: 'What rank or title does this character hold?', background: 'What experiences shaped this character?', description: 'How would you describe this character?', motivation: 'What does this character want, and why?', weaknesses: 'What weaknesses or limitations affect this character?', strengths: 'What strengths help this character?', specialities: 'What skills or areas of expertise distinguish this character?' };
+
+
+/***/ },
+
+/***/ "./src/infrastructure/confined-fs.ts"
+/*!*******************************************!*\
+  !*** ./src/infrastructure/confined-fs.ts ***!
+  \*******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   configureConfinedFs: () => (/* binding */ configureConfinedFs),
+/* harmony export */   confinedFs: () => (/* binding */ confinedFs)
+/* harmony export */ });
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_module__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:module */ "node:module");
+/* harmony import */ var node_module__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_module__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_2__);
+/** Trusted main/utility-only filesystem adapter. Never expose handles or this API over IPC. */
+
+
+
+let binding;
+let configuredModule;
+/** Call only from trusted bootstrap, before constructing the coordinator. */
+function configureConfinedFs(modulePath) {
+    if (!node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(modulePath) || node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(modulePath) !== 'confined_fs.node')
+        throw new Error('Invalid trusted native module location');
+    if (binding || (configuredModule !== undefined && configuredModule !== modulePath))
+        throw new Error('Confined filesystem module location is already fixed');
+    configuredModule = modulePath;
+}
+function native() {
+    if (binding)
+        return binding;
+    if (!(process.platform === 'darwin' && ['x64', 'arm64'].includes(process.arch)) && !(process.platform === 'win32' && process.arch === 'x64'))
+        throw new Error('Unsupported confined filesystem platform/architecture');
+    if (process.type === 'renderer')
+        throw new Error('Confined filesystem is restricted to trusted host processes');
+    const runtime = process;
+    const packaged = runtime.resourcesPath && !runtime.defaultApp;
+    const filename = configuredModule ?? (packaged
+        ? node_path__WEBPACK_IMPORTED_MODULE_0___default().join(runtime.resourcesPath, 'native', 'confined-fs', `${process.platform}-${process.arch}`, 'confined_fs.node')
+        : node_path__WEBPACK_IMPORTED_MODULE_0___default().resolve('native/confined-fs/build/Release/confined_fs.node'));
+    try {
+        const loaded = (0,node_module__WEBPACK_IMPORTED_MODULE_1__.createRequire)(node_path__WEBPACK_IMPORTED_MODULE_0___default().join(process.cwd(), 'package.json'))(filename);
+        const operations = ['root', 'open', 'close', 'stat', 'read', 'write', 'sync', 'mkdir', 'rename', 'unlink'];
+        if (loaded.contractVersion !== 1 || operations.some(name => typeof loaded[name] !== 'function'))
+            throw new Error('Incompatible confined filesystem contract');
+        binding = loaded;
+        return loaded;
+    }
+    catch (cause) {
+        throw new Error(`Required confined filesystem addon unavailable: ${filename}`, { cause });
+    }
+}
+function segments(relative) {
+    const result = relative.split('/');
+    if (node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(relative) || result.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)))
+        throw new Error('Unsafe managed path');
+    return result;
+}
+function directory(absolute) { return native().root(node_path__WEBPACK_IMPORTED_MODULE_0___default().resolve(absolute)); }
+function parent(root, relative) {
+    const parts = segments(relative), name = parts.pop();
+    let handle = directory(root);
+    try {
+        for (const part of parts) {
+            const next = native().open(handle, part, 'directory');
+            native().close(handle);
+            handle = next;
+        }
+        return { handle, name };
+    }
+    catch (error) {
+        native().close(handle);
+        throw error;
+    }
+}
+function regular(handle) {
+    const stat = native().stat(handle);
+    if (stat.directory)
+        throw new Error('Invalid managed file');
+    return stat;
+}
+function digest(handle, copy) {
+    const hash = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256');
+    for (;;) {
+        const bytes = native().read(handle, 262144);
+        if (!bytes.length)
+            break;
+        hash.update(bytes);
+        if (copy)
+            native().write(copy, bytes);
+    }
+    regular(handle);
+    return hash.digest('hex');
+}
+function write(handle, data) {
+    regular(handle);
+    for (let offset = 0; offset < data.byteLength; offset += 262144)
+        native().write(handle, Buffer.from(data.buffer, data.byteOffset + offset, Math.min(262144, data.byteLength - offset)));
+    regular(handle);
+    native().sync(handle, false);
+}
+function verify(parent, name, expected, expectedHash) {
+    let handle;
+    try {
+        handle = native().open(parent, name, 'read');
+        if (!expected || regular(handle).id !== expected.id || (expectedHash !== undefined && digest(handle) !== expectedHash))
+            throw new Error('Managed target changed');
+    }
+    catch (error) {
+        if (expected || error.code !== 'ENOENT')
+            throw error;
+    }
+    finally {
+        if (handle)
+            native().close(handle);
+    }
+}
+function previous(parent, name, expectedHash) {
+    let handle;
+    try {
+        handle = native().open(parent, name, 'read');
+        const identity = regular(handle);
+        if (expectedHash === null || digest(handle) !== expectedHash)
+            throw new Error('Unexpected managed bytes');
+        return identity;
+    }
+    catch (error) {
+        if (error.code !== 'ENOENT' || expectedHash !== null)
+            throw error;
+    }
+    finally {
+        if (handle)
+            native().close(handle);
+    }
+}
+function publish(root, relative, content, options) {
+    const p = parent(root, relative), temporary = `.publish-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    let target, original;
+    try {
+        native().sync(p.handle, true);
+        let before;
+        if (options.existing) {
+            original = native().open(p.handle, p.name, 'read');
+            before = regular(original);
+        }
+        else if (options.expectedHash !== undefined)
+            before = previous(p.handle, p.name, options.expectedHash);
+        target = native().open(p.handle, temporary, 'new');
+        regular(target);
+        content(target);
+        regular(target);
+        native().sync(target, false);
+        native().sync(p.handle, true);
+        options.staged?.();
+        verify(p.handle, p.name, before, options.expectedHash ?? undefined);
+        native().rename(p.handle, target, temporary, p.name, before !== undefined);
+        native().sync(p.handle, true);
+    }
+    finally {
+        // Retain staging evidence on failure. No unverified cleanup deletes another object's bytes.
+        if (original)
+            native().close(original);
+        if (target)
+            native().close(target);
+        native().close(p.handle);
+    }
+}
+const confinedFs = {
+    syncDir(absolute) { const h = directory(absolute); try {
+        native().sync(h, true);
+    }
+    finally {
+        native().close(h);
+    } },
+    writeExclusive(absolute, data, reserved) {
+        const p = parent(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(absolute), node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(absolute));
+        let h;
+        try {
+            native().sync(p.handle, true);
+            h = native().open(p.handle, p.name, 'new', reserved);
+            write(h, Buffer.from(data));
+            native().sync(p.handle, true);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    publishMarker(root, relative, data, staged) {
+        publish(root, relative, h => write(h, Buffer.from(data)), { staged });
+    },
+    preserveMarker(root, relative) {
+        const p = parent(root, relative);
+        let h;
+        try {
+            native().sync(p.handle, true);
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            native().rename(p.handle, h, p.name, `${p.name}.damaged-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`, false);
+            native().sync(p.handle, true);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    readManaged(root, relative) {
+        const p = parent(root, relative);
+        let h;
+        try {
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            const chunks = [];
+            for (;;) {
+                const b = native().read(h, 262144);
+                if (!b.length)
+                    break;
+                chunks.push(b);
+            }
+            regular(h);
+            return Buffer.concat(chunks);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    replaceManaged(root, relative, data) { publish(root, relative, h => write(h, Buffer.from(data)), { existing: true }); },
+    ensureManagedDirectory(root, relative) {
+        const parts = segments(relative);
+        let h = directory(root);
+        try {
+            for (const part of parts) {
+                native().sync(h, true);
+                try {
+                    native().mkdir(h, part);
+                    native().sync(h, true);
+                }
+                catch (error) {
+                    if (error.code !== 'EEXIST')
+                        throw error;
+                }
+                const next = native().open(h, part, 'directory');
+                native().close(h);
+                h = next;
+            }
+        }
+        finally {
+            native().close(h);
+        }
+    },
+    publishManagedBytes(root, relative, bytes, expectedHash) {
+        publish(root, relative, h => write(h, bytes), { expectedHash });
+    },
+    removeManagedBytes(root, relative, expectedHash) {
+        const p = parent(root, relative);
+        let h;
+        try {
+            native().sync(p.handle, true);
+            h = native().open(p.handle, p.name, 'read');
+            const identity = regular(h);
+            if (digest(h) !== expectedHash)
+                throw new Error('Unexpected removal target');
+            verify(p.handle, p.name, identity, expectedHash);
+            native().unlink(p.handle, h, p.name);
+            native().close(h);
+            h = undefined;
+            native().sync(p.handle, true);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    publishManagedFile(root, relative, source, expectedHash, expectedSourceHash) {
+        if (segments(relative).length !== 1)
+            throw new Error('Unsafe output filename');
+        const p = parent(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(source), node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(source));
+        let h;
+        try {
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            const sourceHandle = h;
+            publish(root, relative, output => { if (digest(sourceHandle, output) !== expectedSourceHash)
+                throw new Error('Validated private output changed before publication'); }, { expectedHash });
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    hashFile(absolute) {
+        const p = parent(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(absolute), node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(absolute));
+        let h;
+        try {
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            return digest(h);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+};
 
 
 /***/ },
@@ -2991,6 +3468,98 @@ class RecentRoots {
 
 /***/ },
 
+/***/ "./src/infrastructure/recovery-activation.ts"
+/*!***************************************************!*\
+  !*** ./src/infrastructure/recovery-activation.ts ***!
+  \***************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   activationDestinationAvailable: () => (/* binding */ activationDestinationAvailable),
+/* harmony export */   activationPath: () => (/* binding */ activationPath),
+/* harmony export */   activationRootAt: () => (/* binding */ activationRootAt),
+/* harmony export */   validActivationDecision: () => (/* binding */ validActivationDecision)
+/* harmony export */ });
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+
+
+
+
+
+const activationPath = (requestId) => `protection/activation-${requestId}.json`;
+const absolute = (value) => typeof value === 'string' && node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(value) && !value.includes('\0');
+const inside = (file, root) => { const relative = node_path__WEBPACK_IMPORTED_MODULE_0___default().relative(root, file); return !relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_0___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(relative); };
+/** An empty/foreign replacement at an old path is not the missing participant. */
+function activationRootAt(root, participant) {
+    let location;
+    try {
+        location = node_fs__WEBPACK_IMPORTED_MODULE_1___default().realpathSync(root);
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return null;
+        throw error;
+    }
+    let discovery;
+    try {
+        discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_4__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_4__.readManaged)(location, 'writingtool.json'));
+    }
+    catch (error) {
+        if (error.code === 'ENOENT' && !['database', '.writingtool-creation.json'].some(name => node_fs__WEBPACK_IMPORTED_MODULE_1___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_0___default().join(location, name))))
+            return null;
+        throw new Error('An original recovery path has unreadable authority evidence. Preserve it before locating the participant.');
+    }
+    if (!discovery || typeof discovery !== 'object' || !('kind' in discovery) || !('id' in discovery) || !('rootId' in discovery))
+        throw new Error('An original recovery path has invalid authority evidence.');
+    if (discovery.kind === participant.owner.kind && discovery.id === participant.owner.id && discovery.rootId === participant.rootId)
+        return location;
+    if (discovery.id === participant.owner.id || discovery.rootId === participant.rootId)
+        throw new Error('A recovery path has conflicting permanent owner identity.');
+    return null;
+}
+function activationDestinationAvailable(destination, stage) {
+    try {
+        const stat = node_fs__WEBPACK_IMPORTED_MODULE_1___default().lstatSync(destination);
+        if (!stat.isDirectory() || stat.isSymbolicLink() || node_fs__WEBPACK_IMPORTED_MODULE_1___default().readdirSync(destination).length)
+            return false;
+    }
+    catch (error) {
+        if (error.code !== 'ENOENT')
+            throw error;
+    }
+    try {
+        return node_fs__WEBPACK_IMPORTED_MODULE_1___default().statSync(node_fs__WEBPACK_IMPORTED_MODULE_1___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(destination))).dev === node_fs__WEBPACK_IMPORTED_MODULE_1___default().statSync(stage).dev;
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return false;
+        throw error;
+    }
+}
+function validActivationDecision(value) {
+    if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value, ['schemaVersion', 'requestId', 'proposalId', 'manifestId', 'operationId', 'state', 'locations', 'participants']) || value.schemaVersion !== 2 || ![value.requestId, value.proposalId, value.manifestId, value.operationId].every(_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid) || !['await-coordinator', 'commit', 'complete'].includes(String(value.state)) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value.locations, ['project', 'universe']) || value.locations.project !== null && !absolute(value.locations.project) || !absolute(value.locations.universe) || !Array.isArray(value.participants) || !value.participants.length || value.participants.length > 2)
+        return false;
+    const locations = value.locations;
+    if (!value.participants.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(p, ['stage', 'destination', 'owner', 'rootId']) && absolute(p.stage) && absolute(p.destination) && p.stage !== p.destination && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_2__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(p.rootId) && p.destination === (p.owner.kind === 'project' ? locations.project : locations.universe)))
+        return false;
+    const participants = value.participants;
+    const roots = participants.flatMap(p => [p.stage, p.destination]);
+    if (!participants.some(p => p.owner.kind === 'universe'))
+        roots.push(locations.universe);
+    return new Set(participants.map(p => p.owner.kind)).size === participants.length && new Set(participants.map(p => p.rootId)).size === participants.length && roots.every((root, index) => roots.slice(index + 1).every(other => !inside(root, other) && !inside(other, root))) && (value.state !== 'await-coordinator' || participants.length === 1 && participants[0].owner.kind === 'project');
+}
+
+
+/***/ },
+
 /***/ "./src/infrastructure/universe-files.ts"
 /*!**********************************************!*\
   !*** ./src/infrastructure/universe-files.ts ***!
@@ -3019,14 +3588,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs */ "node:fs");
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:crypto */ "node:crypto");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _confined_fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./confined-fs */ "./src/infrastructure/confined-fs.ts");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_3__);
 
 
 
-const hash = (bytes) => (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256').update(bytes).digest('hex');
+
+const hash = (bytes) => (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.createHash)('sha256').update(bytes).digest('hex');
 // RFC8785 for the closed JSON-only slice: keys are UTF-16 sorted; no domain numbers.
 function canonical(v) {
     if (v === null || typeof v !== 'object')
@@ -3139,7 +3710,7 @@ function directoryHandle(p) {
         throw new Error('Verified directory-relative I/O is unavailable on this platform');
     let fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync('/', (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_DIRECTORY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
     try {
-        for (const segment of node_path__WEBPACK_IMPORTED_MODULE_1___default().resolve(p).split('/').filter(Boolean)) {
+        for (const segment of node_path__WEBPACK_IMPORTED_MODULE_2___default().resolve(p).split('/').filter(Boolean)) {
             const next = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(`/proc/self/fd/${fd}/${segment}`, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_DIRECTORY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
             node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
             fd = next;
@@ -3152,8 +3723,8 @@ function directoryHandle(p) {
     }
 }
 function anchored(p) {
-    const fd = directoryHandle(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(p));
-    return { fd, file: `/proc/self/fd/${fd}/${node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(p)}` };
+    const fd = directoryHandle(node_path__WEBPACK_IMPORTED_MODULE_2___default().dirname(p));
+    return { fd, file: `/proc/self/fd/${fd}/${node_path__WEBPACK_IMPORTED_MODULE_2___default().basename(p)}` };
 }
 function regular(fd) {
     const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().fstatSync(fd);
@@ -3162,6 +3733,8 @@ function regular(fd) {
     return stat;
 }
 function syncDir(p) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.syncDir(p);
     const fd = directoryHandle(p);
     try {
         node_fs__WEBPACK_IMPORTED_MODULE_0___default().fsyncSync(fd);
@@ -3171,6 +3744,8 @@ function syncDir(p) {
     }
 }
 function writeExclusive(p, data, reserved) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.writeExclusive(p, data, reserved);
     const parent = anchored(p);
     let fd;
     try {
@@ -3189,8 +3764,10 @@ function writeExclusive(p, data, reserved) {
 }
 // Atomically publish metadata; keep a torn legacy marker under a distinct name.
 function publishMarker(root, relative, data, staged) {
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative));
-    const temporary = `/proc/self/fd/${parent.fd}/.marker-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.publishMarker(root, relative, data, staged);
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative));
+    const temporary = `/proc/self/fd/${parent.fd}/.marker-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     try {
         const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(temporary, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_WRONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_CREAT | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_EXCL | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW, 0o600);
         try {
@@ -3219,7 +3796,9 @@ function publishMarker(root, relative, data, staged) {
     }
 }
 function preserveMarker(root, relative) {
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative));
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.preserveMarker(root, relative);
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative));
     try {
         const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(parent.file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
         try {
@@ -3228,7 +3807,7 @@ function preserveMarker(root, relative) {
         finally {
             node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
         }
-        node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(parent.file, parent.file + '.damaged-' + (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)());
+        node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(parent.file, parent.file + '.damaged-' + (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)());
         node_fs__WEBPACK_IMPORTED_MODULE_0___default().fsyncSync(parent.fd);
     }
     finally {
@@ -3237,11 +3816,11 @@ function preserveMarker(root, relative) {
 }
 function checked(root, relative, directory = false) {
     const segments = relative.split('/');
-    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(relative))
+    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_2___default().isAbsolute(relative))
         throw new Error('Unsafe managed path');
     let p = root;
     for (let i = 0; i < segments.length; i++) {
-        p = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(p, segments[i]);
+        p = node_path__WEBPACK_IMPORTED_MODULE_2___default().join(p, segments[i]);
         const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().lstatSync(p);
         const dir = i < segments.length - 1 || directory;
         if (stat.isSymbolicLink() || (dir ? !stat.isDirectory() : (!stat.isFile() || stat.nlink !== 1)))
@@ -3250,6 +3829,8 @@ function checked(root, relative, directory = false) {
     return p;
 }
 function readManaged(root, relative) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.readManaged(root, relative);
     const p = checked(root, relative);
     const parent = anchored(p);
     let fd;
@@ -3265,9 +3846,11 @@ function readManaged(root, relative) {
     }
 }
 function replaceManaged(root, relative, data) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.replaceManaged(root, relative, data);
     const target = checked(root, relative);
     const parent = anchored(target);
-    const temporary = `/proc/self/fd/${parent.fd}/.publish-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    const temporary = `/proc/self/fd/${parent.fd}/.publish-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     let original;
     try {
         original = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(parent.file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
@@ -3296,6 +3879,8 @@ function replaceManaged(root, relative, data) {
 }
 /** Managed binary publication shares the anchored, durable primitive used by WRT/JSON. */
 function ensureManagedDirectory(root, relative) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.ensureManagedDirectory(root, relative);
     const segments = relative.split('/');
     if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)))
         throw new Error('Unsafe managed directory');
@@ -3321,10 +3906,12 @@ function ensureManagedDirectory(root, relative) {
     }
 }
 function publishManagedBytes(root, relative, data, expectedHash) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.publishManagedBytes(root, relative, data, expectedHash);
     const segments = relative.split('/');
-    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(relative))
+    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_2___default().isAbsolute(relative))
         throw new Error('Unsafe managed path');
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.workspace-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.workspace-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     try {
         let previous;
         try {
@@ -3375,7 +3962,9 @@ function publishManagedBytes(root, relative, data, expectedHash) {
     }
 }
 function removeManagedBytes(root, relative, expectedHash) {
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative));
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.removeManagedBytes(root, relative, expectedHash);
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative));
     try {
         const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(parent.file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
         try {
@@ -3395,9 +3984,11 @@ function removeManagedBytes(root, relative, expectedHash) {
 }
 /** Stream a verified private artifact through the same anchored destination publication protocol. */
 function publishManagedFile(root, relative, source, expectedHash, expectedSourceHash) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.publishManagedFile(root, relative, source, expectedHash, expectedSourceHash);
     if (relative.includes('/') || !relative || /[\\\0:]/.test(relative) || relative === '.' || relative === '..')
         throw new Error('Unsafe output filename');
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.output-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.output-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     let sourceFd, targetFd;
     try {
         let before;
@@ -3419,7 +4010,7 @@ function publishManagedFile(root, relative, source, expectedHash, expectedSource
         sourceFd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(source, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
         regular(sourceFd);
         targetFd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(temporary, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_WRONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_CREAT | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_EXCL | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW, 0o600);
-        const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256'), buffer = Buffer.alloc(262144);
+        const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.createHash)('sha256'), buffer = Buffer.alloc(262144);
         let count;
         while ((count = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readSync(sourceFd, buffer)) > 0) {
             const bytes = buffer.subarray(0, count);
@@ -3464,17 +4055,22 @@ function publishManagedFile(root, relative, source, expectedHash, expectedSource
         node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(parent.fd);
     }
 }
-function hashFile(file) { const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW); try {
-    regular(fd);
-    const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256'), bytes = Buffer.alloc(262144);
-    let n;
-    while ((n = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readSync(fd, bytes)) > 0)
-        digest.update(bytes.subarray(0, n));
-    return digest.digest('hex');
+function hashFile(file) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.hashFile(file);
+    const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
+    try {
+        regular(fd);
+        const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.createHash)('sha256'), bytes = Buffer.alloc(262144);
+        let n;
+        while ((n = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readSync(fd, bytes)) > 0)
+            digest.update(bytes.subarray(0, n));
+        return digest.digest('hex');
+    }
+    finally {
+        node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
+    }
 }
-finally {
-    node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
-} }
 
 
 /***/ },
@@ -3553,6 +4149,17 @@ module.exports = require("node:crypto");
 
 "use strict";
 module.exports = require("node:fs");
+
+/***/ },
+
+/***/ "node:module"
+/*!******************************!*\
+  !*** external "node:module" ***!
+  \******************************/
+(module) {
+
+"use strict";
+module.exports = require("node:module");
 
 /***/ },
 
@@ -3672,31 +4279,35 @@ let __webpack_exports__ = {};
   !*** ./src/desktop/main.ts ***!
   \*****************************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../infrastructure/recent-roots */ "./src/infrastructure/recent-roots.ts");
-/* harmony import */ var _protection__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./protection */ "./src/desktop/protection.ts");
-/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
-/* harmony import */ var _protection_host_client__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./protection-host-client */ "./src/desktop/protection-host-client.ts");
-/* harmony import */ var _presentation__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./presentation */ "./src/desktop/presentation.ts");
-/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
-/* harmony import */ var _workspace_host_client__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./workspace-host-client */ "./src/desktop/workspace-host-client.ts");
-/* harmony import */ var _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../infrastructure/universe-files */ "./src/infrastructure/universe-files.ts");
-/* harmony import */ var _application_contracts_project__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../application/contracts/project */ "./src/application/contracts/project.ts");
-/* harmony import */ var _project_host_client__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./project-host-client */ "./src/desktop/project-host-client.ts");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! node:crypto */ "node:crypto");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_10___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_10__);
-/* harmony import */ var _application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../application/contracts/universe */ "./src/application/contracts/universe.ts");
-/* harmony import */ var _universe_host_client__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./universe-host-client */ "./src/desktop/universe-host-client.ts");
-/* harmony import */ var electron__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! electron */ "electron");
-/* harmony import */ var electron__WEBPACK_IMPORTED_MODULE_13___default = /*#__PURE__*/__webpack_require__.n(electron__WEBPACK_IMPORTED_MODULE_13__);
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! node:path */ "node:path");
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_14___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_14__);
-/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! node:fs */ "node:fs");
-/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_15___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_15__);
-/* harmony import */ var electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! electron-squirrel-startup */ "./node_modules/electron-squirrel-startup/index.js");
-/* harmony import */ var electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_16___default = /*#__PURE__*/__webpack_require__.n(electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_16__);
-/* harmony import */ var _application_contracts_readiness__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../application/contracts/readiness */ "./src/application/contracts/readiness.ts");
-/* harmony import */ var _host_client__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./host-client */ "./src/desktop/host-client.ts");
-/* harmony import */ var _security__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./security */ "./src/desktop/security.ts");
+/* harmony import */ var _infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../infrastructure/recovery-activation */ "./src/infrastructure/recovery-activation.ts");
+/* harmony import */ var _infrastructure_confined_fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../infrastructure/confined-fs */ "./src/infrastructure/confined-fs.ts");
+/* harmony import */ var _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../infrastructure/recent-roots */ "./src/infrastructure/recent-roots.ts");
+/* harmony import */ var _protection__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./protection */ "./src/desktop/protection.ts");
+/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
+/* harmony import */ var _protection_host_client__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./protection-host-client */ "./src/desktop/protection-host-client.ts");
+/* harmony import */ var _presentation__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./presentation */ "./src/desktop/presentation.ts");
+/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
+/* harmony import */ var _workspace_host_client__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./workspace-host-client */ "./src/desktop/workspace-host-client.ts");
+/* harmony import */ var _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../infrastructure/universe-files */ "./src/infrastructure/universe-files.ts");
+/* harmony import */ var _application_contracts_project__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../application/contracts/project */ "./src/application/contracts/project.ts");
+/* harmony import */ var _project_host_client__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./project-host-client */ "./src/desktop/project-host-client.ts");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_12___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_12__);
+/* harmony import */ var _application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../application/contracts/universe */ "./src/application/contracts/universe.ts");
+/* harmony import */ var _universe_host_client__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./universe-host-client */ "./src/desktop/universe-host-client.ts");
+/* harmony import */ var electron__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! electron */ "electron");
+/* harmony import */ var electron__WEBPACK_IMPORTED_MODULE_15___default = /*#__PURE__*/__webpack_require__.n(electron__WEBPACK_IMPORTED_MODULE_15__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_16___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_16__);
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_17___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_17__);
+/* harmony import */ var electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! electron-squirrel-startup */ "./node_modules/electron-squirrel-startup/index.js");
+/* harmony import */ var electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_18___default = /*#__PURE__*/__webpack_require__.n(electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_18__);
+/* harmony import */ var _application_contracts_readiness__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../application/contracts/readiness */ "./src/application/contracts/readiness.ts");
+/* harmony import */ var _host_client__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./host-client */ "./src/desktop/host-client.ts");
+/* harmony import */ var _security__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./security */ "./src/desktop/security.ts");
+
+
 
 
 
@@ -3720,7 +4331,7 @@ __webpack_require__.r(__webpack_exports__);
 const diagnostic = process.env.WRITINGTOOL_DIAGNOSTIC === '1';
 const fault = diagnostic ? process.env.WRITINGTOOL_HOST_FAULT : undefined;
 if (diagnostic && process.env.WRITINGTOOL_PROFILE)
-    electron__WEBPACK_IMPORTED_MODULE_13__.app.setPath('userData', process.env.WRITINGTOOL_PROFILE);
+    electron__WEBPACK_IMPORTED_MODULE_15__.app.setPath('userData', process.env.WRITINGTOOL_PROFILE);
 let window;
 let disposePresentation;
 let child;
@@ -3746,17 +4357,28 @@ let quitDecisionInFlight = false;
 const mutationLocations = new Map();
 const unresolvedOperations = new Set();
 function pendingProtectionPath(id) { return `protection/native-pending/${id}.json`; }
-function savePendingProtection(id, value) { const root = electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData'); (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.ensureManagedDirectory)(root, 'protection/native-pending'); const relative = pendingProtectionPath(id), old = node_fs__WEBPACK_IMPORTED_MODULE_15___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_14___default().join(root, relative)) ? (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(root, relative)) : null; (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.publishManagedBytes)(root, relative, Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.jsonBytes)(value)), old); }
-function forgetPendingProtection(id) { pendingProtection.delete(id); unresolvedOperations.delete(id); const root = electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData'), relative = pendingProtectionPath(id); if (node_fs__WEBPACK_IMPORTED_MODULE_15___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_14___default().join(root, relative)))
-    (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.removeManagedBytes)(root, relative, (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(root, relative))); }
-function loadPendingProtection() { const root = electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData'); node_fs__WEBPACK_IMPORTED_MODULE_15___default().mkdirSync(root, { recursive: true, mode: 0o700 }); (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.ensureManagedDirectory)(root, 'protection/native-pending'); for (const name of node_fs__WEBPACK_IMPORTED_MODULE_15___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_14___default().join(root, 'protection/native-pending'))) {
-    const value = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(root, 'protection/native-pending/' + name));
-    if (!(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.closed)(value, ['request', 'project', 'universe', 'projectIdentity', 'universeIdentity']) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__.validProtectionRequest)(value.request, true) || ![value.projectIdentity, value.universeIdentity].every(identity => identity === null || (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.closed)(identity, ['id', 'rootId']) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.isUuid)(identity.id) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.isUuid)(identity.rootId)) || (value.project !== null && (typeof value.project !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_14___default().isAbsolute(value.project))) || (value.universe !== null && (typeof value.universe !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_14___default().isAbsolute(value.universe))))
-        throw new Error('Pending protection metadata is invalid. Preserve application data for recovery.');
-    const pending = { request: value.request, project: value.project, universe: value.universe, projectIdentity: value.projectIdentity, universeIdentity: value.universeIdentity };
-    pendingProtection.set(value.request.requestId, pending);
-    unresolvedOperations.add(value.request.requestId);
-} }
+function savePendingProtection(id, value) { const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'); (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(root, 'protection/native-pending'); const relative = pendingProtectionPath(id), old = node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, relative)) ? (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(root, relative)) : null; (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(root, relative, Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.jsonBytes)(value)), old); }
+function forgetPendingProtection(id) { const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative = pendingProtectionPath(id); try {
+    if (node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, relative)))
+        (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.removeManagedBytes)(root, relative, (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(root, relative)));
+}
+catch (error) {
+    unresolvedOperations.add(id);
+    throw error;
+} pendingProtection.delete(id); unresolvedOperations.delete(id); }
+function loadPendingProtection() {
+    const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData');
+    node_fs__WEBPACK_IMPORTED_MODULE_17___default().mkdirSync(root, { recursive: true, mode: 0o700 });
+    (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(root, 'protection/native-pending');
+    for (const name of node_fs__WEBPACK_IMPORTED_MODULE_17___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, 'protection/native-pending'))) {
+        const value = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(root, 'protection/native-pending/' + name));
+        if (!(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(value, ['request', 'project', 'universe', 'projectIdentity', 'universeIdentity', ...(typeof value === 'object' && value !== null && Object.hasOwn(value, 'dispatch') ? ['dispatch'] : [])]) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.validProtectionRequest)(value.request, true) || value.request.nativePrepareOnly || name !== value.request.requestId + '.json' || Object.hasOwn(value, 'dispatch') && !['prepared', 'attempted'].includes(String(value.dispatch)) || ![value.projectIdentity, value.universeIdentity].every(identity => identity === null || (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(identity, ['id', 'rootId']) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(identity.id) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(identity.rootId)) || (value.project !== null && (typeof value.project !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_16___default().isAbsolute(value.project))) || (value.universe !== null && (typeof value.universe !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_16___default().isAbsolute(value.universe))))
+            throw new Error('Pending protection metadata is invalid. Preserve application data for recovery.');
+        const pending = { request: value.request, project: value.project, universe: value.universe, projectIdentity: value.projectIdentity, universeIdentity: value.universeIdentity, dispatch: value.dispatch === 'prepared' ? 'prepared' : 'attempted' };
+        pendingProtection.set(value.request.requestId, pending);
+        unresolvedOperations.add(value.request.requestId);
+    }
+}
 function rememberMutation(id, location, expected) {
     mutationLocations.set(id, { location, expected });
     unresolvedOperations.add(id);
@@ -3779,14 +4401,15 @@ let invalidRequestsRejected = false;
 let permissionChecks = 0;
 let permissionRequests = 0;
 let hostErrors = 0;
+function nativeModulePath() { return electron__WEBPACK_IMPORTED_MODULE_15__.app.isPackaged ? node_path__WEBPACK_IMPORTED_MODULE_16___default().join(process.resourcesPath, 'native/confined-fs', `${process.platform}-${process.arch}`, 'confined_fs.node') : node_path__WEBPACK_IMPORTED_MODULE_16___default().join(electron__WEBPACK_IMPORTED_MODULE_15__.app.getAppPath(), 'native/confined-fs/build/Release/confined_fs.node'); }
 function launchApplicationHost(args = []) {
-    node_fs__WEBPACK_IMPORTED_MODULE_15___default().mkdirSync(electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData'), { recursive: true, mode: 0o700 });
-    child = electron__WEBPACK_IMPORTED_MODULE_13__.utilityProcess.fork(node_path__WEBPACK_IMPORTED_MODULE_14___default().join(__dirname, 'utility-host.cjs'), [...args, '--user-data=' + electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData')], { serviceName: 'WritingTool application host' });
-    client = new _host_client__WEBPACK_IMPORTED_MODULE_18__.HostClient(child);
-    universeClient = new _universe_host_client__WEBPACK_IMPORTED_MODULE_12__.UniverseHostClient(child);
-    projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_9__.ProjectHostClient(child);
-    workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_6__.WorkspaceHostClient(child);
-    protectionClient = new _protection_host_client__WEBPACK_IMPORTED_MODULE_3__.ProtectionHostClient(child);
+    node_fs__WEBPACK_IMPORTED_MODULE_17___default().mkdirSync(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), { recursive: true, mode: 0o700 });
+    child = electron__WEBPACK_IMPORTED_MODULE_15__.utilityProcess.fork(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(__dirname, 'utility-host.cjs'), [...args, '--user-data=' + electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), '--writingtool-native-module=' + nativeModulePath()], { serviceName: 'WritingTool application host' });
+    client = new _host_client__WEBPACK_IMPORTED_MODULE_20__.HostClient(child);
+    universeClient = new _universe_host_client__WEBPACK_IMPORTED_MODULE_14__.UniverseHostClient(child);
+    projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_11__.ProjectHostClient(child);
+    workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_8__.WorkspaceHostClient(child);
+    protectionClient = new _protection_host_client__WEBPACK_IMPORTED_MODULE_5__.ProtectionHostClient(child);
     hostExited = false;
     child.on('message', message => {
         if (typeof message === 'object' && message !== null && 'kind' in message && message.kind === 'protection.progress') {
@@ -3807,15 +4430,16 @@ function launchApplicationHost(args = []) {
     child.on('error', () => { hostErrors++; client?.fail('HOST_EXITED'); universeClient?.fail(); projectClient?.fail(); workspaceClient?.fail(); protectionClient?.fail(); });
 }
 function authorized(event) {
-    return !!window && !window.isDestroyed() && !!event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_19__.trustedSender)(event.sender.id, window.webContents.id, event.senderFrame === window.webContents.mainFrame, event.senderFrame.url, 'http://localhost:3000/main_window/index.html');
+    return !!window && !window.isDestroyed() && !!event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_21__.trustedSender)(event.sender.id, window.webContents.id, event.senderFrame === window.webContents.mainFrame, event.senderFrame.url, 'http://localhost:3000/main_window/index.html');
 }
-if ((electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_16___default()))
-    electron__WEBPACK_IMPORTED_MODULE_13__.app.quit();
+if ((electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_18___default()))
+    electron__WEBPACK_IMPORTED_MODULE_15__.app.quit();
 else
-    electron__WEBPACK_IMPORTED_MODULE_13__.app.whenReady().then(async () => {
+    electron__WEBPACK_IMPORTED_MODULE_15__.app.whenReady().then(async () => {
         try {
             if (fault === 'start')
                 throw new Error('Diagnostic startup failure');
+            (0,_infrastructure_confined_fs__WEBPACK_IMPORTED_MODULE_1__.configureConfinedFs)(nativeModulePath());
             loadPendingProtection();
             launchApplicationHost(fault ? [`--diagnostic-fault=${fault}`] : []);
             // Exercise Electron's documented FatalError event path without inducing a crash.
@@ -3823,22 +4447,22 @@ else
                 child.emit('error', 'FatalError', 'diagnostic', '{}');
         }
         catch {
-            client = new _host_client__WEBPACK_IMPORTED_MODULE_18__.HostClient(undefined);
-            universeClient = new _universe_host_client__WEBPACK_IMPORTED_MODULE_12__.UniverseHostClient(undefined);
-            projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_9__.ProjectHostClient(undefined);
+            client = new _host_client__WEBPACK_IMPORTED_MODULE_20__.HostClient(undefined);
+            universeClient = new _universe_host_client__WEBPACK_IMPORTED_MODULE_14__.UniverseHostClient(undefined);
+            projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_11__.ProjectHostClient(undefined);
             hostExited = true;
         }
-        electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.on('writingtool:quit-request:v1', (event, value) => {
-            if (authorized(event) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.closed)(value, ['protocolVersion', 'requestId', 'command']) && value.protocolVersion === 1 && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.isUuid)(value.requestId) && value.command === 'application.quit')
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.on('writingtool:quit-request:v1', (event, value) => {
+            if (authorized(event) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(value, ['protocolVersion', 'requestId', 'command']) && value.protocolVersion === 1 && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(value.requestId) && value.command === 'application.quit')
                 void requestNativeQuit('app');
         });
-        electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.handle(_security__WEBPACK_IMPORTED_MODULE_19__.READINESS_CHANNEL, (event, request) => {
-            if (!authorized(event) || !(0,_application_contracts_readiness__WEBPACK_IMPORTED_MODULE_17__.validRequest)(request))
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_security__WEBPACK_IMPORTED_MODULE_21__.READINESS_CHANNEL, (event, request) => {
+            if (!authorized(event) || !(0,_application_contracts_readiness__WEBPACK_IMPORTED_MODULE_19__.validRequest)(request))
                 throw new Error('Readiness request denied');
             return client.request(request);
         });
-        electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.handle(_application_contracts_project__WEBPACK_IMPORTED_MODULE_8__.PROJECT_CHANNEL, async (event, value) => {
-            if (!authorized(event) || !(0,_application_contracts_project__WEBPACK_IMPORTED_MODULE_8__.validProjectRequest)(value) || draining)
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_project__WEBPACK_IMPORTED_MODULE_10__.PROJECT_CHANNEL, async (event, value) => {
+            if (!authorized(event) || !(0,_application_contracts_project__WEBPACK_IMPORTED_MODULE_10__.validProjectRequest)(value) || draining)
                 throw new Error('Project request denied');
             const request = value, base = { protocolVersion: 1, requestId: request.requestId, command: request.command };
             if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || unresolvedOperations.size || (pendingProjectCreation && !['project.open', 'project.current'].includes(request.command)))
@@ -3849,12 +4473,20 @@ else
                 let basePath, universePath;
                 if (request.command === 'project.create' || request.command === 'project.open') {
                     if (request.command === 'project.create') {
-                        const universe = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: 'Choose the existing universe for this project', properties: ['openDirectory'] });
+                        const universe = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: 'Create project — 1 of 2: Choose the existing universe folder', properties: ['openDirectory'] });
                         if (universe.canceled || !universe.filePaths[0])
                             return { ...base, status: 'canceled' };
                         universePath = universe.filePaths[0];
+                        try {
+                            const descriptor = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(universePath, 'writingtool.json'));
+                            if (!(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(descriptor, ['schemaVersion', 'kind', 'id', 'rootId', 'creationOperationId']) || descriptor.schemaVersion !== 1 || descriptor.kind !== 'universe' || !(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(descriptor.id) || !(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(descriptor.rootId) || !(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(descriptor.creationOperationId))
+                                throw new Error('Invalid universe discovery.');
+                        }
+                        catch {
+                            return { ...base, status: 'error', code: 'VALIDATION', message: 'No project was created. First choose an existing universe folder containing writingtool.json. The empty project folder is selected in the next step.', outcome: 'not-committed', retry: 'new-request' };
+                        }
                     }
-                    const selected = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: request.command === 'project.create' ? 'Choose an empty folder for the project' : 'Open project folder', properties: ['openDirectory'] });
+                    const selected = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: request.command === 'project.create' ? 'Create project — 2 of 2: Choose an empty project folder' : 'Open project folder', properties: ['openDirectory'] });
                     if (selected.canceled || !selected.filePaths[0])
                         return { ...base, status: 'canceled' };
                     basePath = selected.filePaths[0];
@@ -3863,7 +4495,7 @@ else
                     launchApplicationHost();
                 if (request.command === 'project.open' && pendingProjectCreation && !hostExited) {
                     projectClient?.fail();
-                    projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_9__.ProjectHostClient(child);
+                    projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_11__.ProjectHostClient(child);
                 }
                 const hostRequest = { ...request, ...(basePath ? { basePath } : {}), ...(universePath ? { universePath } : {}), ...(pendingProjectCreation && request.command === 'project.open' ? { expectedCreationOperationId: pendingProjectCreation.operationId } : {}) };
                 if (request.command === 'project.create')
@@ -3871,10 +4503,10 @@ else
                 sent = true;
                 let result = await projectClient.request(hostRequest);
                 if (result.status === 'locate') {
-                    const selected = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: `Locate the project's universe (${result.universeId})`, properties: ['openDirectory'] });
+                    const selected = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: `Locate the project's universe (${result.universeId})`, properties: ['openDirectory'] });
                     if (selected.canceled || !selected.filePaths[0])
                         return { ...base, status: 'canceled' };
-                    result = await projectClient.request({ ...hostRequest, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), universePath: selected.filePaths[0] });
+                    result = await projectClient.request({ ...hostRequest, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), universePath: selected.filePaths[0] });
                     result = { ...result, requestId: request.requestId };
                 }
                 if (result.status === 'locate')
@@ -3891,21 +4523,21 @@ else
                         activeLocation = activeSnapshot.location;
                     }
                     if (result.snapshot)
-                        new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_0__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData')).remember({ kind: 'project', id: result.snapshot.ownerId }, result.snapshot.rootId, node_path__WEBPACK_IMPORTED_MODULE_14___default().basename(result.snapshot.location), result.snapshot.location);
+                        new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_2__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData')).remember({ kind: 'project', id: result.snapshot.ownerId }, result.snapshot.rootId, node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(result.snapshot.location), result.snapshot.location);
                 }
                 return result;
             }
             catch {
                 if (!sent)
                     return { ...base, status: 'error', code: 'IO_FAILURE', message: 'The project folder chooser could not complete. Try again.', outcome: 'not-committed', retry: 'new-request' };
-                return (0,_project_host_client__WEBPACK_IMPORTED_MODULE_9__.projectUnavailable)(request);
+                return (0,_project_host_client__WEBPACK_IMPORTED_MODULE_11__.projectUnavailable)(request);
             }
             finally {
                 projectInFlight = false;
             }
         });
-        electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.handle(_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.UNIVERSE_CHANNEL, async (event, value) => {
-            if (!authorized(event) || !(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.validUniverseRequest)(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.UNIVERSE_CHANNEL, async (event, value) => {
+            if (!authorized(event) || !(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.validUniverseRequest)(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
                 throw new Error('Universe request denied');
             universeInFlight = true;
             try {
@@ -3920,7 +4552,7 @@ else
                     const injected = diagnostic ? process.env.WRITINGTOOL_UNIVERSE_FOLDER : undefined;
                     let selection;
                     try {
-                        selection = diagnostic && diagnosticChooserCanceled ? { canceled: true, filePaths: [] } : injected ? { canceled: false, filePaths: [injected] } : await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: request.command === 'universe.create' ? 'Choose an empty folder for the universe' : 'Open universe folder', properties: ['openDirectory'] });
+                        selection = diagnostic && diagnosticChooserCanceled ? { canceled: true, filePaths: [] } : injected ? { canceled: false, filePaths: [injected] } : await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: request.command === 'universe.create' ? 'Choose an empty folder for the universe' : 'Open universe folder', properties: ['openDirectory'] });
                     }
                     catch {
                         return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'IO_FAILURE', message: 'The folder chooser could not open. Try selecting a location again.', outcome: 'not-committed', retry: 'new-request' };
@@ -3929,7 +4561,7 @@ else
                         return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'canceled' };
                     let basePath;
                     try {
-                        basePath = node_fs__WEBPACK_IMPORTED_MODULE_15___default().realpathSync(selection.filePaths[0]);
+                        basePath = node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(selection.filePaths[0]);
                     }
                     catch {
                         return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'IO_FAILURE', message: 'The selected folder is unavailable. Your edits were retained.', outcome: request.command === 'universe.open' && request.reconcileOperationId ? 'unknown' : 'not-committed', retry: request.command === 'universe.open' && request.reconcileOperationId ? 'after-recovery' : 'new-request' };
@@ -3944,7 +4576,7 @@ else
                         activeLocation = result.snapshot?.location;
                         activeSnapshot = result.snapshot;
                         if (result.snapshot)
-                            new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_0__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData')).remember({ kind: 'universe', id: result.snapshot.ownerId }, result.snapshot.rootId, result.snapshot.profile.name, result.snapshot.location);
+                            new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_2__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData')).remember({ kind: 'universe', id: result.snapshot.ownerId }, result.snapshot.rootId, result.snapshot.profile.name, result.snapshot.location);
                     }
                     if (request.command === 'universe.create' && !(result.status === 'error' && result.outcome === 'unknown'))
                         unresolvedOperations.delete(request.input.operationId);
@@ -3967,7 +4599,7 @@ else
                 if (diagnostic && diagnosticLoseSaveAck && request.command === 'universe.profile.save' && result.status === 'ok') {
                     diagnosticLoseSaveAck = false;
                     diagnosticLostReceipt = result.receipt;
-                    result = (0,_universe_host_client__WEBPACK_IMPORTED_MODULE_12__.hostUnavailable)(request);
+                    result = (0,_universe_host_client__WEBPACK_IMPORTED_MODULE_14__.hostUnavailable)(request);
                 }
                 if (request.command === 'universe.profile.save' && !(result.status === 'error' && result.outcome === 'unknown'))
                     unresolvedOperations.delete(request.input.operationId);
@@ -3977,60 +4609,190 @@ else
                 universeInFlight = false;
             }
         });
-        const runProtection = (0,_protection__WEBPACK_IMPORTED_MODULE_1__.nativeProtection)({ openRoot: async (owner, location) => { if (owner.kind === 'project') {
-                let result = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.open', basePath: location });
-                if (result.status === 'locate') {
-                    const chosen = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: 'Locate matching universe', properties: ['openDirectory'] });
-                    if (chosen.canceled || !chosen.filePaths[0])
-                        throw new Error('The matching universe is required.');
-                    result = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.open', basePath: location, universePath: chosen.filePaths[0] });
+        const locateProtectionRoot = async (location, identity, kind) => {
+            if (!location && !identity)
+                return null;
+            if (!location || !identity)
+                throw new Error('The original protection participant identity is incomplete. Preserve its recovery metadata.');
+            const matching = (folder) => { if (!folder)
+                return null; try {
+                const resolved = node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(folder), value = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(resolved, 'writingtool.json'));
+                return value && typeof value === 'object' && 'kind' in value && 'id' in value && 'rootId' in value && value.kind === kind && value.id === identity.id && value.rootId === identity.rootId ? resolved : null;
+            }
+            catch {
+                return null;
+            } };
+            const original = matching(location);
+            if (original)
+                return original;
+            const chosen = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: `Locate the original ${kind} (${identity.id})`, properties: ['openDirectory'] });
+            const resolved = matching(chosen.filePaths[0]);
+            if (chosen.canceled || !resolved)
+                throw new Error('The original owning identity is required. The protection operation remains pending.');
+            return resolved;
+        };
+        const synchronizeProtectionContext = async (notify = true) => {
+            const [project, universe] = await Promise.all([
+                projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.current' }),
+                universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.current' }),
+            ]);
+            if (project.status !== 'ok' || universe.status !== 'ok') {
+                if (notify)
+                    window?.webContents.send('writingtool:recovered-context:v1');
+                throw new Error('The active recovery participants could not be confirmed. Reopen the saved owning roots.');
+            }
+            if (project.snapshot && (!universe.snapshot || project.snapshot.universe.ownerId !== universe.snapshot.ownerId || project.snapshot.universe.rootId !== universe.snapshot.rootId))
+                throw new Error('The active project and universe identities do not match.');
+            activeProjectLocation = project.snapshot?.location;
+            activeProjectIdentity = project.snapshot ? { id: project.snapshot.ownerId, rootId: project.snapshot.rootId } : undefined;
+            activeLocation = universe.snapshot?.location;
+            activeSnapshot = universe.snapshot;
+            if (notify)
+                window?.webContents.send('writingtool:recovered-context:v1');
+        };
+        const runProtection = (0,_protection__WEBPACK_IMPORTED_MODULE_3__.nativeProtection)({ openRoot: async (owner, location) => { try {
+                if (owner.kind === 'project') {
+                    let result = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.open', basePath: location });
+                    if (result.status === 'locate') {
+                        const chosen = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: 'Locate matching universe', properties: ['openDirectory'] });
+                        if (chosen.canceled || !chosen.filePaths[0])
+                            throw new Error('The matching universe is required.');
+                        result = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.open', basePath: location, universePath: chosen.filePaths[0] });
+                    }
+                    if (result.status !== 'ok' || !result.snapshot)
+                        throw new Error(result.status === 'error' ? result.message : 'Project opening was not acknowledged.');
+                    return { project: result.snapshot.location, universe: result.snapshot.universeLocation };
                 }
-                if (result.status !== 'ok' || !result.snapshot)
-                    throw new Error(result.status === 'error' ? result.message : 'Project opening was not acknowledged.');
-                return { project: result.snapshot.location, universe: result.snapshot.universeLocation };
-            } if (activeProjectLocation) {
-                const closed = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.close' });
-                if (closed.status !== 'ok')
-                    throw new Error('Close the active project before changing universes.');
-            } const opened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'universe.open', basePath: location }); if (opened.status !== 'ok' || !opened.snapshot)
-                throw new Error(opened.status === 'error' ? opened.message : 'Universe opening was not acknowledged.'); return { project: null, universe: opened.snapshot.location }; }, window: () => window, roots: () => [activeProjectLocation, activeLocation].filter((p) => !!p), sourceName: async (r) => { if (r.command === 'protection.export' && r.storyId) {
-                const result = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'workspace.query' });
+                if (activeProjectLocation) {
+                    const closed = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.close' });
+                    if (closed.status !== 'ok')
+                        throw new Error('Close the active project before changing universes.');
+                }
+                const opened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.open', basePath: location });
+                if (opened.status !== 'ok' || !opened.snapshot)
+                    throw new Error(opened.status === 'error' ? opened.message : 'Universe opening was not acknowledged.');
+                return { project: null, universe: opened.snapshot.location };
+            }
+            finally {
+                await synchronizeProtectionContext(false);
+            } }, window: () => window, originalRequest: id => pendingProtection.get(id)?.request, originalUniverse: id => { const pending = pendingProtection.get(id); return pending?.universe && pending.universeIdentity ? { owner: { kind: 'universe', id: pending.universeIdentity.id }, rootId: pending.universeIdentity.rootId, location: pending.universe } : undefined; }, roots: () => [activeProjectLocation, activeLocation].filter((p) => !!p), activeOwners: () => [...(activeProjectIdentity ? [{ kind: 'project', id: activeProjectIdentity.id }] : []), ...(activeSnapshot ? [{ kind: 'universe', id: activeSnapshot.ownerId }] : [])], sourceName: async (r) => { if (r.command === 'protection.export' && r.storyId) {
+                const result = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'workspace.query' });
                 if (result.status === 'ok') {
                     const story = result.snapshot.project?.records.find(record => record.recordType === 'story' && record.id === r.storyId);
                     if (story?.recordType === 'story')
                         return story.data.title;
                 }
-            } return r.command === 'protection.export' && r.owner.kind === 'project' && activeProjectLocation ? node_path__WEBPACK_IMPORTED_MODULE_14___default().basename(activeProjectLocation) : activeSnapshot?.profile.name ?? 'WritingTool'; }, settings: async () => { const result = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'settings.get' }); if (result.status !== 'ok' || !result.settings)
-                throw new Error('Read backup settings before continuing.'); return result.settings; }, send: r => { const persist = !['protection.reconcile', 'protection.pending', 'protection.history', 'protection.inspect', 'protection.resume', 'protection.open', 'protection.cancel'].includes(r.command); if (persist) {
-                const entry = { request: r, project: activeProjectLocation ?? null, universe: activeLocation ?? null, projectIdentity: activeProjectIdentity ?? null, universeIdentity: activeSnapshot ? { id: activeSnapshot.ownerId, rootId: activeSnapshot.rootId } : null };
-                pendingProtection.set(r.requestId, entry);
-                savePendingProtection(r.requestId, entry);
-            } return protectionClient.request(r).then(result => { if (persist && !(result.status === 'error' && result.outcome === 'unknown'))
-                forgetPendingProtection(r.requestId); return result; }); } });
-        electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.handle(_application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__.PROTECTION_CHANNEL, async (event, value) => {
-            if (!authorized(event) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__.validProtectionRequest)(value) || draining)
+            } return r.command === 'protection.export' && r.owner.kind === 'project' && activeProjectLocation ? node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(activeProjectLocation) : activeSnapshot?.profile.name ?? 'WritingTool'; }, settings: async () => { const result = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'settings.get' }); if (result.status !== 'ok' || !result.settings)
+                throw new Error('Read backup settings before continuing.'); return result.settings; }, send: async (r) => {
+                const persist = r.command !== 'protection.reconcile' && (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.protectionHasDurableEffects)(r);
+                if (persist) {
+                    const entry = { request: r, project: activeProjectLocation ?? null, universe: activeLocation ?? null, projectIdentity: activeProjectIdentity ?? null, universeIdentity: activeSnapshot ? { id: activeSnapshot.ownerId, rootId: activeSnapshot.rootId } : null, dispatch: 'prepared' };
+                    // No ordinary command is posted until both native context and a no-effects
+                    // utility job are durable. Prepared native records prove execution never began.
+                    pendingProtection.set(r.requestId, entry);
+                    savePendingProtection(r.requestId, entry);
+                    const ready = await protectionClient.request({ ...r, nativePrepareOnly: true });
+                    if (ready.status !== 'ok')
+                        throw new Error(ready.status === 'error' ? ready.message : 'The protection job was not prepared. Reconcile before retrying.');
+                    const attempted = { ...entry, dispatch: 'attempted' };
+                    savePendingProtection(r.requestId, attempted);
+                    pendingProtection.set(r.requestId, attempted);
+                }
+                return protectionClient.request(r);
+            } });
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.PROTECTION_CHANNEL, async (event, value) => {
+            if (!authorized(event) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.validProtectionRequest)(value))
                 throw new Error('Protection request denied');
+            if (draining)
+                return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: 'Wait for normal closing to finish.', outcome: 'not-committed', operationId: null };
             if (value.command === 'protection.pending') {
-                const result = await protectionClient.request(value);
-                return result.status === 'ok' ? { ...result, value: { ...result.value, pending: [...pendingProtection.keys()] } } : result;
+                try {
+                    const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative = 'protection/proposals';
+                    (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(root, relative);
+                    const proposals = node_fs__WEBPACK_IMPORTED_MODULE_17___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, relative)).filter(name => name.endsWith('.json') && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(name.slice(0, -5))).map(name => name.slice(0, -5));
+                    return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'ok', value: { pending: [...pendingProtection.keys()], proposals } };
+                }
+                catch (error) {
+                    return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: error instanceof Error ? error.message : 'Pending recovery metadata could not be read.', outcome: 'not-committed', operationId: null };
+                }
             }
             if (value.command === 'protection.cancel')
                 return protectionClient.request(value);
+            // Listing recent roots has no authority effects and must remain available during recovery.
+            if (value.command === 'protection.recents')
+                return runProtection(value);
             if (value.command === 'protection.reconcile') {
                 if (protectionInFlight || workspaceInFlight || projectInFlight || universeInFlight)
-                    throw new Error('Wait for the active authority operation before reconciliation.');
+                    return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: 'Wait for the active authority operation before reconciliation.', outcome: 'not-committed', operationId: null };
                 protectionInFlight = true;
                 try {
-                    const pending = pendingProtection.get(value.operationId);
+                    let pending = pendingProtection.get(value.operationId);
+                    if (pending?.dispatch === 'prepared' && !hostExited) {
+                        // Execution was never sent; reset a failed preparation transport too.
+                        protectionClient?.fail();
+                        protectionClient = new _protection_host_client__WEBPACK_IMPORTED_MODULE_5__.ProtectionHostClient(child);
+                        forgetPendingProtection(value.operationId);
+                        window?.webContents.send('writingtool:recovered-context:v1');
+                        return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'ok', value: { reconciliation: { operationId: value.operationId, outcome: 'not-committed' } } };
+                    }
+                    let moved = false;
+                    if (pending) {
+                        const project = await locateProtectionRoot(pending.project, pending.projectIdentity, 'project'), universe = await locateProtectionRoot(pending.universe, pending.universeIdentity, 'universe');
+                        moved = project !== pending.project || universe !== pending.universe;
+                        if (moved) {
+                            const relocated = { ...pending, project, universe };
+                            savePendingProtection(value.operationId, relocated);
+                            pendingProtection.set(value.operationId, relocated);
+                            pending = relocated;
+                        }
+                    }
+                    moved = moved || !!(pending?.project && activeProjectLocation && activeProjectIdentity?.id === pending.projectIdentity?.id && activeProjectIdentity?.rootId === pending.projectIdentity?.rootId && activeProjectLocation !== pending.project) || !!(!pending?.project && pending?.universe && activeLocation && activeSnapshot?.ownerId === pending.universeIdentity?.id && activeSnapshot?.rootId === pending.universeIdentity?.rootId && activeLocation !== pending.universe);
+                    const activationFile = node_path__WEBPACK_IMPORTED_MODULE_16___default().join(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_0__.activationPath)(value.operationId));
+                    let activation = false;
+                    if (pending?.request.command === 'protection.apply' && node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(activationFile)) {
+                        const decision = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_0__.activationPath)(value.operationId)));
+                        if (!(0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_0__.validActivationDecision)(decision) || decision.requestId !== value.operationId || decision.proposalId !== pending.request.proposalId)
+                            throw new Error('Original activation evidence is invalid.');
+                        activation = true;
+                        // Published roots may have opened before a ZIP acknowledgement failed.
+                        // Release a host holding their old VFS paths before native relocation.
+                        for (const participant of decision.participants) {
+                            const location = (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_0__.activationRootAt)(participant.stage, participant) ?? (0,_infrastructure_recovery_activation__WEBPACK_IMPORTED_MODULE_0__.activationRootAt)(participant.destination, participant);
+                            const active = participant.owner.kind === 'project' ? activeProjectIdentity : activeSnapshot ? { id: activeSnapshot.ownerId, rootId: activeSnapshot.rootId } : undefined;
+                            const activePath = participant.owner.kind === 'project' ? activeProjectLocation : activeLocation;
+                            if (!location || active?.id === participant.owner.id && active.rootId === participant.rootId && activePath !== location)
+                                moved = true;
+                        }
+                    }
+                    if (moved && !hostExited && child) {
+                        const original = child;
+                        await new Promise((resolve, reject) => { const timer = setTimeout(() => { original.removeListener('exit', exited); reject(new Error('Wait for the original application host to release its authority before retrying.')); }, 15000); const exited = () => { clearTimeout(timer); resolve(); }; original.once('exit', exited); try {
+                            original.kill();
+                        }
+                        catch (error) {
+                            clearTimeout(timer);
+                            original.removeListener('exit', exited);
+                            reject(error);
+                        } });
+                    }
                     const hostRestarted = hostExited;
-                    if (hostRestarted)
+                    if (hostRestarted) {
                         launchApplicationHost();
+                        if (activation) {
+                            activeProjectLocation = undefined;
+                            activeProjectIdentity = undefined;
+                            activeLocation = undefined;
+                            activeSnapshot = undefined;
+                        }
+                    }
                     else {
                         protectionClient?.fail();
-                        protectionClient = new _protection_host_client__WEBPACK_IMPORTED_MODULE_3__.ProtectionHostClient(child);
+                        protectionClient = new _protection_host_client__WEBPACK_IMPORTED_MODULE_5__.ProtectionHostClient(child);
                     }
-                    if (pending?.project && (hostRestarted || activeProjectLocation !== pending.project)) {
-                        const opened = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.open', basePath: pending.project, universePath: pending.universe ?? undefined });
+                    // Activation owns reopening its staged participants before the live universe;
+                    // either may need the other's coordinator journal during recovery.
+                    if (!activation && pending?.project && (hostRestarted || moved || activeProjectLocation !== pending.project || activeProjectIdentity?.id !== pending.projectIdentity?.id || activeProjectIdentity?.rootId !== pending.projectIdentity?.rootId)) {
+                        const opened = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.open', basePath: pending.project, universePath: pending.universe ?? undefined });
                         if (opened.status !== 'ok' || !opened.snapshot || opened.snapshot.ownerId !== pending.projectIdentity?.id || opened.snapshot.rootId !== pending.projectIdentity?.rootId || opened.snapshot.universe.ownerId !== pending.universeIdentity?.id || opened.snapshot.universe.rootId !== pending.universeIdentity?.rootId)
                             throw new Error('Reopen the original participants before protection reconciliation.');
                         activeProjectLocation = opened.snapshot.location;
@@ -4038,33 +4800,30 @@ else
                         activeLocation = opened.snapshot.universeLocation;
                         activeSnapshot = opened.snapshot.universe;
                     }
-                    else if (pending?.universe && (hostRestarted || activeLocation !== pending.universe)) {
-                        const opened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'universe.open', basePath: pending.universe });
+                    else if (!activation && pending?.universe && (hostRestarted || moved || activeLocation !== pending.universe || activeSnapshot?.ownerId !== pending.universeIdentity?.id || activeSnapshot?.rootId !== pending.universeIdentity?.rootId)) {
+                        const opened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.open', basePath: pending.universe });
                         if (opened.status !== 'ok' || !opened.snapshot || opened.snapshot.ownerId !== pending.universeIdentity?.id || opened.snapshot.rootId !== pending.universeIdentity?.rootId)
                             throw new Error('Reopen the original universe before protection reconciliation.');
+                        activeProjectLocation = undefined;
+                        activeProjectIdentity = undefined;
                         activeLocation = opened.snapshot.location;
                         activeSnapshot = opened.snapshot;
                     }
+                    if (pending?.dispatch === 'prepared') {
+                        await synchronizeProtectionContext();
+                        forgetPendingProtection(value.operationId);
+                        return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'ok', value: { reconciliation: { operationId: value.operationId, outcome: 'not-committed' } } };
+                    }
                     const result = await runProtection(value);
                     if (result.status === 'ok') {
+                        await synchronizeProtectionContext();
                         forgetPendingProtection(value.operationId);
-                        const p = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.current' });
-                        if (p.status === 'ok' && p.snapshot) {
-                            activeProjectLocation = p.snapshot.location;
-                            activeProjectIdentity = { id: p.snapshot.ownerId, rootId: p.snapshot.rootId };
-                            activeLocation = p.snapshot.universeLocation;
-                            activeSnapshot = p.snapshot.universe;
-                        }
-                        else {
-                            const u = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'universe.current' });
-                            if (u.status === 'ok' && u.snapshot) {
-                                activeLocation = u.snapshot.location;
-                                activeSnapshot = u.snapshot;
-                            }
-                        }
-                        window?.webContents.send('writingtool:recovered-context:v1');
                     }
                     return result;
+                }
+                catch (error) {
+                    unresolvedOperations.add(value.operationId);
+                    return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: error instanceof Error ? error.message : 'Protection reconciliation remains unconfirmed.', outcome: 'unknown', operationId: value.operationId };
                 }
                 finally {
                     protectionInFlight = false;
@@ -4075,31 +4834,29 @@ else
             protectionInFlight = true;
             try {
                 const result = await runProtection(value);
-                if (result.status === 'ok' && result.value.activated) {
-                    const roots = result.value.activated;
-                    activeProjectLocation = roots.project ?? undefined;
-                    activeLocation = roots.universe;
-                    const u = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'universe.current' });
-                    if (u.status === 'ok')
-                        activeSnapshot = u.snapshot;
-                    const p = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.current' });
-                    if (p.status === 'ok' && p.snapshot)
-                        activeProjectIdentity = { id: p.snapshot.ownerId, rootId: p.snapshot.rootId };
-                    window?.webContents.send('writingtool:recovered-context:v1');
-                }
+                if (result.status === 'ok' && result.value.activated || value.command === 'protection.recent' && value.action !== 'remove')
+                    await synchronizeProtectionContext();
                 if (result.status === 'error' && result.outcome === 'unknown')
                     unresolvedOperations.add(value.requestId);
+                else
+                    forgetPendingProtection(value.requestId);
                 return result;
+            }
+            catch (error) {
+                const uncertain = pendingProtection.has(value.requestId);
+                if (uncertain)
+                    unresolvedOperations.add(value.requestId);
+                return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: error instanceof Error ? error.message : 'The native protection result could not be confirmed.', outcome: uncertain ? 'unknown' : 'not-committed', operationId: uncertain ? value.requestId : null };
             }
             finally {
                 protectionInFlight = false;
             }
         });
-        electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.handle(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.WORKSPACE_CHANNEL, async (event, value) => {
-            if (!authorized(event) || !(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validWorkspaceRequest)(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.WORKSPACE_CHANNEL, async (event, value) => {
+            if (!authorized(event) || !(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.validWorkspaceRequest)(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
                 throw new Error('Workspace request denied');
             const request = value, base = { protocolVersion: 1, requestId: request.requestId, command: request.command };
-            if ((unresolvedOperations.size || pendingProjectCreation) && request.command !== 'workspace.reconcile' && request.command !== 'settings.get')
+            if ((unresolvedOperations.size || pendingProjectCreation) && request.command !== 'workspace.reconcile' && request.command !== 'settings.get' && request.command !== 'workspace.query')
                 return { ...base, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the original pending operation before continuing.', outcome: 'unknown', retry: 'after-recovery', issues: [] };
             workspaceInFlight = true;
             let sent = false;
@@ -4110,12 +4867,12 @@ else
                         const locate = async (original, identity, label) => { if (!identity)
                             return undefined; const valid = (folder) => { if (!folder)
                             return; try {
-                            const resolved = node_fs__WEBPACK_IMPORTED_MODULE_15___default().realpathSync(folder), d = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.decode)(node_fs__WEBPACK_IMPORTED_MODULE_15___default().readFileSync(node_path__WEBPACK_IMPORTED_MODULE_14___default().join(resolved, 'writingtool.json')));
+                            const resolved = node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(folder), d = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)(node_fs__WEBPACK_IMPORTED_MODULE_17___default().readFileSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(resolved, 'writingtool.json')));
                             if (d.id === identity.id && d.rootId === identity.rootId)
                                 return resolved;
                         }
                         catch { } return; }; const existing = valid(original); if (existing)
-                            return existing; const selected = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: `Locate the original ${label} (${identity.id})`, properties: ['openDirectory'] }); const chosen = valid(selected.filePaths[0]); if (selected.canceled || !chosen)
+                            return existing; const selected = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: `Locate the original ${label} (${identity.id})`, properties: ['openDirectory'] }); const chosen = valid(selected.filePaths[0]); if (selected.canceled || !chosen)
                             throw new Error('The original owning identity is required for reconciliation'); return chosen; };
                         const projectLocation = await locate(pending.projectLocation, pending.projectIdentity, 'project'), universeLocation = await locate(pending.universeLocation, pending.universeIdentity, 'universe');
                         const moved = projectLocation !== pending.projectLocation || universeLocation !== pending.universeLocation;
@@ -4128,12 +4885,12 @@ else
                         if (hostExited) {
                             launchApplicationHost();
                             if (projectLocation) {
-                                const reopened = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.open', basePath: projectLocation, ...(universeLocation ? { universePath: universeLocation } : {}) });
+                                const reopened = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.open', basePath: projectLocation, ...(universeLocation ? { universePath: universeLocation } : {}) });
                                 if (reopened.status !== 'ok' || !reopened.snapshot || reopened.snapshot.ownerId !== pending.projectIdentity?.id || reopened.snapshot.rootId !== pending.projectIdentity?.rootId)
                                     throw new Error('Original project participants could not be reopened');
                             }
                             else if (universeLocation) {
-                                const reopened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'universe.open', basePath: universeLocation });
+                                const reopened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.open', basePath: universeLocation });
                                 if (reopened.status !== 'ok' || !reopened.snapshot || reopened.snapshot.ownerId !== pending.universeIdentity?.id || reopened.snapshot.rootId !== pending.universeIdentity?.rootId)
                                     throw new Error('Original universe could not be reopened');
                             }
@@ -4144,7 +4901,7 @@ else
                 }
                 if (request.command === 'workspace.reconcile' || request.command === 'settings.get') {
                     workspaceClient?.fail();
-                    workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_6__.WorkspaceHostClient(child);
+                    workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_8__.WorkspaceHostClient(child);
                 }
                 let internal = request;
                 if (request.command === 'workspace.asset.import') {
@@ -4152,38 +4909,38 @@ else
                     if (frozen)
                         internal = { ...frozen.request, requestId: request.requestId };
                     else {
-                        const selected = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: 'Choose profile image', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+                        const selected = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: 'Choose profile image', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
                         if (selected.canceled || !selected.filePaths[0])
                             return { ...base, status: 'canceled' };
-                        const bytes = node_fs__WEBPACK_IMPORTED_MODULE_15___default().readFileSync(selected.filePaths[0]);
+                        const bytes = node_fs__WEBPACK_IMPORTED_MODULE_17___default().readFileSync(selected.filePaths[0]);
                         const png = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255, webp = bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
-                        if ((!png && !jpeg && !webp) || electron__WEBPACK_IMPORTED_MODULE_13__.nativeImage.createFromBuffer(bytes).isEmpty())
+                        if ((!png && !jpeg && !webp) || electron__WEBPACK_IMPORTED_MODULE_15__.nativeImage.createFromBuffer(bytes).isEmpty())
                             return { ...base, status: 'error', code: 'VALIDATION', message: 'Choose a readable PNG, JPEG or WebP image. The previous image was retained.', outcome: 'not-committed', retry: 'new-request', issues: [] };
-                        internal = { ...request, nativeAsset: { id: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), sha256: (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)(bytes), mediaType: png ? 'image/png' : jpeg ? 'image/jpeg' : 'image/webp', base64: bytes.toString('base64') } };
+                        internal = { ...request, nativeAsset: { id: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), sha256: (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)(bytes), mediaType: png ? 'image/png' : jpeg ? 'image/jpeg' : 'image/webp', base64: bytes.toString('base64') } };
                     }
                 }
                 if (request.command === 'settings.import') {
-                    const selected = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: 'Import settings', properties: ['openFile'], filters: [{ name: 'Settings', extensions: ['json'] }] });
+                    const selected = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: 'Import settings', properties: ['openFile'], filters: [{ name: 'Settings', extensions: ['json'] }] });
                     if (selected.canceled || !selected.filePaths[0])
                         return { ...base, status: 'canceled' };
-                    internal = { ...request, nativeSettings: (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.decode)(node_fs__WEBPACK_IMPORTED_MODULE_15___default().readFileSync(selected.filePaths[0])) };
+                    internal = { ...request, nativeSettings: (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)(node_fs__WEBPACK_IMPORTED_MODULE_17___default().readFileSync(selected.filePaths[0])) };
                 }
                 if (request.command === 'settings.select-backup') {
-                    const selected = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: 'Choose backup destination', properties: ['openDirectory'] });
+                    const selected = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: 'Choose backup destination', properties: ['openDirectory'] });
                     if (selected.canceled || !selected.filePaths[0])
                         return { ...base, status: 'canceled' };
-                    internal = { ...request, nativeDestination: node_fs__WEBPACK_IMPORTED_MODULE_15___default().realpathSync(selected.filePaths[0]) };
+                    internal = { ...request, nativeDestination: node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(selected.filePaths[0]) };
                 }
                 let exportPath;
                 if (request.command === 'settings.export') {
-                    const selected = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showSaveDialog(window, { title: 'Export settings', defaultPath: 'WritingTool-settings.json', filters: [{ name: 'Settings', extensions: ['json'] }], properties: ['showOverwriteConfirmation'] });
+                    const selected = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showSaveDialog(window, { title: 'Export settings', defaultPath: 'WritingTool-settings.json', filters: [{ name: 'Settings', extensions: ['json'] }], properties: ['showOverwriteConfirmation'] });
                     if (selected.canceled || !selected.filePath)
                         return { ...base, status: 'canceled' };
                     exportPath = selected.filePath;
-                    const parent = node_fs__WEBPACK_IMPORTED_MODULE_15___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_14___default().dirname(exportPath)), target = node_path__WEBPACK_IMPORTED_MODULE_14___default().join(parent, node_path__WEBPACK_IMPORTED_MODULE_14___default().basename(exportPath));
-                    for (const root of [activeLocation, activeProjectLocation, electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData')].filter((p) => !!p)) {
-                        const relative = node_path__WEBPACK_IMPORTED_MODULE_14___default().relative(node_fs__WEBPACK_IMPORTED_MODULE_15___default().realpathSync(root), target);
-                        if (!relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_14___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_14___default().isAbsolute(relative))
+                    const parent = node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().dirname(exportPath)), target = node_path__WEBPACK_IMPORTED_MODULE_16___default().join(parent, node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(exportPath));
+                    for (const root of [activeLocation, activeProjectLocation, electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData')].filter((p) => !!p)) {
+                        const relative = node_path__WEBPACK_IMPORTED_MODULE_16___default().relative(node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(root), target);
+                        if (!relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_16___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_16___default().isAbsolute(relative))
                             throw new Error('Settings export cannot replace live application data');
                     }
                 }
@@ -4195,19 +4952,19 @@ else
                 sent = true;
                 let result = await workspaceClient.request(internal);
                 if (result.status === 'ok' && exportPath && result.settings) {
-                    const parent = node_fs__WEBPACK_IMPORTED_MODULE_15___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_14___default().dirname(exportPath)), name = node_path__WEBPACK_IMPORTED_MODULE_14___default().basename(exportPath);
+                    const parent = node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().dirname(exportPath)), name = node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(exportPath);
                     let expected = null;
                     try {
-                        const stat = node_fs__WEBPACK_IMPORTED_MODULE_15___default().lstatSync(exportPath);
+                        const stat = node_fs__WEBPACK_IMPORTED_MODULE_17___default().lstatSync(exportPath);
                         if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1)
                             throw new Error('Aliased export destination');
-                        expected = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)(node_fs__WEBPACK_IMPORTED_MODULE_15___default().readFileSync(exportPath));
+                        expected = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)(node_fs__WEBPACK_IMPORTED_MODULE_17___default().readFileSync(exportPath));
                     }
                     catch (e) {
                         if (e.code !== 'ENOENT')
                             throw e;
                     }
-                    ;(0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.publishManagedBytes)(parent, name, Buffer.from(JSON.stringify(result.settings, null, 2) + '\n'), expected);
+                    ;(0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(parent, name, Buffer.from(JSON.stringify(result.settings, null, 2) + '\n'), expected);
                     result = { ...result, destination: exportPath };
                 }
                 const id = request.command === 'workspace.mutate' ? request.input.operationId : request.command === 'workspace.asset.import' || request.command === 'workspace.reconcile' ? request.operationId : undefined;
@@ -4228,7 +4985,7 @@ else
                     pendingWorkspace.delete(id);
                 }
                 if (result.status === 'ok' && activeLocation) {
-                    const current = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'universe.current' });
+                    const current = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.current' });
                     if (current.status === 'ok') {
                         activeSnapshot = current.snapshot;
                         activeLocation = current.snapshot?.location;
@@ -4237,15 +4994,15 @@ else
                 return result;
             }
             catch {
-                return sent ? (0,_workspace_host_client__WEBPACK_IMPORTED_MODULE_6__.workspaceUnavailable)(request) : { ...base, status: 'error', code: 'IO_FAILURE', message: 'The native workspace selection or file operation could not complete. Existing content was retained.', outcome: 'not-committed', retry: 'new-request', issues: [] };
+                return sent ? (0,_workspace_host_client__WEBPACK_IMPORTED_MODULE_8__.workspaceUnavailable)(request) : { ...base, status: 'error', code: 'IO_FAILURE', message: 'The native workspace selection or file operation could not complete. Existing content was retained.', outcome: 'not-committed', retry: 'new-request', issues: [] };
             }
             finally {
                 workspaceInFlight = false;
             }
         });
-        disposePresentation = (0,_presentation__WEBPACK_IMPORTED_MODULE_4__.registerPresentation)(() => window, 'http://localhost:3000/main_window/index.html', '/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs');
-        window = new electron__WEBPACK_IMPORTED_MODULE_13__.BrowserWindow({ width: 960, height: 680, minWidth: 360, minHeight: 360, backgroundColor: '#292929', show: false, webPreferences: { preload: '/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs', sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false, additionalArguments: diagnostic ? ['--writingtool-smoke'] : [] } });
-        electron__WEBPACK_IMPORTED_MODULE_13__.powerMonitor.on('resume', () => { if (window && !window.isDestroyed())
+        disposePresentation = (0,_presentation__WEBPACK_IMPORTED_MODULE_6__.registerPresentation)(() => window, 'http://localhost:3000/main_window/index.html', '/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs');
+        window = new electron__WEBPACK_IMPORTED_MODULE_15__.BrowserWindow({ width: 960, height: 680, minWidth: 360, minHeight: 360, backgroundColor: '#292929', show: false, webPreferences: { preload: '/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs', sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false, additionalArguments: diagnostic ? ['--writingtool-smoke'] : [] } });
+        electron__WEBPACK_IMPORTED_MODULE_15__.powerMonitor.on('resume', () => { if (window && !window.isDestroyed())
             window.webContents.send('writingtool:system-resume:v1'); });
         window.webContents.on('console-message', (_event, _level, message) => {
             if (diagnostic && message === 'WRITINGTOOL_INVALID_REQUESTS true')
@@ -4283,17 +5040,17 @@ else
         });
         window.once('ready-to-show', () => window?.show());
         await window.loadURL('http://localhost:3000/main_window/index.html');
-        const fallbackRelative = 'protection/close-fallback.json', fallbackRoot = electron__WEBPACK_IMPORTED_MODULE_13__.app.getPath('userData');
-        if (!diagnostic && node_fs__WEBPACK_IMPORTED_MODULE_15___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_14___default().join(fallbackRoot, fallbackRelative))) {
-            const bytes = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(fallbackRoot, fallbackRelative), notice = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.decode)(bytes);
-            if ((0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.closed)(notice, ['schemaVersion', 'folder', 'createdAt', 'used', 'actualPath']) && notice.schemaVersion === 1 && notice.used === true && typeof notice.folder === 'string' && typeof notice.actualPath === 'string') {
-                const answer = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showMessageBox(window, { type: 'info', title: 'Closing backup saved in another folder', message: 'Your required closing backup was saved at:\n' + notice.actualPath, detail: 'Choose a new backup destination for future backups.', buttons: ['Choose backup folder…', 'Remind me next launch'], defaultId: 0, cancelId: 1 });
+        const fallbackRelative = 'protection/close-fallback.json', fallbackRoot = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData');
+        if (!diagnostic && node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(fallbackRoot, fallbackRelative))) {
+            const bytes = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(fallbackRoot, fallbackRelative), notice = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)(bytes);
+            if ((0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(notice, ['schemaVersion', 'folder', 'createdAt', 'used', 'actualPath']) && notice.schemaVersion === 1 && notice.used === true && typeof notice.folder === 'string' && typeof notice.actualPath === 'string') {
+                const answer = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showMessageBox(window, { type: 'info', title: 'Closing backup saved in another folder', message: 'Your required closing backup was saved at:\n' + notice.actualPath, detail: 'Choose a new backup destination for future backups.', buttons: ['Choose backup folder…', 'Remind me next launch'], defaultId: 0, cancelId: 1 });
                 if (answer.response === 0) {
-                    const chosen = await electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showOpenDialog(window, { title: 'Choose future backup folder', properties: ['openDirectory', 'createDirectory'] });
+                    const chosen = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showOpenDialog(window, { title: 'Choose future backup folder', properties: ['openDirectory', 'createDirectory'] });
                     if (!chosen.canceled && chosen.filePaths[0]) {
-                        const saved = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'settings.select-backup', nativeDestination: node_fs__WEBPACK_IMPORTED_MODULE_15___default().realpathSync(chosen.filePaths[0]) });
+                        const saved = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'settings.select-backup', nativeDestination: node_fs__WEBPACK_IMPORTED_MODULE_17___default().realpathSync(chosen.filePaths[0]) });
                         if (saved.status === 'ok')
-                            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.removeManagedBytes)(fallbackRoot, fallbackRelative, (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)(bytes));
+                            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.removeManagedBytes)(fallbackRoot, fallbackRelative, (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)(bytes));
                     }
                 }
             }
@@ -4302,7 +5059,7 @@ else
             void smoke();
     }).catch(error => {
         console.error(error);
-        electron__WEBPACK_IMPORTED_MODULE_13__.app.exit(1);
+        electron__WEBPACK_IMPORTED_MODULE_15__.app.exit(1);
     });
 async function smoke() {
     const deadline = Date.now() + 14000;
@@ -4421,12 +5178,12 @@ async function smoke() {
         oldChild?.kill();
         await exited;
         const reopened = await window.webContents.executeJavaScript(`window.writingTool.openUniverse()`);
-        await window.webContents.executeJavaScript(`(async()=>{await window.writingTool.closeUniverse();Array.from(document.querySelectorAll('nav button')).find(button=>button.textContent.startsWith('New universe')).click();await new Promise(resolve=>setTimeout(resolve,70));const input=document.querySelector('.profile input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Unsaved native close draft');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+        await window.webContents.executeJavaScript(`(async()=>{await window.writingTool.closeUniverse();document.dispatchEvent(new Event('writingtool-recovered-context'));await new Promise(resolve=>setTimeout(resolve,150));Array.from(document.querySelectorAll('nav button')).find(button=>button.textContent.startsWith('New universe')).click();await new Promise(resolve=>setTimeout(resolve,70));const input=document.querySelector('.profile input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Unsaved native close draft');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
         const cancelNative = async (kind) => {
             if (kind === 'window')
                 window.close();
             else
-                electron__WEBPACK_IMPORTED_MODULE_13__.app.quit();
+                electron__WEBPACK_IMPORTED_MODULE_15__.app.quit();
             const preserved = await window.webContents.executeJavaScript(`(async()=>{for(let i=0;i<100&&!document.querySelector('#pending-heading');i++)await new Promise(resolve=>setTimeout(resolve,30));const retained=!!document.querySelector('#pending-heading')&&document.querySelector('.profile input')?.value==='Unsaved native close draft';Array.from(document.querySelectorAll('.blocking button')).find(button=>button.textContent==='Cancel')?.click();return retained;})()`);
             await new Promise(resolve => setTimeout(resolve, 70));
             return preserved && !!window && !window.isDestroyed();
@@ -4441,11 +5198,13 @@ async function smoke() {
         };
     }
     const expected = fault ? 'unavailable' : 'ready';
-    const untrusted = new electron__WEBPACK_IMPORTED_MODULE_13__.BrowserWindow({ show: false, webPreferences: { preload: '/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs', sandbox: true, contextIsolation: true, nodeIntegration: false } });
+    const untrusted = new electron__WEBPACK_IMPORTED_MODULE_15__.BrowserWindow({ show: false, webPreferences: { preload: '/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs', sandbox: true, contextIsolation: true, nodeIntegration: false } });
     await untrusted.loadURL('http://localhost:3000/main_window/index.html');
     const untrustedResult = await untrusted.webContents.executeJavaScript('window.writingTool.readiness()');
     const untrustedUniverse = await untrusted.webContents.executeJavaScript('window.writingTool.currentUniverse()');
-    const senderDenied = untrustedUniverse.status === 'error' && untrustedUniverse.code === 'HOST_UNAVAILABLE' && untrustedResult.status === 'unavailable' && untrustedResult.code === 'UNAVAILABLE';
+    const untrustedWorkspace = await untrusted.webContents.executeJavaScript("window.writingTool.workspace({command:'workspace.query'})");
+    const untrustedProtection = await untrusted.webContents.executeJavaScript("window.writingTool.protection({command:'protection.pending'})");
+    const senderDenied = untrustedUniverse.status === 'error' && untrustedUniverse.code === 'HOST_UNAVAILABLE' && untrustedWorkspace.status === 'error' && untrustedWorkspace.code === 'HOST_UNAVAILABLE' && untrustedProtection.status === 'error' && untrustedResult.status === 'unavailable' && untrustedResult.code === 'UNAVAILABLE';
     untrusted.destroy();
     const checksBefore = permissionChecks;
     const requestsBefore = permissionRequests;
@@ -4462,20 +5221,20 @@ async function smoke() {
   ])`);
     const permissionsDenied = permissions.query === 'denied' && permissions.request === 'denied' && permissionChecks > checksBefore && permissionRequests > requestsBefore;
     const before = window.webContents.getURL();
-    const windowCount = electron__WEBPACK_IMPORTED_MODULE_13__.BrowserWindow.getAllWindows().length;
+    const windowCount = electron__WEBPACK_IMPORTED_MODULE_15__.BrowserWindow.getAllWindows().length;
     await window.webContents.executeJavaScript(`window.open('https://example.invalid'); location.href='https://example.invalid';`);
     await new Promise(resolve => setTimeout(resolve, 150));
-    const security = observed.node === 'undefined' && observed.process === 'undefined' && JSON.stringify(observed.keys) === '["createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"]' && window.webContents.getURL() === before && electron__WEBPACK_IMPORTED_MODULE_13__.BrowserWindow.getAllWindows().length === windowCount;
+    const security = observed.node === 'undefined' && observed.process === 'undefined' && JSON.stringify(observed.keys) === '["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"]' && window.webContents.getURL() === before && electron__WEBPACK_IMPORTED_MODULE_15__.BrowserWindow.getAllWindows().length === windowCount;
     const expectedCode = { start: 'HOST_START_FAILED', exit: 'HOST_EXITED', invalid: 'INVALID_RESPONSE', timeout: 'TIMEOUT', 'exit-after-ready': 'HOST_EXITED', 'fatal-error': 'HOST_EXITED' }[fault ?? ''];
     const universePassed = !universeFlow || universeFlow.passed;
     const passed = universePassed && observed.state === expected && client?.pendingCount === 0 && security && senderDenied && invalidRequestsRejected && permissionsDenied && (fault !== 'fatal-error' || hostErrors === 1) && (!expectedCode || String(observed.text).includes(expectedCode));
-    console.log('WRITINGTOOL_SMOKE ' + JSON.stringify({ passed, packaged: electron__WEBPACK_IMPORTED_MODULE_13__.app.isPackaged, fault: fault ?? 'none', observed, security, senderDenied, invalidRequestsRejected, permissionsDenied, permissionChecks, permissionRequests, hostErrors, pending: client?.pendingCount, universeFlow, versions: process.versions }));
+    console.log('WRITINGTOOL_SMOKE ' + JSON.stringify({ passed, packaged: electron__WEBPACK_IMPORTED_MODULE_15__.app.isPackaged, fault: fault ?? 'none', observed, security, senderDenied, invalidRequestsRejected, permissionsDenied, permissionChecks, permissionRequests, hostErrors, pending: client?.pendingCount, universeFlow, versions: process.versions }));
     if (!passed) {
-        electron__WEBPACK_IMPORTED_MODULE_13__.app.exit(1);
+        electron__WEBPACK_IMPORTED_MODULE_15__.app.exit(1);
         return;
     }
     // Success exits through the same production dirty decision and host drain.
-    electron__WEBPACK_IMPORTED_MODULE_13__.app.quit();
+    electron__WEBPACK_IMPORTED_MODULE_15__.app.quit();
     if (window && !window.isDestroyed())
         await window.webContents.executeJavaScript(`(async()=>{for(let i=0;i<100&&!document.querySelector('#pending-heading');i++)await new Promise(resolve=>setTimeout(resolve,30));Array.from(document.querySelectorAll('.blocking button')).find(button=>button.textContent==='Discard')?.click();})()`).catch(() => {
         });
@@ -4484,10 +5243,11 @@ async function requestNativeQuit(kind) {
     if (quitDecisionInFlight || draining)
         return;
     quitDecisionInFlight = true;
+    let authorityReleased = false;
     try {
         const owned = window;
         if (owned && !owned.isDestroyed()) {
-            const token = (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)();
+            const token = (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)();
             const approved = await owned.webContents.executeJavaScript(`new Promise(resolve => {
                 const token=${JSON.stringify(token)};
                 const listener=event=>{if(event.detail?.token!==token)return;document.removeEventListener('writingtool-quit-decision',listener);resolve(event.detail.approved===true);};
@@ -4498,7 +5258,7 @@ async function requestNativeQuit(kind) {
                 return;
         }
         if (unresolvedOperations.size || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
-            electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
+            electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
             return;
         }
         draining = true;
@@ -4506,18 +5266,28 @@ async function requestNativeQuit(kind) {
             // Reuse the same process, never create replacement authority. A
             // failed readiness/transport client is not a shutdown acknowledgment.
             universeClient?.fail();
-            universeClient = new _universe_host_client__WEBPACK_IMPORTED_MODULE_12__.UniverseHostClient(child);
+            universeClient = new _universe_host_client__WEBPACK_IMPORTED_MODULE_14__.UniverseHostClient(child);
             projectClient?.fail();
-            projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_9__.ProjectHostClient(child);
-            const projectResult = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'project.close' });
+            projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_11__.ProjectHostClient(child);
+            const projectResult = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.close' });
             if (projectResult.status !== 'ok' && !hostExited) {
-                electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showErrorBox('Unable to close project', projectResult.status === 'error' ? projectResult.message : 'Shutdown was not acknowledged.');
+                electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showErrorBox('Unable to close project', projectResult.status === 'error' ? projectResult.message : 'Shutdown was not acknowledged.');
                 return;
             }
-            const result = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID)(), command: 'universe.close' });
+            if (projectResult.status === 'ok') {
+                authorityReleased ||= !!activeProjectLocation;
+                activeProjectLocation = undefined;
+                activeProjectIdentity = undefined;
+            }
+            const result = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.close' });
             if (result.status !== 'ok' && !hostExited) {
-                electron__WEBPACK_IMPORTED_MODULE_13__.dialog.showErrorBox('Unable to close universe', result.status === 'error' ? result.message : 'Shutdown was not acknowledged.');
+                electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showErrorBox('Unable to close universe', result.status === 'error' ? result.message : 'Shutdown was not acknowledged.');
                 return;
+            }
+            if (result.status === 'ok') {
+                authorityReleased ||= !!activeLocation;
+                activeLocation = undefined;
+                activeSnapshot = null;
             }
         }
         if (diagnostic)
@@ -4528,7 +5298,7 @@ async function requestNativeQuit(kind) {
         if (kind === 'window' && window && !window.isDestroyed())
             window.close();
         else
-            electron__WEBPACK_IMPORTED_MODULE_13__.app.quit();
+            electron__WEBPACK_IMPORTED_MODULE_15__.app.quit();
     }
     catch (error) {
         console.error('Normal close remains pending', error);
@@ -4536,20 +5306,23 @@ async function requestNativeQuit(kind) {
     finally {
         draining = false;
         quitDecisionInFlight = false;
+        if (!drained && window && !window.isDestroyed()) {
+            window.webContents.send('writingtool:close-aborted:v1', authorityReleased);
+        }
     }
 }
-electron__WEBPACK_IMPORTED_MODULE_13__.app.on('before-quit', event => {
+electron__WEBPACK_IMPORTED_MODULE_15__.app.on('before-quit', event => {
     if (drained || quitPermit === 'app') {
         quitPermit = undefined;
         drained = true;
         if (!shutdown) {
             shutdown = true;
-            electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.removeHandler(_security__WEBPACK_IMPORTED_MODULE_19__.READINESS_CHANNEL);
-            electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.removeHandler(_application_contracts_universe__WEBPACK_IMPORTED_MODULE_11__.UNIVERSE_CHANNEL);
-            electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.removeHandler(_application_contracts_project__WEBPACK_IMPORTED_MODULE_8__.PROJECT_CHANNEL);
-            electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.removeHandler(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.WORKSPACE_CHANNEL);
-            electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.removeHandler(_application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__.PROTECTION_CHANNEL);
-            electron__WEBPACK_IMPORTED_MODULE_13__.ipcMain.removeAllListeners('writingtool:quit-request:v1');
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeHandler(_security__WEBPACK_IMPORTED_MODULE_21__.READINESS_CHANNEL);
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeHandler(_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.UNIVERSE_CHANNEL);
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeHandler(_application_contracts_project__WEBPACK_IMPORTED_MODULE_10__.PROJECT_CHANNEL);
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeHandler(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.WORKSPACE_CHANNEL);
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeHandler(_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.PROTECTION_CHANNEL);
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeAllListeners('writingtool:quit-request:v1');
             client?.fail('UNAVAILABLE');
             child?.kill();
         }
@@ -4558,7 +5331,7 @@ electron__WEBPACK_IMPORTED_MODULE_13__.app.on('before-quit', event => {
     event.preventDefault();
     void requestNativeQuit('app');
 });
-electron__WEBPACK_IMPORTED_MODULE_13__.app.on('window-all-closed', () => electron__WEBPACK_IMPORTED_MODULE_13__.app.quit());
+electron__WEBPACK_IMPORTED_MODULE_15__.app.on('window-all-closed', () => electron__WEBPACK_IMPORTED_MODULE_15__.app.quit());
 
 })();
 

@@ -64,7 +64,7 @@ export class FileProjectStorage {
             });
             syncDir(path.join(root,'database'));
             const store = new FileProjectStore(root,d,db,lease,session,this.coordinator); store.snapshot(); store.workspace.attach(); return {store,receipt};
-        } catch (e) {
+        } catch {
             try {db?.close();} finally {if (lease?.isTransaction) lease.exec('ROLLBACK'); lease?.close();}
             if (!reserved) throw new UniverseFailure('IO_FAILURE','The project folder could not be reserved. No creation was started.');
             throw new UniverseFailure('RECOVERY_REQUIRED','Project creation needs recovery. Its folder and evidence were preserved.','unknown');
@@ -72,6 +72,8 @@ export class FileProjectStorage {
     }
     open(basePath: string, expectedCreationOperationId?: string): FileProjectStore {
         const root = this.physicalPath(basePath);
+        if (fs.readdirSync(root).length === 0)
+            throw new UniverseFailure('VALIDATION', 'This folder is empty and does not contain a saved project. Use Create project, select its existing universe, then choose this empty folder.');
         let db: DatabaseSync | undefined, lease: DatabaseSync | undefined,store:FileProjectStore|undefined;
         try {
             const d = discovery(root);

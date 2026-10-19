@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { confinedFs } from './confined-fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 export const hash = (bytes: string | Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
@@ -140,6 +141,7 @@ function regular(fd: number): fs.Stats {
     return stat;
 }
 export function syncDir(p: string): void {
+    if (process.platform !== 'linux') return confinedFs.syncDir(p);
     const fd = directoryHandle(p);
     try {
         fs.fsyncSync(fd);
@@ -149,6 +151,7 @@ export function syncDir(p: string): void {
     }
 }
 export function writeExclusive(p: string, data: string, reserved?: () => void): void {
+    if (process.platform !== 'linux') return confinedFs.writeExclusive(p, data, reserved);
     const parent = anchored(p);
     let fd: number | undefined;
     try {
@@ -167,6 +170,7 @@ export function writeExclusive(p: string, data: string, reserved?: () => void): 
 }
 // Atomically publish metadata; keep a torn legacy marker under a distinct name.
 export function publishMarker(root: string, relative: string, data: string, staged?: () => void): void {
+    if (process.platform !== 'linux') return confinedFs.publishMarker(root, relative, data, staged);
     const parent = anchored(path.join(root, relative));
     const temporary = `/proc/self/fd/${parent.fd}/.marker-${randomUUID()}`;
     try {
@@ -197,6 +201,7 @@ export function publishMarker(root: string, relative: string, data: string, stag
     }
 }
 export function preserveMarker(root: string, relative: string): void {
+    if (process.platform !== 'linux') return confinedFs.preserveMarker(root, relative);
     const parent = anchored(path.join(root, relative));
     try {
         const fd = fs.openSync(parent.file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
@@ -228,6 +233,7 @@ export function checked(root: string, relative: string, directory = false): stri
     return p;
 }
 export function readManaged(root: string, relative: string): Buffer {
+    if (process.platform !== 'linux') return confinedFs.readManaged(root, relative);
     const p = checked(root, relative);
     const parent = anchored(p);
     let fd: number | undefined;
@@ -243,6 +249,7 @@ export function readManaged(root: string, relative: string): Buffer {
     }
 }
 export function replaceManaged(root: string, relative: string, data: string): void {
+    if (process.platform !== 'linux') return confinedFs.replaceManaged(root, relative, data);
     const target = checked(root, relative);
     const parent = anchored(target);
     const temporary = `/proc/self/fd/${parent.fd}/.publish-${randomUUID()}`;
@@ -274,11 +281,13 @@ export function replaceManaged(root: string, relative: string, data: string): vo
 }
 /** Managed binary publication shares the anchored, durable primitive used by WRT/JSON. */
 export function ensureManagedDirectory(root:string,relative:string):void {
+    if (process.platform !== 'linux') return confinedFs.ensureManagedDirectory(root, relative);
     const segments=relative.split('/');if(segments.some(s=>!s||s==='.'||s==='..'||/[\\\0:]/.test(s)))throw new Error('Unsafe managed directory');
     let fd=directoryHandle(root);
     try {for(const segment of segments){const p=`/proc/self/fd/${fd}/${segment}`;try{fs.mkdirSync(p,{mode:0o700});fs.fsyncSync(fd);}catch(e){if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e;}const next=fs.openSync(p,fs.constants.O_RDONLY|fs.constants.O_DIRECTORY|fs.constants.O_NOFOLLOW);fs.closeSync(fd);fd=next;}}finally{fs.closeSync(fd);}
 }
 export function publishManagedBytes(root:string,relative:string,data:Uint8Array,expectedHash:string|null):void {
+    if (process.platform !== 'linux') return confinedFs.publishManagedBytes(root, relative, data, expectedHash);
     const segments=relative.split('/');if(segments.some(s=>!s||s==='.'||s==='..'||/[\\\0:]/.test(s))||path.isAbsolute(relative))throw new Error('Unsafe managed path');
     const parent=anchored(path.join(root,relative)),temporary=`/proc/self/fd/${parent.fd}/.workspace-${randomUUID()}`;
     try {
@@ -291,9 +300,13 @@ export function publishManagedBytes(root:string,relative:string,data:Uint8Array,
     }finally{fs.closeSync(parent.fd);}
 }
 export function removeManagedBytes(root:string,relative:string,expectedHash:string):void {
+    if (process.platform !== 'linux') return confinedFs.removeManagedBytes(root, relative, expectedHash);
     const parent=anchored(path.join(root,relative));try{const fd=fs.openSync(parent.file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);try{regular(fd);if(hash(fs.readFileSync(fd))!==expectedHash)throw new Error('Unexpected removal target');}finally{fs.closeSync(fd);}fs.unlinkSync(parent.file);fs.fsyncSync(parent.fd);}finally{fs.closeSync(parent.fd);}
 }
 /** Stream a verified private artifact through the same anchored destination publication protocol. */
 export function publishManagedFile(root:string,relative:string,source:string,expectedHash:string|null,expectedSourceHash:string):void{
+    if (process.platform !== 'linux') return confinedFs.publishManagedFile(root, relative, source, expectedHash, expectedSourceHash);
  if(relative.includes('/')||!relative||/[\\\0:]/.test(relative)||relative==='.'||relative==='..')throw new Error('Unsafe output filename');const parent=anchored(path.join(root,relative)),temporary=`/proc/self/fd/${parent.fd}/.output-${randomUUID()}`;let sourceFd:number|undefined,targetFd:number|undefined;try{let before:fs.Stats|undefined;try{const fd=fs.openSync(parent.file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);try{before=regular(fd);if(expectedHash===null||hash(fs.readFileSync(fd))!==expectedHash)throw new Error('Output changed since Save As.');}finally{fs.closeSync(fd);}}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT'||expectedHash!==null)throw e;}sourceFd=fs.openSync(source,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);regular(sourceFd);targetFd=fs.openSync(temporary,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,0o600);const digest=createHash('sha256'),buffer=Buffer.alloc(262144);let count:number;while((count=fs.readSync(sourceFd,buffer))>0){const bytes=buffer.subarray(0,count);digest.update(bytes);let offset=0;while(offset<count)offset+=fs.writeSync(targetFd,bytes,offset,count-offset);}if(digest.digest('hex')!==expectedSourceHash)throw new Error('Validated private output changed before publication.');fs.fsyncSync(targetFd);fs.closeSync(targetFd);targetFd=undefined;fs.fsyncSync(parent.fd);if(before){const stat=fs.lstatSync(parent.file);if(stat.ino!==before.ino||stat.dev!==before.dev||!stat.isFile()||stat.nlink!==1)throw new Error('Output identity changed.');}else{try{fs.lstatSync(parent.file);throw new Error('Output appeared after Save As.');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}fs.renameSync(temporary,parent.file);fs.fsyncSync(parent.fd);}finally{if(sourceFd!==undefined)fs.closeSync(sourceFd);if(targetFd!==undefined)fs.closeSync(targetFd);try{fs.unlinkSync(temporary);}catch{}fs.closeSync(parent.fd);}}
-export function hashFile(file:string):string{const fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);try{regular(fd);const digest=createHash('sha256'),bytes=Buffer.alloc(262144);let n:number;while((n=fs.readSync(fd,bytes))>0)digest.update(bytes.subarray(0,n));return digest.digest('hex');}finally{fs.closeSync(fd);}}
+export function hashFile(file:string):string{
+    if (process.platform !== 'linux') return confinedFs.hashFile(file);
+    const fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);try{regular(fd);const digest=createHash('sha256'),bytes=Buffer.alloc(262144);let n:number;while((n=fs.readSync(fd,bytes))>0)digest.update(bytes.subarray(0,n));return digest.digest('hex');}finally{fs.closeSync(fd);}}

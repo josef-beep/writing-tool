@@ -53,3 +53,6 @@ section[hidden] { display:none; }
 
 .project-context { margin-block: 1.5rem; padding: 1rem; background: var(--surface, #333); border: 1px solid #666; border-radius: .4rem; }
 .project-context p { margin-block: .4rem; }
+
+.calendar-update-status { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-left: 1rem; }
+.calendar-update-status button { padding: .25rem .5rem; }

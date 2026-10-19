@@ -45,18 +45,18 @@ Standing product and technical authority: `../planning-artifacts/execution-appro
 | 4.5 — Inspect established decision/result relationships in a tree view | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
 | 4.6 — Find unresolved decisions from the universe timeline | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
 | 4.7 — Inspect established decisions in character, story-arc and writing context | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 5.1 — Capture and inspect complete scheduled revisions of current work | Pending | Deferred until coding pass finishes |
-| 5.2 — Restore a chapter revision while preserving replaced work | Pending | Deferred until coding pass finishes |
-| 5.3 — Restore a character revision against the authoritative universe | Pending | Deferred until coding pass finishes |
-| 5.4 — Restore an event revision without changing its depicting chapters | Pending | Deferred until coding pass finishes |
-| 5.5 — Create independent complete project and universe ZIP backups | Pending | Deferred until coding pass finishes |
-| 5.6 — Restore a whole project against its authoritative universe | Pending | Deferred until coding pass finishes |
-| 5.7 — Recover a project or standalone universe from one complete ZIP | Pending | Deferred until coding pass finishes |
-| 5.8 — Create complete backups on an independent configurable schedule | Pending | Deferred until coding pass finishes |
-| 5.9 — Finish normal close with complete revisions and backups, including fallback recovery | Pending | Deferred until coding pass finishes |
-| 5.10 — Apply time-based retention and safe manual deletion | Pending | Deferred until coding pass finishes |
-| 6.1 — Export a whole story or selected chapters as DOCX, PDF, Markdown or text | Pending | Deferred until coding pass finishes |
-| 6.2 — Export local database content through a separate consistent-export workflow | Pending | Deferred until coding pass finishes |
+| 5.1 — Capture and inspect complete scheduled revisions of current work | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.2 — Restore a chapter revision while preserving replaced work | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.3 — Restore a character revision against the authoritative universe | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.4 — Restore an event revision without changing its depicting chapters | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.5 — Create independent complete project and universe ZIP backups | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.6 — Restore a whole project against its authoritative universe | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.7 — Recover a project or standalone universe from one complete ZIP | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.8 — Create complete backups on an independent configurable schedule | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.9 — Finish normal close with complete revisions and backups, including fallback recovery | Source present; integration unverified | Deferred until coding pass finishes |
+| 5.10 — Apply time-based retention and safe manual deletion | Source present; integration unverified | Deferred until coding pass finishes |
+| 6.1 — Export a whole story or selected chapters as DOCX, PDF, Markdown or text | Source present; integration unverified | Deferred until coding pass finishes |
+| 6.2 — Export local database content through a separate consistent-export workflow | Source present; integration unverified | Deferred until coding pass finishes |
 
 ## Active coding checkpoint
 
@@ -79,3 +79,61 @@ Standing product and technical authority: `../planning-artifacts/execution-appro
 Connected renderer, Lexical editor/adapter, manual/manuscript guards and acknowledgment/reconciliation, calendar/timeline/tree/filter/context forms, app-wide settings/theme/layout and secure mirrored native panels are written. Pinned Lexical packages/lockfile are installed; declarations/source only were inspected. API/ownership/scheduling seams and limitations are in `workspace-presentation-api.md`. No execution checks ran; all verification stays deferred. Existing generated `.webpack` changes were preserved.
 
 Next is sequential protection/export implementation: working revisions/backup/recovery/export menu/center surfaces, capture/restore/reconciliation/schedulers/retention, required close revision/backup, chooser recovery/recents integration and bundled font registration/resources. Do not call the coding pass complete before that slice and platform I/O.
+
+## Continuation — 2026-10-19
+
+Protection/export source from the saved WIP commit is present across application contracts, immutable revisions/ZIPs/recovery/export infrastructure, native selection/bridge, renderer panels/schedules/close capture, resources and fonts. This continuation inspected its integration and corrected owner-identity activation selection and postcommit/postpublication error classification. It also applies backup destination separation to recovery/reconciliation and uses streamed output hashing. These source changes do not establish story acceptance; the protection spec's unchecked acceptance tasks remain verification obligations.
+
+Native source/dispatch/build/resource hooks are now written. See `spec-release-platform-io.md` and `../../native/confined-fs/README.md`. Linux helper bodies are preserved. macOS source uses pinned relative operations and full file flushing. Windows relative operations are written, but a supported directory metadata durability implementation is still a **coding/release blocker**; native mutations reject this capability before changing files. Do not treat the platform coding slice or whole coding pass as finished. All native compilation, automated checks, app/runtime/packaging and formal reviews remain deferred. No generated .webpack files were changed.
+
+Next work: resolve the Windows directory durability primitive without weakening the adopted preservation contract, then continue the remaining source/acceptance audit across the prepared protection/platform slices. Tests remain deferred until Jo changes that direction. No stories beyond the earlier 1.1/1.2 are marked done.
+
+### Later Windows source correction — 2026-10-19
+
+The unconditional Windows directory-sync rejection above has now been replaced with a concrete NTFS-only native flush path after further primary-source investigation. It upgrades the pinned object via ReOpenFile, validates identity, invokes NtFlushBuffersFileEx flags 0, and requires both direct and completion success. Non-NTFS and unavailable/denied primitives still fail before mutation. The earlier missing-implementation blocker is closed at source level; all runtime/installed/physical-durability gates remain open. Native platform coding tasks have source, with no compilation or execution checks. Remaining work is the deferred formal acceptance/review and verification of the full coding pass; no story acceptance is implied. Continue honoring Jo's instruction to leave tests and execution checks deferred.
+
+## Lifecycle and reconciliation source audit — 2026-10-19
+
+Implemented normal-close input locking through native drain with safe canceled/failed-close unlock and root refresh after partial release. Header and floating-panel blocks now react to protection/dialog state. Scheduled backup cancellation reports an incomplete retryable attempt; retry protects newer pending edits, manual Discard resets visible draft content, due jobs retain separate attempt clocks, and autosave responds to system resume.
+
+Reconciliation now retains the original operation ID through every transport-error layer and validates that correlation. Native pending metadata survives output validation and fallback-notice bookkeeping, with durable cleanup before removing in-memory blockers. Reconciled closing backups retain their original close/fallback context. Failed initial job recording now releases the in-memory busy slot. Unknown outcomes canceled during close remain actionable through reconciliation/alternative-location controls.
+
+No tests, lint, typecheck, app launch, native compilation, build or package commands were run. Source/behavior remains provisional; full release acceptance and platform gates remain open. Generated .webpack changes were already present at the start of this continuation and were left untouched by assistant commands. Continue the remaining source/acceptance audit under the coding-only direction; do not report all 49 stories verified or repeat routine approvals.
+
+
+## Further source corrections — 2026-10-19
+
+Fixed automatic backup retention's protected-revision refusal after successful publication, with oldest-first eligible cleanup; moved capture SQLite copies into finally-cleaned private temporary directories; and staged full archive-history/catalog/identity validation before imported manifests reach live history. Backup closure now validates every retained catalog. Existing user-root capture artifacts are preserved.
+
+Main/floating timeline focus now carries both endpoints explicitly, so point jumps and undated chapter navigation cannot reuse an unrelated chapter endpoint. Calendar-update status/action is persistent in the Shell footer and uses both profile/workspace pending-edit guards. Conversion locks input and updates open record versions through success/reconciliation without resetting manuscript bytes or unrelated settings.
+
+Coding-only status continues: no tests/typecheck/lint/app launch/native compilation/build/package. Deferred cases are recorded in the protection/export and presentation specs. Release acceptance remains open.
+
+
+## Protection/navigation/retention continuation — 2026-10-19
+
+Implemented persistent original-operation reconciliation controls and immediate panel serialization; corrected alternate-location retry, cancellation progress identity, stale deletion selection and explicit conflict selection. Locked committed/backup-required/canceled proposal changes in backend/UI, returning the applied view after prepared-output reconciliation. Connected profile Save/Discard/Cancel to workspace menu navigation and disabled hidden writing commands/shortcuts while the profile covers it.
+
+Fixed indefinite local-revision retention caused by available self-contained ZIPs pinning their embedded manifests. Uncertain/offline archive evidence, explicit retained dependencies and pending/canceled recovery proposals still protect entries; immutable object deletion remains deferred. Revision retention now runs independently of successful backups. Cleanup failure is a typed warning beside a completed capture, with newest-ten and oldest-first rules preserved.
+
+Synchronized native/renderer current-root context as a complete pair after recovery/recent navigation, including partial-open failure and clearing absent roots. Native postprocessing failures keep original pending IDs blocked. Recents-bookkeeping failure after an acknowledged open is a warning.
+
+All changes are source-only and unverified. No tests/typecheck/lint/launch/native compilation/build/package ran; generated .webpack changes are preserved. Deferred scenarios and the next source-audit targets (native metadata publication before initial host-job recording, moved original reconciliation participants) are recorded in the protection/presentation specs. Release/story acceptance remains open.
+
+
+## Preparation and relocation continuation — 2026-10-19
+
+Mutating protection dispatch now has durable native prepared/attempted markers and a utility ready-job acknowledgement. Prepared-but-unsent work reconciles as not-committed and prompts/retries the actual original command rather than being counted as a completed capture. Job records have strict state-specific validation, and legacy markerless records stay conservative. Failed reads/cancel signals do not create orphan mutation IDs; native pending/proposal inventory remains accessible after host failure. Read-only history/inspection no longer writes perpetual job records; resume is durably prepared because it changes a proposal.
+
+Reconciliation can locate moved original project/universe identities, persist the matching paths, wait for the previous host to release authority and reopen/recheck both participants without replacing the original ID. Replayed backup/export output paths are checked against the current roots. Export reconciliation supports a new Save As capability; existing published-output evidence is checked first.
+
+No execution checks ran, and no story/platform acceptance changed. Detailed deferred fault scenarios are in the protection spec. Next source targets include exact durable export capture pinning across restart, conversion validation, and partial activation when roots/destinations relocate. Generated .webpack changes remain preserved.
+
+
+## Durable export capture continuation — 2026-10-19
+
+Exports now pin their original saved text/formatting, chapter order/calendar, catalog and real capture timestamp in private user-data manifests with shared immutable payloads. Retry/reconciliation consumes that same cut instead of recapturing newer live work. Shared captured-state validation is reused with revisions/archives; export pins do not create user-visible revisions or widen catalog-only output scope.
+
+Added aborted export job evidence and terminal-only cache reclamation under the cross-host coordinator gate, preserving unresolved/shared pins and retrying interrupted cleanup. Completed jobs retain publication digests; service reconciliation and native acknowledgement verify original output bytes. Conversion timeout/cancellation is idempotent and cannot turn a timeout into success. Improved FODT whitespace/exact indent handling and DOCX content comparison for empty paragraphs and line breaks. Unsupported XML controls fail before output publication without changing saved writing.
+
+Source changes only, no execution checks. DOCX/PDF rendered fidelity, cache/replay fault cases and platform durability remain unverified; PDF validation remains structural. Next source target is partial recovery activation and moved stage/destination reconciliation. The coding pass and full release acceptance are not complete; preserve generated .webpack edits.

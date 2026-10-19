@@ -3,8 +3,6 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {type AppSettings,SETTINGS_ID,validAppSettings} from '../application/contracts/workspace';
 export {SETTINGS_ID,validAppSettings} from '../application/contracts/workspace';
-import {closed,isUuid} from '../domain/validation';
-import {positiveInteger,scalarText,signedInteger,unsignedInteger} from '../domain/calendar';
 import {UniverseFailure} from '../application/universe';
 import {decode,hash,jsonBytes,readManaged,publishManagedBytes,ensureManagedDirectory} from './universe-files';
 const fields=['schemaVersion','id','recordVersion','autosaveMinutes','revisionMinutes','backupMinutes','retentionDays','backupDestination','theme','fontFamily','fontSize','panels'];

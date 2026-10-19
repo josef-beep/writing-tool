@@ -12,7 +12,14 @@ export const mainConfig: Configuration = {
   entry: { index: './src/desktop/main.ts', 'utility-host': './src/desktop/utility-host.ts' },
   // Put your normal webpack config below here
   module: {
-    rules,
+    rules: [
+      ...rules,
+      {
+        test: /[/\\]confined-fs\.ts$/,
+        // The trusted addon is an external resource loaded by Node at runtime.
+        parser: { createRequire: false },
+      },
+    ],
   },
   plugins,
   resolve: {

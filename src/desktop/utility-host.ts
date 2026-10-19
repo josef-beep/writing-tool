@@ -1,6 +1,7 @@
+import {configureConfinedFs} from '../infrastructure/confined-fs';
 import {ProtectionApplication} from '../application/protection';
 import {ProtectionService} from '../infrastructure/protection-service';
-import {validProtectionRequest,type ProtectionResult} from '../application/contracts/protection';
+import {protectionOperationId,protectionHasDurableEffects,validProtectionRequest,type ProtectionResult} from '../application/contracts/protection';
 import {OperationCanceled} from '../infrastructure/archives';
 import {WorkspaceApplication} from '../application/workspace';
 import {WorkspaceCoordinator} from '../infrastructure/workspace-coordinator';
@@ -19,6 +20,9 @@ import { readiness } from '../application/readiness';
 import { validRequest } from '../application/contracts/readiness';
 const userData=process.argv.find(arg=>arg.startsWith('--user-data='))?.slice('--user-data='.length);
 if(!userData)throw new Error('Application host requires its native user-data location');
+const nativeModule=process.argv.find(arg=>arg.startsWith('--writingtool-native-module='))?.slice('--writingtool-native-module='.length);
+if(!nativeModule)throw new Error('Application host requires its trusted native module location');
+configureConfinedFs(nativeModule);
 const coordinator=new WorkspaceCoordinator(userData);
 const settings=new SettingsStorage(userData,fn=>coordinator.settingsGate(fn));
 const universes = new UniverseApplication(new FileUniverseStorage(undefined,coordinator));
@@ -38,7 +42,7 @@ port.on('message', ({ data }: {
 }) => {
     if(validProtectionRequest(data,true)){
         const base={protocolVersion:1 as const,requestId:data.requestId,command:data.command};
-        void protection.execute(data).then(value=>port.postMessage({...base,status:'ok',value} satisfies ProtectionResult)).catch(error=>port.postMessage(error instanceof OperationCanceled?{...base,status:'canceled'}:{...base,status:'error',message:error instanceof Error?error.message:'Protection operation failed.',outcome:error instanceof UniverseFailure&&error.outcome!=='not-committed'?'unknown':'not-committed',operationId:error instanceof UniverseFailure&&error.outcome==='unknown'?data.requestId:null}));return;
+        void protection.execute(data).then(value=>port.postMessage({...base,status:'ok',value} satisfies ProtectionResult)).catch(error=>port.postMessage(error instanceof OperationCanceled?{...base,status:'canceled'}:{...base,status:'error',message:error instanceof Error?error.message:'Protection operation failed.',outcome:protectionHasDurableEffects(data)&&error instanceof UniverseFailure&&error.outcome!=='not-committed'?'unknown':'not-committed',operationId:protectionHasDurableEffects(data)&&error instanceof UniverseFailure&&error.outcome!=='not-committed'?protectionOperationId(data):null}));return;
     }
     if(protection.busy){if(typeof data==='object'&&data&&'requestId'in data&&'command'in data)port.postMessage({protocolVersion:1,requestId:data.requestId,command:data.command,status:'error',code:'RECOVERY_REQUIRED',message:'Wait for the protection operation to finish.',outcome:'not-committed',retry:'new-request',issues:[]});return;}
     if(validWorkspaceRequest(data,true)) {

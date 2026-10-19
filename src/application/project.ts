@@ -31,7 +31,15 @@ export class ProjectApplication {
     }
     create(basePath: string, universePath: string, input: ProjectCreateInput): {snapshot: ProjectSnapshot; receipt: ProjectReceipt} {
         this.current();
-        const candidateUniverse=this.universes.stage(universePath);
+        let candidateUniverse: ReturnType<UniverseApplication['stage']>;
+        try {
+            candidateUniverse=this.universes.stage(universePath);
+        } catch(error) {
+            // Project storage has not been called. A universe-opening failure
+            // cannot leave this project creation committed or uncertain.
+            throw new UniverseFailure(error instanceof UniverseFailure?error.code:'IO_FAILURE',
+                'No project was created. The selected universe could not be opened. '+(error instanceof Error?error.message:'Select an existing universe folder.'), 'not-committed');
+        }
         let candidate: ProjectStore | undefined, receipt: ProjectReceipt | undefined;
         try {
             const created=this.storage.create(basePath,input,candidateUniverse.snapshot.ownerId,candidateUniverse.snapshot.location);

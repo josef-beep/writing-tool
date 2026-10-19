@@ -94,8 +94,17 @@ export function assertWorkspaceState(records:readonly WorkspaceRecord[]):void {
         void d;
     }
     const done=new Set<string>(),visiting=new Set<string>();
-    const visit=(id:string):void=>{if(visiting.has(id))fail('Decision result graph contains a cycle.');if(done.has(id))return;visiting.add(id);const r=map.get(id) as WorkspaceRecordOf<'decision'>;r.data.followingDecisionIds.forEach(visit);visiting.delete(id);done.add(id);};
-    records.filter(r=>r.recordType==='decision').forEach(r=>visit(r.id));
+    // Author-sized graphs must not depend on the JavaScript recursion limit.
+    for(const record of records){
+        if(record.recordType!=='decision'||done.has(record.id))continue;
+        const stack:{id:string;next:number}[]=[{id:record.id,next:0}];visiting.add(record.id);
+        while(stack.length){const frame=stack[stack.length-1],decision=map.get(frame.id) as WorkspaceRecordOf<'decision'>;
+            if(frame.next===decision.data.followingDecisionIds.length){visiting.delete(frame.id);done.add(frame.id);stack.pop();continue;}
+            const id=decision.data.followingDecisionIds[frame.next++];
+            if(visiting.has(id))fail('Decision result graph contains a cycle.');
+            if(!done.has(id)){visiting.add(id);stack.push({id,next:0});}
+        }
+    }
 }
 export const decisionResolved = (d:DecisionData):boolean => d.eventIds.length+d.followingDecisionIds.length>0;
 const exactCompare=(a:string,b:string):number=>BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0;
@@ -111,7 +120,7 @@ export function characterCompleteness(character:WorkspaceRecordOf<'character'>,e
 export function normalizeCharacter(character:CharacterData,hasBackgroundEvent=false):CharacterData {return {...character,waivers:character.waivers.filter(f=>!character[f].trim()&&!(f==='background'&&hasBackgroundEvent))};}
 export function factionCompleteness(f:FactionData):{complete:boolean;missing:string[]} {const fields=['name',...FACTION_TEXT.filter(k=>!['population','resources','culture'].includes(k))];const missing=fields.filter(k=>!(f[k as keyof FactionData] as string).trim());if(!f.image)missing.push('image');if(!f.leaderImage)missing.push('leaderImage');return{complete:!missing.length,missing};}
 export function normalizeFaction(f:FactionData):FactionData {return {...f,military:f.military.filter(m=>m.name.trim()||m.role.trim()||m.description.trim()||m.baseStrength!==null||m.movementPoints!==null||m.baseModifierPoints!==null)};}
-export function synchronizedBirth(character:WorkspaceRecordOf<'character'>,event:WorkspaceRecordOf<'event'>,calendar:CalendarData,direction:'character-to-event'|'event-to-character'):{character:WorkspaceRecordOf<'character'>;event:WorkspaceRecordOf<'event'>} {if(event.data.kind!=='birth'||event.data.characterId!==character.id||character.data.birthEventId!==event.id||!character.data.birth)fail('Birth synchronization requires the canonical association.');return direction==='character-to-event'?{character,event:{...event,data:{...event.data,date:birthPosition(character.data.birth,calendar)}}}:{character:{...character,data:{...character.data,birth:{...character.data.birth,year:event.data.date.year}}},event};}
+export function synchronizedBirth(character:WorkspaceRecordOf<'character'>,event:WorkspaceRecordOf<'event'>,calendar:CalendarData,direction:'character-to-event'|'event-to-character'):{character:WorkspaceRecordOf<'character'>;event:WorkspaceRecordOf<'event'>} {const birth=character.data.birth;if(event.data.kind!=='birth'||event.data.characterId!==character.id||character.data.birthEventId!==event.id||!birth)return fail('Birth synchronization requires the canonical association.');return direction==='character-to-event'?{character,event:{...event,data:{...event.data,date:birthPosition(birth,calendar)}}}:{character:{...character,data:{...character.data,birth:{...birth,year:event.data.date.year}}},event};}
 
 export const BUILTIN_DECISION_TYPES: readonly DecisionTypeData[] = [
     {name:'Personal Decisions',makerRequired:true,builtin:'personal'},

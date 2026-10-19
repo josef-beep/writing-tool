@@ -75,6 +75,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   CATALOG_NOTICE: () => (/* binding */ CATALOG_NOTICE),
 /* harmony export */   PROTECTION_CHANNEL: () => (/* binding */ PROTECTION_CHANNEL),
 /* harmony export */   digest: () => (/* binding */ digest),
+/* harmony export */   protectionHasDurableEffects: () => (/* binding */ protectionHasDurableEffects),
+/* harmony export */   protectionOperationId: () => (/* binding */ protectionOperationId),
 /* harmony export */   validArchiveRecord: () => (/* binding */ validArchiveRecord),
 /* harmony export */   validCapturedUnit: () => (/* binding */ validCapturedUnit),
 /* harmony export */   validObjectRef: () => (/* binding */ validObjectRef),
@@ -96,6 +98,10 @@ __webpack_require__.r(__webpack_exports__);
 
 const PROTECTION_CHANNEL = 'writingtool:protection:v1';
 const CATALOG_NOTICE = 'Database catalog only. Writing, object files and images are not included. Use a complete ZIP backup for independent recovery.';
+/** Reconciliation retains the operation being reconciled, even if its transport attempt fails. */
+function protectionOperationId(request) { return request.command === 'protection.reconcile' ? request.operationId : request.requestId; }
+/** Read failures and cancellation signals do not create a new uncertain mutation. */
+function protectionHasDurableEffects(request) { return !['protection.history', 'protection.inspect', 'protection.pending', 'protection.recents', 'protection.open', 'protection.cancel'].includes(request.command); }
 function validProtectionRequest(v, internal = false) {
     if (typeof v !== 'object' || !v)
         return false;
@@ -191,6 +197,16 @@ function validProtectionRequest(v, internal = false) {
     if (keys.includes('reason') && !['Manual', 'Automatic', 'Close', 'Replaced', 'Recovered'].includes(String(x.reason)))
         return false;
     if (internal) {
+        if (Object.hasOwn(x, 'nativeActivationLocations')) {
+            if (x.command !== 'protection.reconcile' || !Array.isArray(x.nativeActivationLocations) || x.nativeActivationLocations.length > 2 || !x.nativeActivationLocations.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(p, ['owner', 'rootId', 'location', ...(Object.hasOwn(p, 'destination') ? ['destination'] : [])]) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(p.rootId) && nativePath(p.location) && (!Object.hasOwn(p, 'destination') || nativePath(p.destination))))
+                return false;
+            keys.push('nativeActivationLocations');
+        }
+        if (Object.hasOwn(x, 'nativePrepareOnly')) {
+            if (x.nativePrepareOnly !== true)
+                return false;
+            keys.push('nativePrepareOnly');
+        }
         if (Object.hasOwn(x, 'nativeDestination') && (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.nativeDestination, ['path', 'expectedHash']) || !nativePath(x.nativeDestination.path) || x.nativeDestination.expectedHash !== null && !digest(x.nativeDestination.expectedHash)))
             return false;
         if (Object.hasOwn(x, 'nativeBackupFolder') && !nativePath(x.nativeBackupFolder))
@@ -204,20 +220,22 @@ function validProtectionRequest(v, internal = false) {
     return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, ['protocolVersion', 'requestId', 'command', ...keys]);
 }
 function validProtectionResult(v, r) { if (typeof v !== 'object' || !v)
-    return false; const x = v, base = ['protocolVersion', 'requestId', 'command', 'status']; return x.protocolVersion === 1 && x.requestId === r.requestId && x.command === r.command && (x.status === 'ok' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'value']) && validProtectionValue(x.value) : x.status === 'canceled' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, base) : x.status === 'error' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'message', 'outcome', 'operationId']) && typeof x.message === 'string' && ['not-committed', 'unknown'].includes(String(x.outcome)) && (x.operationId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.operationId))); }
+    return false; const x = v, base = ['protocolVersion', 'requestId', 'command', 'status']; return x.protocolVersion === 1 && x.requestId === r.requestId && x.command === r.command && (x.status === 'ok' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'value']) && validProtectionValue(x.value) && (!x.value.reconciliation || r.command === 'protection.reconcile' && x.value.reconciliation.operationId === r.operationId) : x.status === 'canceled' ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, base) : x.status === 'error' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x, [...base, 'message', 'outcome', 'operationId']) && typeof x.message === 'string' && ['not-committed', 'unknown'].includes(String(x.outcome)) && (x.outcome === 'unknown' ? x.operationId === protectionOperationId(r) : x.operationId === null)); }
 const digest = (v) => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
 const nativePath = (v) => (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v) && !!v && !v.includes('\0') && (/^(?:\/|[A-Za-z]:[\\/])/.test(v));
 const uuidList = (v) => Array.isArray(v) && v.every(_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid) && new Set(v).size === v.length;
 const validObjectRef = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['sha256', 'byteLength']) && digest(v.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(v.byteLength);
 const validCapturedUnit = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['snapshot', 'files']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v.snapshot, ['owner', 'rootId', 'universeId', 'generation', 'assets', 'counters', 'recordIds']) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(Object.fromEntries([...Object.entries(v.snapshot).filter(([k]) => k !== 'recordIds'), ['records', []], ['manuscripts', {}]])) && uuidList(v.snapshot.recordIds) && Array.isArray(v.files) && v.files.every(f => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(f, ['relativePath', 'object']) && safePath(f.relativePath) && validObjectRef(f.object)) && new Set(v.files.map(f => f.relativePath.toLowerCase())).size === v.files.length;
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 const safePath = (v) => typeof v === 'string' && !!v && !v.startsWith('/') && !v.split('/').some(p => !p || p === '.' || p === '..' || /[\\\0:\x00-\x1f]/.test(p) || /[. ]$/.test(p));
-function validRevisionManifest(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'kind', 'id', 'owner', 'reason', 'capturedAt', 'completedAt', 'localCaptureStart', 'offsetMinutes', 'timeZone', 'displayName', 'universeDisplayName', 'units', 'retainedRevisionIds']) && v.schemaVersion === 1 && v.kind === 'complete-revision' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['Manual', 'Automatic', 'Close', 'Replaced', 'Recovered'].includes(String(v.reason)) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.localCaptureStart) && typeof v.offsetMinutes === 'string' && /^-?(0|[1-9][0-9]*)$/.test(v.offsetMinutes) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.timeZone) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.displayName) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.universeDisplayName) && Array.isArray(v.units) && v.units.every(validCapturedUnit) && v.units.length === (v.owner.kind === 'project' ? 2 : 1) && v.units.some(u => u.snapshot.owner.kind === v.owner.kind && u.snapshot.owner.id === v.owner.id) && new Set(v.units.map(u => u.snapshot.owner.kind + u.snapshot.owner.id)).size === v.units.length && uuidList(v.retainedRevisionIds) && (v.owner.kind === 'universe' || v.units.some(u => u.snapshot.owner.kind === 'universe' && u.snapshot.owner.id === v.units.find(p => p.snapshot.owner.kind === 'project')?.snapshot.universeId)); }
+function validRevisionManifest(v) { if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'kind', 'id', 'owner', 'reason', 'capturedAt', 'completedAt', 'localCaptureStart', 'offsetMinutes', 'timeZone', 'displayName', 'universeDisplayName', 'units', 'retainedRevisionIds']) || !Array.isArray(v.units))
+    return false; const units = v.units; return v.schemaVersion === 1 && v.kind === 'complete-revision' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['Manual', 'Automatic', 'Close', 'Replaced', 'Recovered'].includes(String(v.reason)) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.localCaptureStart) && typeof v.offsetMinutes === 'string' && /^-?(0|[1-9][0-9]*)$/.test(v.offsetMinutes) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.timeZone) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.displayName) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.universeDisplayName) && units.every(validCapturedUnit) && units.length === (v.owner.kind === 'project' ? 2 : 1) && units.some(u => u.snapshot.owner.kind === v.owner.kind && u.snapshot.owner.id === v.owner.id) && new Set(units.map(u => u.snapshot.owner.kind + u.snapshot.owner.id)).size === units.length && uuidList(v.retainedRevisionIds) && (v.owner.kind === 'universe' || units.some(u => u.snapshot.owner.kind === 'universe' && u.snapshot.owner.id === units.find(p => p.snapshot.owner.kind === 'project')?.snapshot.universeId)); }
 function validResolution(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['recordId', 'liveFingerprint', 'recoveredFingerprint', 'choice', 'record', 'manuscript']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.recordId) && (v.liveFingerprint === null || digest(v.liveFingerprint)) && digest(v.recoveredFingerprint) && ['keep-live', 'use-recovered', 'combined'].includes(String(v.choice)) && (v.choice === 'combined' ? (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(v.record) && v.record.id === v.recordId && (v.record.recordType === 'chapter' ? (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(v.manuscript) : v.manuscript === null) : v.record === null && v.manuscript === null); }
 function validProposal(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'revisionId', 'owner', 'status', 'scope', 'expected', 'choices', 'operationId', 'replacedRevisionId']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.revisionId) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['review', 'canceled', 'applied', 'backup-required'].includes(String(v.status)) && (v.scope === null || uuidList(v.scope)) && Array.isArray(v.expected) && v.expected.length <= 2 && v.expected.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['owner', 'generation']) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(e.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.generation)) && Array.isArray(v.choices) && v.choices.every(validResolution) && new Set(v.choices.map(c => c.recordId)).size === v.choices.length && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.operationId) && (v.replacedRevisionId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.replacedRevisionId)); }
 function validRecoveryView(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['proposal', 'conflicts', 'issues', 'missing']) && validProposal(v.proposal) && Array.isArray(v.conflicts) && v.conflicts.every(c => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(c, ['id', 'live', 'recovered', 'liveText', 'recoveredText', 'resolved', 'liveFingerprint', 'recoveredFingerprint']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(c.id) && (c.live === null || (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.live) && c.live.id === c.id) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.recovered) && c.recovered.id === c.id && (c.liveText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.liveText)) && (c.recoveredText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.recoveredText)) && typeof c.resolved === 'boolean' && (c.liveFingerprint === null || digest(c.liveFingerprint)) && digest(c.recoveredFingerprint)) && Array.isArray(v.issues) && v.issues.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText) && Array.isArray(v.missing) && v.missing.every(m => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(m, ['sourceId', 'targetId', 'label', 'canRemove']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.sourceId) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.targetId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(m.label) && typeof m.canRemove === 'boolean'); }
 function validProtectionValue(v) { if (typeof v !== 'object' || !v || Array.isArray(v))
-    return false; const x = v, keys = ['assets', 'archives', 'recents', 'pending', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
-    return false; return (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
+    return false; const x = v, keys = ['reconciliation', 'warnings', 'assets', 'archives', 'recents', 'pending', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
+    return false; return (!Object.hasOwn(x, 'reconciliation') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.reconciliation, ['operationId', 'outcome']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.reconciliation.operationId) && x.reconciliation.outcome === 'not-committed') && (!Object.hasOwn(x, 'warnings') || Array.isArray(x.warnings) && x.warnings.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)) && (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
 function validArchiveRecord(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'owner', 'sha256', 'capturedAt', 'completedAt', 'locations', 'evidence', 'revisionIds', 'state']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && digest(v.sha256) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && Array.isArray(v.locations) && v.locations.every(nativePath) && Array.isArray(v.evidence) && v.evidence.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['path', 'device', 'inode']) && nativePath(e.path) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.device) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.inode)) && uuidList(v.revisionIds) && ['valid', 'uncertain'].includes(String(v.state)); }
 
 
@@ -583,7 +601,15 @@ class ProjectApplication {
     }
     create(basePath, universePath, input) {
         this.current();
-        const candidateUniverse = this.universes.stage(universePath);
+        let candidateUniverse;
+        try {
+            candidateUniverse = this.universes.stage(universePath);
+        }
+        catch (error) {
+            // Project storage has not been called. A universe-opening failure
+            // cannot leave this project creation committed or uncertain.
+            throw new _universe__WEBPACK_IMPORTED_MODULE_1__.UniverseFailure(error instanceof _universe__WEBPACK_IMPORTED_MODULE_1__.UniverseFailure ? error.code : 'IO_FAILURE', 'No project was created. The selected universe could not be opened. ' + (error instanceof Error ? error.message : 'Select an existing universe folder.'), 'not-committed');
+        }
         let candidate, receipt;
         try {
             const created = this.storage.create(basePath, input, candidateUniverse.snapshot.ownerId, candidateUniverse.snapshot.location);
@@ -1318,6 +1344,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   safeDisplayName: () => (/* binding */ safeDisplayName)
 /* harmony export */ });
 function captureTime(date = new Date()) { const two = (n) => String(n).padStart(2, '0'); return { utc: date.toISOString(), local: `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}_${two(date.getHours())}-${two(date.getMinutes())}-${two(date.getSeconds())}`, offsetMinutes: String(-date.getTimezoneOffset()), zone: Intl.DateTimeFormat().resolvedOptions().timeZone }; }
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 function safeDisplayName(name) { const value = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/g, '').trim(); return value && !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value) ? value : 'WritingTool'; }
 
 
@@ -1339,6 +1366,7 @@ __webpack_require__.r(__webpack_exports__);
 // Unicode License V3: resources/licenses/Unicode-LICENSE.txt
 // Full default case folding, Unicode 17.0.0 CaseFolding.txt (C/F; Turkic excluded).
 const FOLD = { "A": "a", "B": "b", "C": "c", "D": "d", "E": "e", "F": "f", "G": "g", "H": "h", "I": "i", "J": "j", "K": "k", "L": "l", "M": "m", "N": "n", "O": "o", "P": "p", "Q": "q", "R": "r", "S": "s", "T": "t", "U": "u", "V": "v", "W": "w", "X": "x", "Y": "y", "Z": "z", "\u00b5": "\u03bc", "\u00c0": "\u00e0", "\u00c1": "\u00e1", "\u00c2": "\u00e2", "\u00c3": "\u00e3", "\u00c4": "\u00e4", "\u00c5": "\u00e5", "\u00c6": "\u00e6", "\u00c7": "\u00e7", "\u00c8": "\u00e8", "\u00c9": "\u00e9", "\u00ca": "\u00ea", "\u00cb": "\u00eb", "\u00cc": "\u00ec", "\u00cd": "\u00ed", "\u00ce": "\u00ee", "\u00cf": "\u00ef", "\u00d0": "\u00f0", "\u00d1": "\u00f1", "\u00d2": "\u00f2", "\u00d3": "\u00f3", "\u00d4": "\u00f4", "\u00d5": "\u00f5", "\u00d6": "\u00f6", "\u00d8": "\u00f8", "\u00d9": "\u00f9", "\u00da": "\u00fa", "\u00db": "\u00fb", "\u00dc": "\u00fc", "\u00dd": "\u00fd", "\u00de": "\u00fe", "\u00df": "ss", "\u0100": "\u0101", "\u0102": "\u0103", "\u0104": "\u0105", "\u0106": "\u0107", "\u0108": "\u0109", "\u010a": "\u010b", "\u010c": "\u010d", "\u010e": "\u010f", "\u0110": "\u0111", "\u0112": "\u0113", "\u0114": "\u0115", "\u0116": "\u0117", "\u0118": "\u0119", "\u011a": "\u011b", "\u011c": "\u011d", "\u011e": "\u011f", "\u0120": "\u0121", "\u0122": "\u0123", "\u0124": "\u0125", "\u0126": "\u0127", "\u0128": "\u0129", "\u012a": "\u012b", "\u012c": "\u012d", "\u012e": "\u012f", "\u0130": "i\u0307", "\u0132": "\u0133", "\u0134": "\u0135", "\u0136": "\u0137", "\u0139": "\u013a", "\u013b": "\u013c", "\u013d": "\u013e", "\u013f": "\u0140", "\u0141": "\u0142", "\u0143": "\u0144", "\u0145": "\u0146", "\u0147": "\u0148", "\u0149": "\u02bcn", "\u014a": "\u014b", "\u014c": "\u014d", "\u014e": "\u014f", "\u0150": "\u0151", "\u0152": "\u0153", "\u0154": "\u0155", "\u0156": "\u0157", "\u0158": "\u0159", "\u015a": "\u015b", "\u015c": "\u015d", "\u015e": "\u015f", "\u0160": "\u0161", "\u0162": "\u0163", "\u0164": "\u0165", "\u0166": "\u0167", "\u0168": "\u0169", "\u016a": "\u016b", "\u016c": "\u016d", "\u016e": "\u016f", "\u0170": "\u0171", "\u0172": "\u0173", "\u0174": "\u0175", "\u0176": "\u0177", "\u0178": "\u00ff", "\u0179": "\u017a", "\u017b": "\u017c", "\u017d": "\u017e", "\u017f": "s", "\u0181": "\u0253", "\u0182": "\u0183", "\u0184": "\u0185", "\u0186": "\u0254", "\u0187": "\u0188", "\u0189": "\u0256", "\u018a": "\u0257", "\u018b": "\u018c", "\u018e": "\u01dd", "\u018f": "\u0259", "\u0190": "\u025b", "\u0191": "\u0192", "\u0193": "\u0260", "\u0194": "\u0263", "\u0196": "\u0269", "\u0197": "\u0268", "\u0198": "\u0199", "\u019c": "\u026f", "\u019d": "\u0272", "\u019f": "\u0275", "\u01a0": "\u01a1", "\u01a2": "\u01a3", "\u01a4": "\u01a5", "\u01a6": "\u0280", "\u01a7": "\u01a8", "\u01a9": "\u0283", "\u01ac": "\u01ad", "\u01ae": "\u0288", "\u01af": "\u01b0", "\u01b1": "\u028a", "\u01b2": "\u028b", "\u01b3": "\u01b4", "\u01b5": "\u01b6", "\u01b7": "\u0292", "\u01b8": "\u01b9", "\u01bc": "\u01bd", "\u01c4": "\u01c6", "\u01c5": "\u01c6", "\u01c7": "\u01c9", "\u01c8": "\u01c9", "\u01ca": "\u01cc", "\u01cb": "\u01cc", "\u01cd": "\u01ce", "\u01cf": "\u01d0", "\u01d1": "\u01d2", "\u01d3": "\u01d4", "\u01d5": "\u01d6", "\u01d7": "\u01d8", "\u01d9": "\u01da", "\u01db": "\u01dc", "\u01de": "\u01df", "\u01e0": "\u01e1", "\u01e2": "\u01e3", "\u01e4": "\u01e5", "\u01e6": "\u01e7", "\u01e8": "\u01e9", "\u01ea": "\u01eb", "\u01ec": "\u01ed", "\u01ee": "\u01ef", "\u01f0": "j\u030c", "\u01f1": "\u01f3", "\u01f2": "\u01f3", "\u01f4": "\u01f5", "\u01f6": "\u0195", "\u01f7": "\u01bf", "\u01f8": "\u01f9", "\u01fa": "\u01fb", "\u01fc": "\u01fd", "\u01fe": "\u01ff", "\u0200": "\u0201", "\u0202": "\u0203", "\u0204": "\u0205", "\u0206": "\u0207", "\u0208": "\u0209", "\u020a": "\u020b", "\u020c": "\u020d", "\u020e": "\u020f", "\u0210": "\u0211", "\u0212": "\u0213", "\u0214": "\u0215", "\u0216": "\u0217", "\u0218": "\u0219", "\u021a": "\u021b", "\u021c": "\u021d", "\u021e": "\u021f", "\u0220": "\u019e", "\u0222": "\u0223", "\u0224": "\u0225", "\u0226": "\u0227", "\u0228": "\u0229", "\u022a": "\u022b", "\u022c": "\u022d", "\u022e": "\u022f", "\u0230": "\u0231", "\u0232": "\u0233", "\u023a": "\u2c65", "\u023b": "\u023c", "\u023d": "\u019a", "\u023e": "\u2c66", "\u0241": "\u0242", "\u0243": "\u0180", "\u0244": "\u0289", "\u0245": "\u028c", "\u0246": "\u0247", "\u0248": "\u0249", "\u024a": "\u024b", "\u024c": "\u024d", "\u024e": "\u024f", "\u0345": "\u03b9", "\u0370": "\u0371", "\u0372": "\u0373", "\u0376": "\u0377", "\u037f": "\u03f3", "\u0386": "\u03ac", "\u0388": "\u03ad", "\u0389": "\u03ae", "\u038a": "\u03af", "\u038c": "\u03cc", "\u038e": "\u03cd", "\u038f": "\u03ce", "\u0390": "\u03b9\u0308\u0301", "\u0391": "\u03b1", "\u0392": "\u03b2", "\u0393": "\u03b3", "\u0394": "\u03b4", "\u0395": "\u03b5", "\u0396": "\u03b6", "\u0397": "\u03b7", "\u0398": "\u03b8", "\u0399": "\u03b9", "\u039a": "\u03ba", "\u039b": "\u03bb", "\u039c": "\u03bc", "\u039d": "\u03bd", "\u039e": "\u03be", "\u039f": "\u03bf", "\u03a0": "\u03c0", "\u03a1": "\u03c1", "\u03a3": "\u03c3", "\u03a4": "\u03c4", "\u03a5": "\u03c5", "\u03a6": "\u03c6", "\u03a7": "\u03c7", "\u03a8": "\u03c8", "\u03a9": "\u03c9", "\u03aa": "\u03ca", "\u03ab": "\u03cb", "\u03b0": "\u03c5\u0308\u0301", "\u03c2": "\u03c3", "\u03cf": "\u03d7", "\u03d0": "\u03b2", "\u03d1": "\u03b8", "\u03d5": "\u03c6", "\u03d6": "\u03c0", "\u03d8": "\u03d9", "\u03da": "\u03db", "\u03dc": "\u03dd", "\u03de": "\u03df", "\u03e0": "\u03e1", "\u03e2": "\u03e3", "\u03e4": "\u03e5", "\u03e6": "\u03e7", "\u03e8": "\u03e9", "\u03ea": "\u03eb", "\u03ec": "\u03ed", "\u03ee": "\u03ef", "\u03f0": "\u03ba", "\u03f1": "\u03c1", "\u03f4": "\u03b8", "\u03f5": "\u03b5", "\u03f7": "\u03f8", "\u03f9": "\u03f2", "\u03fa": "\u03fb", "\u03fd": "\u037b", "\u03fe": "\u037c", "\u03ff": "\u037d", "\u0400": "\u0450", "\u0401": "\u0451", "\u0402": "\u0452", "\u0403": "\u0453", "\u0404": "\u0454", "\u0405": "\u0455", "\u0406": "\u0456", "\u0407": "\u0457", "\u0408": "\u0458", "\u0409": "\u0459", "\u040a": "\u045a", "\u040b": "\u045b", "\u040c": "\u045c", "\u040d": "\u045d", "\u040e": "\u045e", "\u040f": "\u045f", "\u0410": "\u0430", "\u0411": "\u0431", "\u0412": "\u0432", "\u0413": "\u0433", "\u0414": "\u0434", "\u0415": "\u0435", "\u0416": "\u0436", "\u0417": "\u0437", "\u0418": "\u0438", "\u0419": "\u0439", "\u041a": "\u043a", "\u041b": "\u043b", "\u041c": "\u043c", "\u041d": "\u043d", "\u041e": "\u043e", "\u041f": "\u043f", "\u0420": "\u0440", "\u0421": "\u0441", "\u0422": "\u0442", "\u0423": "\u0443", "\u0424": "\u0444", "\u0425": "\u0445", "\u0426": "\u0446", "\u0427": "\u0447", "\u0428": "\u0448", "\u0429": "\u0449", "\u042a": "\u044a", "\u042b": "\u044b", "\u042c": "\u044c", "\u042d": "\u044d", "\u042e": "\u044e", "\u042f": "\u044f", "\u0460": "\u0461", "\u0462": "\u0463", "\u0464": "\u0465", "\u0466": "\u0467", "\u0468": "\u0469", "\u046a": "\u046b", "\u046c": "\u046d", "\u046e": "\u046f", "\u0470": "\u0471", "\u0472": "\u0473", "\u0474": "\u0475", "\u0476": "\u0477", "\u0478": "\u0479", "\u047a": "\u047b", "\u047c": "\u047d", "\u047e": "\u047f", "\u0480": "\u0481", "\u048a": "\u048b", "\u048c": "\u048d", "\u048e": "\u048f", "\u0490": "\u0491", "\u0492": "\u0493", "\u0494": "\u0495", "\u0496": "\u0497", "\u0498": "\u0499", "\u049a": "\u049b", "\u049c": "\u049d", "\u049e": "\u049f", "\u04a0": "\u04a1", "\u04a2": "\u04a3", "\u04a4": "\u04a5", "\u04a6": "\u04a7", "\u04a8": "\u04a9", "\u04aa": "\u04ab", "\u04ac": "\u04ad", "\u04ae": "\u04af", "\u04b0": "\u04b1", "\u04b2": "\u04b3", "\u04b4": "\u04b5", "\u04b6": "\u04b7", "\u04b8": "\u04b9", "\u04ba": "\u04bb", "\u04bc": "\u04bd", "\u04be": "\u04bf", "\u04c0": "\u04cf", "\u04c1": "\u04c2", "\u04c3": "\u04c4", "\u04c5": "\u04c6", "\u04c7": "\u04c8", "\u04c9": "\u04ca", "\u04cb": "\u04cc", "\u04cd": "\u04ce", "\u04d0": "\u04d1", "\u04d2": "\u04d3", "\u04d4": "\u04d5", "\u04d6": "\u04d7", "\u04d8": "\u04d9", "\u04da": "\u04db", "\u04dc": "\u04dd", "\u04de": "\u04df", "\u04e0": "\u04e1", "\u04e2": "\u04e3", "\u04e4": "\u04e5", "\u04e6": "\u04e7", "\u04e8": "\u04e9", "\u04ea": "\u04eb", "\u04ec": "\u04ed", "\u04ee": "\u04ef", "\u04f0": "\u04f1", "\u04f2": "\u04f3", "\u04f4": "\u04f5", "\u04f6": "\u04f7", "\u04f8": "\u04f9", "\u04fa": "\u04fb", "\u04fc": "\u04fd", "\u04fe": "\u04ff", "\u0500": "\u0501", "\u0502": "\u0503", "\u0504": "\u0505", "\u0506": "\u0507", "\u0508": "\u0509", "\u050a": "\u050b", "\u050c": "\u050d", "\u050e": "\u050f", "\u0510": "\u0511", "\u0512": "\u0513", "\u0514": "\u0515", "\u0516": "\u0517", "\u0518": "\u0519", "\u051a": "\u051b", "\u051c": "\u051d", "\u051e": "\u051f", "\u0520": "\u0521", "\u0522": "\u0523", "\u0524": "\u0525", "\u0526": "\u0527", "\u0528": "\u0529", "\u052a": "\u052b", "\u052c": "\u052d", "\u052e": "\u052f", "\u0531": "\u0561", "\u0532": "\u0562", "\u0533": "\u0563", "\u0534": "\u0564", "\u0535": "\u0565", "\u0536": "\u0566", "\u0537": "\u0567", "\u0538": "\u0568", "\u0539": "\u0569", "\u053a": "\u056a", "\u053b": "\u056b", "\u053c": "\u056c", "\u053d": "\u056d", "\u053e": "\u056e", "\u053f": "\u056f", "\u0540": "\u0570", "\u0541": "\u0571", "\u0542": "\u0572", "\u0543": "\u0573", "\u0544": "\u0574", "\u0545": "\u0575", "\u0546": "\u0576", "\u0547": "\u0577", "\u0548": "\u0578", "\u0549": "\u0579", "\u054a": "\u057a", "\u054b": "\u057b", "\u054c": "\u057c", "\u054d": "\u057d", "\u054e": "\u057e", "\u054f": "\u057f", "\u0550": "\u0580", "\u0551": "\u0581", "\u0552": "\u0582", "\u0553": "\u0583", "\u0554": "\u0584", "\u0555": "\u0585", "\u0556": "\u0586", "\u0587": "\u0565\u0582", "\u10a0": "\u2d00", "\u10a1": "\u2d01", "\u10a2": "\u2d02", "\u10a3": "\u2d03", "\u10a4": "\u2d04", "\u10a5": "\u2d05", "\u10a6": "\u2d06", "\u10a7": "\u2d07", "\u10a8": "\u2d08", "\u10a9": "\u2d09", "\u10aa": "\u2d0a", "\u10ab": "\u2d0b", "\u10ac": "\u2d0c", "\u10ad": "\u2d0d", "\u10ae": "\u2d0e", "\u10af": "\u2d0f", "\u10b0": "\u2d10", "\u10b1": "\u2d11", "\u10b2": "\u2d12", "\u10b3": "\u2d13", "\u10b4": "\u2d14", "\u10b5": "\u2d15", "\u10b6": "\u2d16", "\u10b7": "\u2d17", "\u10b8": "\u2d18", "\u10b9": "\u2d19", "\u10ba": "\u2d1a", "\u10bb": "\u2d1b", "\u10bc": "\u2d1c", "\u10bd": "\u2d1d", "\u10be": "\u2d1e", "\u10bf": "\u2d1f", "\u10c0": "\u2d20", "\u10c1": "\u2d21", "\u10c2": "\u2d22", "\u10c3": "\u2d23", "\u10c4": "\u2d24", "\u10c5": "\u2d25", "\u10c7": "\u2d27", "\u10cd": "\u2d2d", "\u13f8": "\u13f0", "\u13f9": "\u13f1", "\u13fa": "\u13f2", "\u13fb": "\u13f3", "\u13fc": "\u13f4", "\u13fd": "\u13f5", "\u1c80": "\u0432", "\u1c81": "\u0434", "\u1c82": "\u043e", "\u1c83": "\u0441", "\u1c84": "\u0442", "\u1c85": "\u0442", "\u1c86": "\u044a", "\u1c87": "\u0463", "\u1c88": "\ua64b", "\u1c89": "\u1c8a", "\u1c90": "\u10d0", "\u1c91": "\u10d1", "\u1c92": "\u10d2", "\u1c93": "\u10d3", "\u1c94": "\u10d4", "\u1c95": "\u10d5", "\u1c96": "\u10d6", "\u1c97": "\u10d7", "\u1c98": "\u10d8", "\u1c99": "\u10d9", "\u1c9a": "\u10da", "\u1c9b": "\u10db", "\u1c9c": "\u10dc", "\u1c9d": "\u10dd", "\u1c9e": "\u10de", "\u1c9f": "\u10df", "\u1ca0": "\u10e0", "\u1ca1": "\u10e1", "\u1ca2": "\u10e2", "\u1ca3": "\u10e3", "\u1ca4": "\u10e4", "\u1ca5": "\u10e5", "\u1ca6": "\u10e6", "\u1ca7": "\u10e7", "\u1ca8": "\u10e8", "\u1ca9": "\u10e9", "\u1caa": "\u10ea", "\u1cab": "\u10eb", "\u1cac": "\u10ec", "\u1cad": "\u10ed", "\u1cae": "\u10ee", "\u1caf": "\u10ef", "\u1cb0": "\u10f0", "\u1cb1": "\u10f1", "\u1cb2": "\u10f2", "\u1cb3": "\u10f3", "\u1cb4": "\u10f4", "\u1cb5": "\u10f5", "\u1cb6": "\u10f6", "\u1cb7": "\u10f7", "\u1cb8": "\u10f8", "\u1cb9": "\u10f9", "\u1cba": "\u10fa", "\u1cbd": "\u10fd", "\u1cbe": "\u10fe", "\u1cbf": "\u10ff", "\u1e00": "\u1e01", "\u1e02": "\u1e03", "\u1e04": "\u1e05", "\u1e06": "\u1e07", "\u1e08": "\u1e09", "\u1e0a": "\u1e0b", "\u1e0c": "\u1e0d", "\u1e0e": "\u1e0f", "\u1e10": "\u1e11", "\u1e12": "\u1e13", "\u1e14": "\u1e15", "\u1e16": "\u1e17", "\u1e18": "\u1e19", "\u1e1a": "\u1e1b", "\u1e1c": "\u1e1d", "\u1e1e": "\u1e1f", "\u1e20": "\u1e21", "\u1e22": "\u1e23", "\u1e24": "\u1e25", "\u1e26": "\u1e27", "\u1e28": "\u1e29", "\u1e2a": "\u1e2b", "\u1e2c": "\u1e2d", "\u1e2e": "\u1e2f", "\u1e30": "\u1e31", "\u1e32": "\u1e33", "\u1e34": "\u1e35", "\u1e36": "\u1e37", "\u1e38": "\u1e39", "\u1e3a": "\u1e3b", "\u1e3c": "\u1e3d", "\u1e3e": "\u1e3f", "\u1e40": "\u1e41", "\u1e42": "\u1e43", "\u1e44": "\u1e45", "\u1e46": "\u1e47", "\u1e48": "\u1e49", "\u1e4a": "\u1e4b", "\u1e4c": "\u1e4d", "\u1e4e": "\u1e4f", "\u1e50": "\u1e51", "\u1e52": "\u1e53", "\u1e54": "\u1e55", "\u1e56": "\u1e57", "\u1e58": "\u1e59", "\u1e5a": "\u1e5b", "\u1e5c": "\u1e5d", "\u1e5e": "\u1e5f", "\u1e60": "\u1e61", "\u1e62": "\u1e63", "\u1e64": "\u1e65", "\u1e66": "\u1e67", "\u1e68": "\u1e69", "\u1e6a": "\u1e6b", "\u1e6c": "\u1e6d", "\u1e6e": "\u1e6f", "\u1e70": "\u1e71", "\u1e72": "\u1e73", "\u1e74": "\u1e75", "\u1e76": "\u1e77", "\u1e78": "\u1e79", "\u1e7a": "\u1e7b", "\u1e7c": "\u1e7d", "\u1e7e": "\u1e7f", "\u1e80": "\u1e81", "\u1e82": "\u1e83", "\u1e84": "\u1e85", "\u1e86": "\u1e87", "\u1e88": "\u1e89", "\u1e8a": "\u1e8b", "\u1e8c": "\u1e8d", "\u1e8e": "\u1e8f", "\u1e90": "\u1e91", "\u1e92": "\u1e93", "\u1e94": "\u1e95", "\u1e96": "h\u0331", "\u1e97": "t\u0308", "\u1e98": "w\u030a", "\u1e99": "y\u030a", "\u1e9a": "a\u02be", "\u1e9b": "\u1e61", "\u1e9e": "ss", "\u1ea0": "\u1ea1", "\u1ea2": "\u1ea3", "\u1ea4": "\u1ea5", "\u1ea6": "\u1ea7", "\u1ea8": "\u1ea9", "\u1eaa": "\u1eab", "\u1eac": "\u1ead", "\u1eae": "\u1eaf", "\u1eb0": "\u1eb1", "\u1eb2": "\u1eb3", "\u1eb4": "\u1eb5", "\u1eb6": "\u1eb7", "\u1eb8": "\u1eb9", "\u1eba": "\u1ebb", "\u1ebc": "\u1ebd", "\u1ebe": "\u1ebf", "\u1ec0": "\u1ec1", "\u1ec2": "\u1ec3", "\u1ec4": "\u1ec5", "\u1ec6": "\u1ec7", "\u1ec8": "\u1ec9", "\u1eca": "\u1ecb", "\u1ecc": "\u1ecd", "\u1ece": "\u1ecf", "\u1ed0": "\u1ed1", "\u1ed2": "\u1ed3", "\u1ed4": "\u1ed5", "\u1ed6": "\u1ed7", "\u1ed8": "\u1ed9", "\u1eda": "\u1edb", "\u1edc": "\u1edd", "\u1ede": "\u1edf", "\u1ee0": "\u1ee1", "\u1ee2": "\u1ee3", "\u1ee4": "\u1ee5", "\u1ee6": "\u1ee7", "\u1ee8": "\u1ee9", "\u1eea": "\u1eeb", "\u1eec": "\u1eed", "\u1eee": "\u1eef", "\u1ef0": "\u1ef1", "\u1ef2": "\u1ef3", "\u1ef4": "\u1ef5", "\u1ef6": "\u1ef7", "\u1ef8": "\u1ef9", "\u1efa": "\u1efb", "\u1efc": "\u1efd", "\u1efe": "\u1eff", "\u1f08": "\u1f00", "\u1f09": "\u1f01", "\u1f0a": "\u1f02", "\u1f0b": "\u1f03", "\u1f0c": "\u1f04", "\u1f0d": "\u1f05", "\u1f0e": "\u1f06", "\u1f0f": "\u1f07", "\u1f18": "\u1f10", "\u1f19": "\u1f11", "\u1f1a": "\u1f12", "\u1f1b": "\u1f13", "\u1f1c": "\u1f14", "\u1f1d": "\u1f15", "\u1f28": "\u1f20", "\u1f29": "\u1f21", "\u1f2a": "\u1f22", "\u1f2b": "\u1f23", "\u1f2c": "\u1f24", "\u1f2d": "\u1f25", "\u1f2e": "\u1f26", "\u1f2f": "\u1f27", "\u1f38": "\u1f30", "\u1f39": "\u1f31", "\u1f3a": "\u1f32", "\u1f3b": "\u1f33", "\u1f3c": "\u1f34", "\u1f3d": "\u1f35", "\u1f3e": "\u1f36", "\u1f3f": "\u1f37", "\u1f48": "\u1f40", "\u1f49": "\u1f41", "\u1f4a": "\u1f42", "\u1f4b": "\u1f43", "\u1f4c": "\u1f44", "\u1f4d": "\u1f45", "\u1f50": "\u03c5\u0313", "\u1f52": "\u03c5\u0313\u0300", "\u1f54": "\u03c5\u0313\u0301", "\u1f56": "\u03c5\u0313\u0342", "\u1f59": "\u1f51", "\u1f5b": "\u1f53", "\u1f5d": "\u1f55", "\u1f5f": "\u1f57", "\u1f68": "\u1f60", "\u1f69": "\u1f61", "\u1f6a": "\u1f62", "\u1f6b": "\u1f63", "\u1f6c": "\u1f64", "\u1f6d": "\u1f65", "\u1f6e": "\u1f66", "\u1f6f": "\u1f67", "\u1f80": "\u1f00\u03b9", "\u1f81": "\u1f01\u03b9", "\u1f82": "\u1f02\u03b9", "\u1f83": "\u1f03\u03b9", "\u1f84": "\u1f04\u03b9", "\u1f85": "\u1f05\u03b9", "\u1f86": "\u1f06\u03b9", "\u1f87": "\u1f07\u03b9", "\u1f88": "\u1f00\u03b9", "\u1f89": "\u1f01\u03b9", "\u1f8a": "\u1f02\u03b9", "\u1f8b": "\u1f03\u03b9", "\u1f8c": "\u1f04\u03b9", "\u1f8d": "\u1f05\u03b9", "\u1f8e": "\u1f06\u03b9", "\u1f8f": "\u1f07\u03b9", "\u1f90": "\u1f20\u03b9", "\u1f91": "\u1f21\u03b9", "\u1f92": "\u1f22\u03b9", "\u1f93": "\u1f23\u03b9", "\u1f94": "\u1f24\u03b9", "\u1f95": "\u1f25\u03b9", "\u1f96": "\u1f26\u03b9", "\u1f97": "\u1f27\u03b9", "\u1f98": "\u1f20\u03b9", "\u1f99": "\u1f21\u03b9", "\u1f9a": "\u1f22\u03b9", "\u1f9b": "\u1f23\u03b9", "\u1f9c": "\u1f24\u03b9", "\u1f9d": "\u1f25\u03b9", "\u1f9e": "\u1f26\u03b9", "\u1f9f": "\u1f27\u03b9", "\u1fa0": "\u1f60\u03b9", "\u1fa1": "\u1f61\u03b9", "\u1fa2": "\u1f62\u03b9", "\u1fa3": "\u1f63\u03b9", "\u1fa4": "\u1f64\u03b9", "\u1fa5": "\u1f65\u03b9", "\u1fa6": "\u1f66\u03b9", "\u1fa7": "\u1f67\u03b9", "\u1fa8": "\u1f60\u03b9", "\u1fa9": "\u1f61\u03b9", "\u1faa": "\u1f62\u03b9", "\u1fab": "\u1f63\u03b9", "\u1fac": "\u1f64\u03b9", "\u1fad": "\u1f65\u03b9", "\u1fae": "\u1f66\u03b9", "\u1faf": "\u1f67\u03b9", "\u1fb2": "\u1f70\u03b9", "\u1fb3": "\u03b1\u03b9", "\u1fb4": "\u03ac\u03b9", "\u1fb6": "\u03b1\u0342", "\u1fb7": "\u03b1\u0342\u03b9", "\u1fb8": "\u1fb0", "\u1fb9": "\u1fb1", "\u1fba": "\u1f70", "\u1fbb": "\u1f71", "\u1fbc": "\u03b1\u03b9", "\u1fbe": "\u03b9", "\u1fc2": "\u1f74\u03b9", "\u1fc3": "\u03b7\u03b9", "\u1fc4": "\u03ae\u03b9", "\u1fc6": "\u03b7\u0342", "\u1fc7": "\u03b7\u0342\u03b9", "\u1fc8": "\u1f72", "\u1fc9": "\u1f73", "\u1fca": "\u1f74", "\u1fcb": "\u1f75", "\u1fcc": "\u03b7\u03b9", "\u1fd2": "\u03b9\u0308\u0300", "\u1fd3": "\u03b9\u0308\u0301", "\u1fd6": "\u03b9\u0342", "\u1fd7": "\u03b9\u0308\u0342", "\u1fd8": "\u1fd0", "\u1fd9": "\u1fd1", "\u1fda": "\u1f76", "\u1fdb": "\u1f77", "\u1fe2": "\u03c5\u0308\u0300", "\u1fe3": "\u03c5\u0308\u0301", "\u1fe4": "\u03c1\u0313", "\u1fe6": "\u03c5\u0342", "\u1fe7": "\u03c5\u0308\u0342", "\u1fe8": "\u1fe0", "\u1fe9": "\u1fe1", "\u1fea": "\u1f7a", "\u1feb": "\u1f7b", "\u1fec": "\u1fe5", "\u1ff2": "\u1f7c\u03b9", "\u1ff3": "\u03c9\u03b9", "\u1ff4": "\u03ce\u03b9", "\u1ff6": "\u03c9\u0342", "\u1ff7": "\u03c9\u0342\u03b9", "\u1ff8": "\u1f78", "\u1ff9": "\u1f79", "\u1ffa": "\u1f7c", "\u1ffb": "\u1f7d", "\u1ffc": "\u03c9\u03b9", "\u2126": "\u03c9", "\u212a": "k", "\u212b": "\u00e5", "\u2132": "\u214e", "\u2160": "\u2170", "\u2161": "\u2171", "\u2162": "\u2172", "\u2163": "\u2173", "\u2164": "\u2174", "\u2165": "\u2175", "\u2166": "\u2176", "\u2167": "\u2177", "\u2168": "\u2178", "\u2169": "\u2179", "\u216a": "\u217a", "\u216b": "\u217b", "\u216c": "\u217c", "\u216d": "\u217d", "\u216e": "\u217e", "\u216f": "\u217f", "\u2183": "\u2184", "\u24b6": "\u24d0", "\u24b7": "\u24d1", "\u24b8": "\u24d2", "\u24b9": "\u24d3", "\u24ba": "\u24d4", "\u24bb": "\u24d5", "\u24bc": "\u24d6", "\u24bd": "\u24d7", "\u24be": "\u24d8", "\u24bf": "\u24d9", "\u24c0": "\u24da", "\u24c1": "\u24db", "\u24c2": "\u24dc", "\u24c3": "\u24dd", "\u24c4": "\u24de", "\u24c5": "\u24df", "\u24c6": "\u24e0", "\u24c7": "\u24e1", "\u24c8": "\u24e2", "\u24c9": "\u24e3", "\u24ca": "\u24e4", "\u24cb": "\u24e5", "\u24cc": "\u24e6", "\u24cd": "\u24e7", "\u24ce": "\u24e8", "\u24cf": "\u24e9", "\u2c00": "\u2c30", "\u2c01": "\u2c31", "\u2c02": "\u2c32", "\u2c03": "\u2c33", "\u2c04": "\u2c34", "\u2c05": "\u2c35", "\u2c06": "\u2c36", "\u2c07": "\u2c37", "\u2c08": "\u2c38", "\u2c09": "\u2c39", "\u2c0a": "\u2c3a", "\u2c0b": "\u2c3b", "\u2c0c": "\u2c3c", "\u2c0d": "\u2c3d", "\u2c0e": "\u2c3e", "\u2c0f": "\u2c3f", "\u2c10": "\u2c40", "\u2c11": "\u2c41", "\u2c12": "\u2c42", "\u2c13": "\u2c43", "\u2c14": "\u2c44", "\u2c15": "\u2c45", "\u2c16": "\u2c46", "\u2c17": "\u2c47", "\u2c18": "\u2c48", "\u2c19": "\u2c49", "\u2c1a": "\u2c4a", "\u2c1b": "\u2c4b", "\u2c1c": "\u2c4c", "\u2c1d": "\u2c4d", "\u2c1e": "\u2c4e", "\u2c1f": "\u2c4f", "\u2c20": "\u2c50", "\u2c21": "\u2c51", "\u2c22": "\u2c52", "\u2c23": "\u2c53", "\u2c24": "\u2c54", "\u2c25": "\u2c55", "\u2c26": "\u2c56", "\u2c27": "\u2c57", "\u2c28": "\u2c58", "\u2c29": "\u2c59", "\u2c2a": "\u2c5a", "\u2c2b": "\u2c5b", "\u2c2c": "\u2c5c", "\u2c2d": "\u2c5d", "\u2c2e": "\u2c5e", "\u2c2f": "\u2c5f", "\u2c60": "\u2c61", "\u2c62": "\u026b", "\u2c63": "\u1d7d", "\u2c64": "\u027d", "\u2c67": "\u2c68", "\u2c69": "\u2c6a", "\u2c6b": "\u2c6c", "\u2c6d": "\u0251", "\u2c6e": "\u0271", "\u2c6f": "\u0250", "\u2c70": "\u0252", "\u2c72": "\u2c73", "\u2c75": "\u2c76", "\u2c7e": "\u023f", "\u2c7f": "\u0240", "\u2c80": "\u2c81", "\u2c82": "\u2c83", "\u2c84": "\u2c85", "\u2c86": "\u2c87", "\u2c88": "\u2c89", "\u2c8a": "\u2c8b", "\u2c8c": "\u2c8d", "\u2c8e": "\u2c8f", "\u2c90": "\u2c91", "\u2c92": "\u2c93", "\u2c94": "\u2c95", "\u2c96": "\u2c97", "\u2c98": "\u2c99", "\u2c9a": "\u2c9b", "\u2c9c": "\u2c9d", "\u2c9e": "\u2c9f", "\u2ca0": "\u2ca1", "\u2ca2": "\u2ca3", "\u2ca4": "\u2ca5", "\u2ca6": "\u2ca7", "\u2ca8": "\u2ca9", "\u2caa": "\u2cab", "\u2cac": "\u2cad", "\u2cae": "\u2caf", "\u2cb0": "\u2cb1", "\u2cb2": "\u2cb3", "\u2cb4": "\u2cb5", "\u2cb6": "\u2cb7", "\u2cb8": "\u2cb9", "\u2cba": "\u2cbb", "\u2cbc": "\u2cbd", "\u2cbe": "\u2cbf", "\u2cc0": "\u2cc1", "\u2cc2": "\u2cc3", "\u2cc4": "\u2cc5", "\u2cc6": "\u2cc7", "\u2cc8": "\u2cc9", "\u2cca": "\u2ccb", "\u2ccc": "\u2ccd", "\u2cce": "\u2ccf", "\u2cd0": "\u2cd1", "\u2cd2": "\u2cd3", "\u2cd4": "\u2cd5", "\u2cd6": "\u2cd7", "\u2cd8": "\u2cd9", "\u2cda": "\u2cdb", "\u2cdc": "\u2cdd", "\u2cde": "\u2cdf", "\u2ce0": "\u2ce1", "\u2ce2": "\u2ce3", "\u2ceb": "\u2cec", "\u2ced": "\u2cee", "\u2cf2": "\u2cf3", "\ua640": "\ua641", "\ua642": "\ua643", "\ua644": "\ua645", "\ua646": "\ua647", "\ua648": "\ua649", "\ua64a": "\ua64b", "\ua64c": "\ua64d", "\ua64e": "\ua64f", "\ua650": "\ua651", "\ua652": "\ua653", "\ua654": "\ua655", "\ua656": "\ua657", "\ua658": "\ua659", "\ua65a": "\ua65b", "\ua65c": "\ua65d", "\ua65e": "\ua65f", "\ua660": "\ua661", "\ua662": "\ua663", "\ua664": "\ua665", "\ua666": "\ua667", "\ua668": "\ua669", "\ua66a": "\ua66b", "\ua66c": "\ua66d", "\ua680": "\ua681", "\ua682": "\ua683", "\ua684": "\ua685", "\ua686": "\ua687", "\ua688": "\ua689", "\ua68a": "\ua68b", "\ua68c": "\ua68d", "\ua68e": "\ua68f", "\ua690": "\ua691", "\ua692": "\ua693", "\ua694": "\ua695", "\ua696": "\ua697", "\ua698": "\ua699", "\ua69a": "\ua69b", "\ua722": "\ua723", "\ua724": "\ua725", "\ua726": "\ua727", "\ua728": "\ua729", "\ua72a": "\ua72b", "\ua72c": "\ua72d", "\ua72e": "\ua72f", "\ua732": "\ua733", "\ua734": "\ua735", "\ua736": "\ua737", "\ua738": "\ua739", "\ua73a": "\ua73b", "\ua73c": "\ua73d", "\ua73e": "\ua73f", "\ua740": "\ua741", "\ua742": "\ua743", "\ua744": "\ua745", "\ua746": "\ua747", "\ua748": "\ua749", "\ua74a": "\ua74b", "\ua74c": "\ua74d", "\ua74e": "\ua74f", "\ua750": "\ua751", "\ua752": "\ua753", "\ua754": "\ua755", "\ua756": "\ua757", "\ua758": "\ua759", "\ua75a": "\ua75b", "\ua75c": "\ua75d", "\ua75e": "\ua75f", "\ua760": "\ua761", "\ua762": "\ua763", "\ua764": "\ua765", "\ua766": "\ua767", "\ua768": "\ua769", "\ua76a": "\ua76b", "\ua76c": "\ua76d", "\ua76e": "\ua76f", "\ua779": "\ua77a", "\ua77b": "\ua77c", "\ua77d": "\u1d79", "\ua77e": "\ua77f", "\ua780": "\ua781", "\ua782": "\ua783", "\ua784": "\ua785", "\ua786": "\ua787", "\ua78b": "\ua78c", "\ua78d": "\u0265", "\ua790": "\ua791", "\ua792": "\ua793", "\ua796": "\ua797", "\ua798": "\ua799", "\ua79a": "\ua79b", "\ua79c": "\ua79d", "\ua79e": "\ua79f", "\ua7a0": "\ua7a1", "\ua7a2": "\ua7a3", "\ua7a4": "\ua7a5", "\ua7a6": "\ua7a7", "\ua7a8": "\ua7a9", "\ua7aa": "\u0266", "\ua7ab": "\u025c", "\ua7ac": "\u0261", "\ua7ad": "\u026c", "\ua7ae": "\u026a", "\ua7b0": "\u029e", "\ua7b1": "\u0287", "\ua7b2": "\u029d", "\ua7b3": "\uab53", "\ua7b4": "\ua7b5", "\ua7b6": "\ua7b7", "\ua7b8": "\ua7b9", "\ua7ba": "\ua7bb", "\ua7bc": "\ua7bd", "\ua7be": "\ua7bf", "\ua7c0": "\ua7c1", "\ua7c2": "\ua7c3", "\ua7c4": "\ua794", "\ua7c5": "\u0282", "\ua7c6": "\u1d8e", "\ua7c7": "\ua7c8", "\ua7c9": "\ua7ca", "\ua7cb": "\u0264", "\ua7cc": "\ua7cd", "\ua7ce": "\ua7cf", "\ua7d0": "\ua7d1", "\ua7d2": "\ua7d3", "\ua7d4": "\ua7d5", "\ua7d6": "\ua7d7", "\ua7d8": "\ua7d9", "\ua7da": "\ua7db", "\ua7dc": "\u019b", "\ua7f5": "\ua7f6", "\uab70": "\u13a0", "\uab71": "\u13a1", "\uab72": "\u13a2", "\uab73": "\u13a3", "\uab74": "\u13a4", "\uab75": "\u13a5", "\uab76": "\u13a6", "\uab77": "\u13a7", "\uab78": "\u13a8", "\uab79": "\u13a9", "\uab7a": "\u13aa", "\uab7b": "\u13ab", "\uab7c": "\u13ac", "\uab7d": "\u13ad", "\uab7e": "\u13ae", "\uab7f": "\u13af", "\uab80": "\u13b0", "\uab81": "\u13b1", "\uab82": "\u13b2", "\uab83": "\u13b3", "\uab84": "\u13b4", "\uab85": "\u13b5", "\uab86": "\u13b6", "\uab87": "\u13b7", "\uab88": "\u13b8", "\uab89": "\u13b9", "\uab8a": "\u13ba", "\uab8b": "\u13bb", "\uab8c": "\u13bc", "\uab8d": "\u13bd", "\uab8e": "\u13be", "\uab8f": "\u13bf", "\uab90": "\u13c0", "\uab91": "\u13c1", "\uab92": "\u13c2", "\uab93": "\u13c3", "\uab94": "\u13c4", "\uab95": "\u13c5", "\uab96": "\u13c6", "\uab97": "\u13c7", "\uab98": "\u13c8", "\uab99": "\u13c9", "\uab9a": "\u13ca", "\uab9b": "\u13cb", "\uab9c": "\u13cc", "\uab9d": "\u13cd", "\uab9e": "\u13ce", "\uab9f": "\u13cf", "\uaba0": "\u13d0", "\uaba1": "\u13d1", "\uaba2": "\u13d2", "\uaba3": "\u13d3", "\uaba4": "\u13d4", "\uaba5": "\u13d5", "\uaba6": "\u13d6", "\uaba7": "\u13d7", "\uaba8": "\u13d8", "\uaba9": "\u13d9", "\uabaa": "\u13da", "\uabab": "\u13db", "\uabac": "\u13dc", "\uabad": "\u13dd", "\uabae": "\u13de", "\uabaf": "\u13df", "\uabb0": "\u13e0", "\uabb1": "\u13e1", "\uabb2": "\u13e2", "\uabb3": "\u13e3", "\uabb4": "\u13e4", "\uabb5": "\u13e5", "\uabb6": "\u13e6", "\uabb7": "\u13e7", "\uabb8": "\u13e8", "\uabb9": "\u13e9", "\uabba": "\u13ea", "\uabbb": "\u13eb", "\uabbc": "\u13ec", "\uabbd": "\u13ed", "\uabbe": "\u13ee", "\uabbf": "\u13ef", "\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl", "\ufb03": "ffi", "\ufb04": "ffl", "\ufb05": "st", "\ufb06": "st", "\ufb13": "\u0574\u0576", "\ufb14": "\u0574\u0565", "\ufb15": "\u0574\u056b", "\ufb16": "\u057e\u0576", "\ufb17": "\u0574\u056d", "\uff21": "\uff41", "\uff22": "\uff42", "\uff23": "\uff43", "\uff24": "\uff44", "\uff25": "\uff45", "\uff26": "\uff46", "\uff27": "\uff47", "\uff28": "\uff48", "\uff29": "\uff49", "\uff2a": "\uff4a", "\uff2b": "\uff4b", "\uff2c": "\uff4c", "\uff2d": "\uff4d", "\uff2e": "\uff4e", "\uff2f": "\uff4f", "\uff30": "\uff50", "\uff31": "\uff51", "\uff32": "\uff52", "\uff33": "\uff53", "\uff34": "\uff54", "\uff35": "\uff55", "\uff36": "\uff56", "\uff37": "\uff57", "\uff38": "\uff58", "\uff39": "\uff59", "\uff3a": "\uff5a", "\ud801\udc00": "\ud801\udc28", "\ud801\udc01": "\ud801\udc29", "\ud801\udc02": "\ud801\udc2a", "\ud801\udc03": "\ud801\udc2b", "\ud801\udc04": "\ud801\udc2c", "\ud801\udc05": "\ud801\udc2d", "\ud801\udc06": "\ud801\udc2e", "\ud801\udc07": "\ud801\udc2f", "\ud801\udc08": "\ud801\udc30", "\ud801\udc09": "\ud801\udc31", "\ud801\udc0a": "\ud801\udc32", "\ud801\udc0b": "\ud801\udc33", "\ud801\udc0c": "\ud801\udc34", "\ud801\udc0d": "\ud801\udc35", "\ud801\udc0e": "\ud801\udc36", "\ud801\udc0f": "\ud801\udc37", "\ud801\udc10": "\ud801\udc38", "\ud801\udc11": "\ud801\udc39", "\ud801\udc12": "\ud801\udc3a", "\ud801\udc13": "\ud801\udc3b", "\ud801\udc14": "\ud801\udc3c", "\ud801\udc15": "\ud801\udc3d", "\ud801\udc16": "\ud801\udc3e", "\ud801\udc17": "\ud801\udc3f", "\ud801\udc18": "\ud801\udc40", "\ud801\udc19": "\ud801\udc41", "\ud801\udc1a": "\ud801\udc42", "\ud801\udc1b": "\ud801\udc43", "\ud801\udc1c": "\ud801\udc44", "\ud801\udc1d": "\ud801\udc45", "\ud801\udc1e": "\ud801\udc46", "\ud801\udc1f": "\ud801\udc47", "\ud801\udc20": "\ud801\udc48", "\ud801\udc21": "\ud801\udc49", "\ud801\udc22": "\ud801\udc4a", "\ud801\udc23": "\ud801\udc4b", "\ud801\udc24": "\ud801\udc4c", "\ud801\udc25": "\ud801\udc4d", "\ud801\udc26": "\ud801\udc4e", "\ud801\udc27": "\ud801\udc4f", "\ud801\udcb0": "\ud801\udcd8", "\ud801\udcb1": "\ud801\udcd9", "\ud801\udcb2": "\ud801\udcda", "\ud801\udcb3": "\ud801\udcdb", "\ud801\udcb4": "\ud801\udcdc", "\ud801\udcb5": "\ud801\udcdd", "\ud801\udcb6": "\ud801\udcde", "\ud801\udcb7": "\ud801\udcdf", "\ud801\udcb8": "\ud801\udce0", "\ud801\udcb9": "\ud801\udce1", "\ud801\udcba": "\ud801\udce2", "\ud801\udcbb": "\ud801\udce3", "\ud801\udcbc": "\ud801\udce4", "\ud801\udcbd": "\ud801\udce5", "\ud801\udcbe": "\ud801\udce6", "\ud801\udcbf": "\ud801\udce7", "\ud801\udcc0": "\ud801\udce8", "\ud801\udcc1": "\ud801\udce9", "\ud801\udcc2": "\ud801\udcea", "\ud801\udcc3": "\ud801\udceb", "\ud801\udcc4": "\ud801\udcec", "\ud801\udcc5": "\ud801\udced", "\ud801\udcc6": "\ud801\udcee", "\ud801\udcc7": "\ud801\udcef", "\ud801\udcc8": "\ud801\udcf0", "\ud801\udcc9": "\ud801\udcf1", "\ud801\udcca": "\ud801\udcf2", "\ud801\udccb": "\ud801\udcf3", "\ud801\udccc": "\ud801\udcf4", "\ud801\udccd": "\ud801\udcf5", "\ud801\udcce": "\ud801\udcf6", "\ud801\udccf": "\ud801\udcf7", "\ud801\udcd0": "\ud801\udcf8", "\ud801\udcd1": "\ud801\udcf9", "\ud801\udcd2": "\ud801\udcfa", "\ud801\udcd3": "\ud801\udcfb", "\ud801\udd70": "\ud801\udd97", "\ud801\udd71": "\ud801\udd98", "\ud801\udd72": "\ud801\udd99", "\ud801\udd73": "\ud801\udd9a", "\ud801\udd74": "\ud801\udd9b", "\ud801\udd75": "\ud801\udd9c", "\ud801\udd76": "\ud801\udd9d", "\ud801\udd77": "\ud801\udd9e", "\ud801\udd78": "\ud801\udd9f", "\ud801\udd79": "\ud801\udda0", "\ud801\udd7a": "\ud801\udda1", "\ud801\udd7c": "\ud801\udda3", "\ud801\udd7d": "\ud801\udda4", "\ud801\udd7e": "\ud801\udda5", "\ud801\udd7f": "\ud801\udda6", "\ud801\udd80": "\ud801\udda7", "\ud801\udd81": "\ud801\udda8", "\ud801\udd82": "\ud801\udda9", "\ud801\udd83": "\ud801\uddaa", "\ud801\udd84": "\ud801\uddab", "\ud801\udd85": "\ud801\uddac", "\ud801\udd86": "\ud801\uddad", "\ud801\udd87": "\ud801\uddae", "\ud801\udd88": "\ud801\uddaf", "\ud801\udd89": "\ud801\uddb0", "\ud801\udd8a": "\ud801\uddb1", "\ud801\udd8c": "\ud801\uddb3", "\ud801\udd8d": "\ud801\uddb4", "\ud801\udd8e": "\ud801\uddb5", "\ud801\udd8f": "\ud801\uddb6", "\ud801\udd90": "\ud801\uddb7", "\ud801\udd91": "\ud801\uddb8", "\ud801\udd92": "\ud801\uddb9", "\ud801\udd94": "\ud801\uddbb", "\ud801\udd95": "\ud801\uddbc", "\ud803\udc80": "\ud803\udcc0", "\ud803\udc81": "\ud803\udcc1", "\ud803\udc82": "\ud803\udcc2", "\ud803\udc83": "\ud803\udcc3", "\ud803\udc84": "\ud803\udcc4", "\ud803\udc85": "\ud803\udcc5", "\ud803\udc86": "\ud803\udcc6", "\ud803\udc87": "\ud803\udcc7", "\ud803\udc88": "\ud803\udcc8", "\ud803\udc89": "\ud803\udcc9", "\ud803\udc8a": "\ud803\udcca", "\ud803\udc8b": "\ud803\udccb", "\ud803\udc8c": "\ud803\udccc", "\ud803\udc8d": "\ud803\udccd", "\ud803\udc8e": "\ud803\udcce", "\ud803\udc8f": "\ud803\udccf", "\ud803\udc90": "\ud803\udcd0", "\ud803\udc91": "\ud803\udcd1", "\ud803\udc92": "\ud803\udcd2", "\ud803\udc93": "\ud803\udcd3", "\ud803\udc94": "\ud803\udcd4", "\ud803\udc95": "\ud803\udcd5", "\ud803\udc96": "\ud803\udcd6", "\ud803\udc97": "\ud803\udcd7", "\ud803\udc98": "\ud803\udcd8", "\ud803\udc99": "\ud803\udcd9", "\ud803\udc9a": "\ud803\udcda", "\ud803\udc9b": "\ud803\udcdb", "\ud803\udc9c": "\ud803\udcdc", "\ud803\udc9d": "\ud803\udcdd", "\ud803\udc9e": "\ud803\udcde", "\ud803\udc9f": "\ud803\udcdf", "\ud803\udca0": "\ud803\udce0", "\ud803\udca1": "\ud803\udce1", "\ud803\udca2": "\ud803\udce2", "\ud803\udca3": "\ud803\udce3", "\ud803\udca4": "\ud803\udce4", "\ud803\udca5": "\ud803\udce5", "\ud803\udca6": "\ud803\udce6", "\ud803\udca7": "\ud803\udce7", "\ud803\udca8": "\ud803\udce8", "\ud803\udca9": "\ud803\udce9", "\ud803\udcaa": "\ud803\udcea", "\ud803\udcab": "\ud803\udceb", "\ud803\udcac": "\ud803\udcec", "\ud803\udcad": "\ud803\udced", "\ud803\udcae": "\ud803\udcee", "\ud803\udcaf": "\ud803\udcef", "\ud803\udcb0": "\ud803\udcf0", "\ud803\udcb1": "\ud803\udcf1", "\ud803\udcb2": "\ud803\udcf2", "\ud803\udd50": "\ud803\udd70", "\ud803\udd51": "\ud803\udd71", "\ud803\udd52": "\ud803\udd72", "\ud803\udd53": "\ud803\udd73", "\ud803\udd54": "\ud803\udd74", "\ud803\udd55": "\ud803\udd75", "\ud803\udd56": "\ud803\udd76", "\ud803\udd57": "\ud803\udd77", "\ud803\udd58": "\ud803\udd78", "\ud803\udd59": "\ud803\udd79", "\ud803\udd5a": "\ud803\udd7a", "\ud803\udd5b": "\ud803\udd7b", "\ud803\udd5c": "\ud803\udd7c", "\ud803\udd5d": "\ud803\udd7d", "\ud803\udd5e": "\ud803\udd7e", "\ud803\udd5f": "\ud803\udd7f", "\ud803\udd60": "\ud803\udd80", "\ud803\udd61": "\ud803\udd81", "\ud803\udd62": "\ud803\udd82", "\ud803\udd63": "\ud803\udd83", "\ud803\udd64": "\ud803\udd84", "\ud803\udd65": "\ud803\udd85", "\ud806\udca0": "\ud806\udcc0", "\ud806\udca1": "\ud806\udcc1", "\ud806\udca2": "\ud806\udcc2", "\ud806\udca3": "\ud806\udcc3", "\ud806\udca4": "\ud806\udcc4", "\ud806\udca5": "\ud806\udcc5", "\ud806\udca6": "\ud806\udcc6", "\ud806\udca7": "\ud806\udcc7", "\ud806\udca8": "\ud806\udcc8", "\ud806\udca9": "\ud806\udcc9", "\ud806\udcaa": "\ud806\udcca", "\ud806\udcab": "\ud806\udccb", "\ud806\udcac": "\ud806\udccc", "\ud806\udcad": "\ud806\udccd", "\ud806\udcae": "\ud806\udcce", "\ud806\udcaf": "\ud806\udccf", "\ud806\udcb0": "\ud806\udcd0", "\ud806\udcb1": "\ud806\udcd1", "\ud806\udcb2": "\ud806\udcd2", "\ud806\udcb3": "\ud806\udcd3", "\ud806\udcb4": "\ud806\udcd4", "\ud806\udcb5": "\ud806\udcd5", "\ud806\udcb6": "\ud806\udcd6", "\ud806\udcb7": "\ud806\udcd7", "\ud806\udcb8": "\ud806\udcd8", "\ud806\udcb9": "\ud806\udcd9", "\ud806\udcba": "\ud806\udcda", "\ud806\udcbb": "\ud806\udcdb", "\ud806\udcbc": "\ud806\udcdc", "\ud806\udcbd": "\ud806\udcdd", "\ud806\udcbe": "\ud806\udcde", "\ud806\udcbf": "\ud806\udcdf", "\ud81b\ude40": "\ud81b\ude60", "\ud81b\ude41": "\ud81b\ude61", "\ud81b\ude42": "\ud81b\ude62", "\ud81b\ude43": "\ud81b\ude63", "\ud81b\ude44": "\ud81b\ude64", "\ud81b\ude45": "\ud81b\ude65", "\ud81b\ude46": "\ud81b\ude66", "\ud81b\ude47": "\ud81b\ude67", "\ud81b\ude48": "\ud81b\ude68", "\ud81b\ude49": "\ud81b\ude69", "\ud81b\ude4a": "\ud81b\ude6a", "\ud81b\ude4b": "\ud81b\ude6b", "\ud81b\ude4c": "\ud81b\ude6c", "\ud81b\ude4d": "\ud81b\ude6d", "\ud81b\ude4e": "\ud81b\ude6e", "\ud81b\ude4f": "\ud81b\ude6f", "\ud81b\ude50": "\ud81b\ude70", "\ud81b\ude51": "\ud81b\ude71", "\ud81b\ude52": "\ud81b\ude72", "\ud81b\ude53": "\ud81b\ude73", "\ud81b\ude54": "\ud81b\ude74", "\ud81b\ude55": "\ud81b\ude75", "\ud81b\ude56": "\ud81b\ude76", "\ud81b\ude57": "\ud81b\ude77", "\ud81b\ude58": "\ud81b\ude78", "\ud81b\ude59": "\ud81b\ude79", "\ud81b\ude5a": "\ud81b\ude7a", "\ud81b\ude5b": "\ud81b\ude7b", "\ud81b\ude5c": "\ud81b\ude7c", "\ud81b\ude5d": "\ud81b\ude7d", "\ud81b\ude5e": "\ud81b\ude7e", "\ud81b\ude5f": "\ud81b\ude7f", "\ud81b\udea0": "\ud81b\udebb", "\ud81b\udea1": "\ud81b\udebc", "\ud81b\udea2": "\ud81b\udebd", "\ud81b\udea3": "\ud81b\udebe", "\ud81b\udea4": "\ud81b\udebf", "\ud81b\udea5": "\ud81b\udec0", "\ud81b\udea6": "\ud81b\udec1", "\ud81b\udea7": "\ud81b\udec2", "\ud81b\udea8": "\ud81b\udec3", "\ud81b\udea9": "\ud81b\udec4", "\ud81b\udeaa": "\ud81b\udec5", "\ud81b\udeab": "\ud81b\udec6", "\ud81b\udeac": "\ud81b\udec7", "\ud81b\udead": "\ud81b\udec8", "\ud81b\udeae": "\ud81b\udec9", "\ud81b\udeaf": "\ud81b\udeca", "\ud81b\udeb0": "\ud81b\udecb", "\ud81b\udeb1": "\ud81b\udecc", "\ud81b\udeb2": "\ud81b\udecd", "\ud81b\udeb3": "\ud81b\udece", "\ud81b\udeb4": "\ud81b\udecf", "\ud81b\udeb5": "\ud81b\uded0", "\ud81b\udeb6": "\ud81b\uded1", "\ud81b\udeb7": "\ud81b\uded2", "\ud81b\udeb8": "\ud81b\uded3", "\ud83a\udd00": "\ud83a\udd22", "\ud83a\udd01": "\ud83a\udd23", "\ud83a\udd02": "\ud83a\udd24", "\ud83a\udd03": "\ud83a\udd25", "\ud83a\udd04": "\ud83a\udd26", "\ud83a\udd05": "\ud83a\udd27", "\ud83a\udd06": "\ud83a\udd28", "\ud83a\udd07": "\ud83a\udd29", "\ud83a\udd08": "\ud83a\udd2a", "\ud83a\udd09": "\ud83a\udd2b", "\ud83a\udd0a": "\ud83a\udd2c", "\ud83a\udd0b": "\ud83a\udd2d", "\ud83a\udd0c": "\ud83a\udd2e", "\ud83a\udd0d": "\ud83a\udd2f", "\ud83a\udd0e": "\ud83a\udd30", "\ud83a\udd0f": "\ud83a\udd31", "\ud83a\udd10": "\ud83a\udd32", "\ud83a\udd11": "\ud83a\udd33", "\ud83a\udd12": "\ud83a\udd34", "\ud83a\udd13": "\ud83a\udd35", "\ud83a\udd14": "\ud83a\udd36", "\ud83a\udd15": "\ud83a\udd37", "\ud83a\udd16": "\ud83a\udd38", "\ud83a\udd17": "\ud83a\udd39", "\ud83a\udd18": "\ud83a\udd3a", "\ud83a\udd19": "\ud83a\udd3b", "\ud83a\udd1a": "\ud83a\udd3c", "\ud83a\udd1b": "\ud83a\udd3d", "\ud83a\udd1c": "\ud83a\udd3e", "\ud83a\udd1d": "\ud83a\udd3f", "\ud83a\udd1e": "\ud83a\udd40", "\ud83a\udd1f": "\ud83a\udd41", "\ud83a\udd20": "\ud83a\udd42", "\ud83a\udd21": "\ud83a\udd43" };
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 const SPACE = /^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g;
 const trimmedCode = (code) => code.replace(SPACE, "");
 function canonicalCodeKey(code) { return (0,_unicode_normalization__WEBPACK_IMPORTED_MODULE_0__.unicode17NFC)((0,_unicode_normalization__WEBPACK_IMPORTED_MODULE_0__.unicode17NFD)(Array.from((0,_unicode_normalization__WEBPACK_IMPORTED_MODULE_0__.unicode17NFD)(code), c => FOLD[c] ?? c).join(""))); }
@@ -1374,7 +1402,8 @@ function validParagraph(v) {
     for (const m of v.marks) {
         if (!(0,_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(m, ['start', 'end', 'styles']) || !(0,_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(m.start) || !(0,_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(m.end) || BigInt(m.start) < BigInt(v.start) || BigInt(m.end) > BigInt(v.end) || BigInt(m.start) >= BigInt(m.end) || !Array.isArray(m.styles) || m.styles.length < 1 || m.styles.length > 2 || new Set(m.styles).size !== m.styles.length || !m.styles.every(s => s === 'bold' || s === 'italic'))
             return false;
-        if (previous && (BigInt(previous.end) > BigInt(m.start) || (previous.end === m.start && previous.styles.length === m.styles.length && previous.styles.every(s => m.styles.includes(s)))))
+        const styles = m.styles;
+        if (previous && (BigInt(previous.end) > BigInt(m.start) || (previous.end === m.start && previous.styles.length === m.styles.length && previous.styles.every(s => styles.includes(s)))))
             return false;
         previous = m;
     }
@@ -1983,10 +2012,29 @@ function assertWorkspaceState(records) {
         void d;
     }
     const done = new Set(), visiting = new Set();
-    const visit = (id) => { if (visiting.has(id))
-        fail('Decision result graph contains a cycle.'); if (done.has(id))
-        return; visiting.add(id); const r = map.get(id); r.data.followingDecisionIds.forEach(visit); visiting.delete(id); done.add(id); };
-    records.filter(r => r.recordType === 'decision').forEach(r => visit(r.id));
+    // Author-sized graphs must not depend on the JavaScript recursion limit.
+    for (const record of records) {
+        if (record.recordType !== 'decision' || done.has(record.id))
+            continue;
+        const stack = [{ id: record.id, next: 0 }];
+        visiting.add(record.id);
+        while (stack.length) {
+            const frame = stack[stack.length - 1], decision = map.get(frame.id);
+            if (frame.next === decision.data.followingDecisionIds.length) {
+                visiting.delete(frame.id);
+                done.add(frame.id);
+                stack.pop();
+                continue;
+            }
+            const id = decision.data.followingDecisionIds[frame.next++];
+            if (visiting.has(id))
+                fail('Decision result graph contains a cycle.');
+            if (!done.has(id)) {
+                visiting.add(id);
+                stack.push({ id, next: 0 });
+            }
+        }
+    }
 }
 const decisionResolved = (d) => d.eventIds.length + d.followingDecisionIds.length > 0;
 const exactCompare = (a, b) => BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0;
@@ -2009,8 +2057,8 @@ function factionCompleteness(f) { const fields = ['name', ...FACTION_TEXT.filter
     missing.push('image'); if (!f.leaderImage)
     missing.push('leaderImage'); return { complete: !missing.length, missing }; }
 function normalizeFaction(f) { return { ...f, military: f.military.filter(m => m.name.trim() || m.role.trim() || m.description.trim() || m.baseStrength !== null || m.movementPoints !== null || m.baseModifierPoints !== null) }; }
-function synchronizedBirth(character, event, calendar, direction) { if (event.data.kind !== 'birth' || event.data.characterId !== character.id || character.data.birthEventId !== event.id || !character.data.birth)
-    fail('Birth synchronization requires the canonical association.'); return direction === 'character-to-event' ? { character, event: { ...event, data: { ...event.data, date: (0,_calendar__WEBPACK_IMPORTED_MODULE_1__.birthPosition)(character.data.birth, calendar) } } } : { character: { ...character, data: { ...character.data, birth: { ...character.data.birth, year: event.data.date.year } } }, event }; }
+function synchronizedBirth(character, event, calendar, direction) { const birth = character.data.birth; if (event.data.kind !== 'birth' || event.data.characterId !== character.id || character.data.birthEventId !== event.id || !birth)
+    return fail('Birth synchronization requires the canonical association.'); return direction === 'character-to-event' ? { character, event: { ...event, data: { ...event.data, date: (0,_calendar__WEBPACK_IMPORTED_MODULE_1__.birthPosition)(birth, calendar) } } } : { character: { ...character, data: { ...character.data, birth: { ...birth, year: event.data.date.year } } }, event }; }
 const BUILTIN_DECISION_TYPES = [
     { name: 'Personal Decisions', makerRequired: true, builtin: 'personal' },
     { name: 'Story Decisions', makerRequired: false, builtin: 'story' },
@@ -2096,17 +2144,36 @@ class ArchiveStorage {
         throw new Error('Archive protection evidence is unreadable. Cleanup is blocked.'); return v; }
     evidence(file) { const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().statSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(file)); return { path: file, device: stat.dev.toString(), inode: stat.ino.toString() }; }
     saveRegistry(records) { const old = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, this.registryPath)) ? (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(this.userData, this.registryPath) : null; (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(this.userData, this.registryPath, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.jsonBytes)(records)), old ? (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)(old) : null); }
-    protectedRevisionIds() { return new Set(this.registry().flatMap(r => r.revisionIds)); }
+    protectedRevisionIds() {
+        const discovery = 'protection/archive-discovery.json';
+        if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, discovery))) {
+            const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(this.userData, discovery));
+            if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_6__.closed)(value, ['schemaVersion', 'uncertain', 'checkedAt', 'directories']) || value.schemaVersion !== 1 || typeof value.uncertain !== 'boolean' || typeof value.checkedAt !== 'string' || !Number.isFinite(Date.parse(value.checkedAt)) || !Array.isArray(value.directories) || !value.directories.every(directory => typeof directory === 'string' && node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(directory)) || value.uncertain)
+                throw new Error('Uncertain archive discovery evidence blocks revision deletion.');
+        }
+        // Valid ZIPs embed their manifests and bytes. Their local history entries can expire
+        // independently; uncertain or unavailable archive evidence still pins those entries.
+        return new Set(this.registry().filter(r => r.state !== 'valid' || !r.locations.length || r.locations.some(file => { try {
+            return (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.hashFile)(file) !== r.sha256;
+        }
+        catch {
+            return true;
+        } })).flatMap(r => r.revisionIds));
+    }
     async write(revision, destination, control, id = (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()) {
         ;(0,_recovery__WEBPACK_IMPORTED_MODULE_8__.validateCaptureCatalogs)(revision, this.revisions);
         const retained = [...this.revisions.list(revision.owner), ...(revision.owner.kind === 'project' ? revision.units.filter(u => u.snapshot.owner.kind === 'universe').flatMap(u => this.revisions.list(u.snapshot.owner)) : [])], all = [revision, ...retained.filter(r => r.id !== revision.id)], sources = new Map(all.flatMap(m => m.units.flatMap(u => u.files.map(f => [f.object.sha256, m.owner])))), objects = new Map(all.flatMap(m => m.units.flatMap(u => u.files.map(f => [f.object.sha256, f.object]))));
+        for (const m of all) {
+            this.revisions.validate(m);
+            (0,_recovery__WEBPACK_IMPORTED_MODULE_8__.validateCaptureCatalogs)(m, this.revisions);
+        }
         const preferred = new Map();
         for (const unit of revision.units)
             for (const file of unit.files)
                 if (!file.relativePath.startsWith('history/') && !preferred.has(file.object.sha256))
                     preferred.set(file.object.sha256, `${unit.snapshot.owner.kind}/${unit.snapshot.owner.id}/${file.relativePath}`);
         const manifest = { schemaVersion: 1, kind: 'complete-backup', id, capturedAt: revision.capturedAt, revision, retained: all.filter(m => m.id !== revision.id), files: [...objects].map(([sha, object]) => ({ relativePath: preferred.get(sha) ?? `objects/${sha}`, object })) };
-        const temp = node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdtempSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_os__WEBPACK_IMPORTED_MODULE_2___default().tmpdir(), 'writingtool-archive-')), staged = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, `${manifest.id}.zip`);
+        const temp = node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdtempSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(node_os__WEBPACK_IMPORTED_MODULE_2___default().tmpdir()), 'writingtool-archive-')), staged = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, `${manifest.id}.zip`);
         let fd;
         try {
             fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(staged, 'wx', 0o600);
@@ -2253,13 +2320,32 @@ class ArchiveStorage {
             throw new Error('Archive payload closure is incomplete.');
         return { manifest, objects, payloadCompletedAt };
     }
-    async import(file, control) { const { manifest, objects } = await this.read(file, control); for (const m of [manifest.revision, ...manifest.retained]) {
-        for (const u of m.units)
-            for (const f of u.files)
-                this.revisions.putObject(m.owner, objects.get(f.object.sha256));
-        this.revisions.import(m);
-        (0,_recovery__WEBPACK_IMPORTED_MODULE_8__.validateCaptureCatalogs)(m, this.revisions);
-    } return manifest.revision; }
+    async import(file, control) {
+        const { manifest, objects } = await this.read(file, control), all = [manifest.revision, ...manifest.retained];
+        const object = (_owner, ref) => { const bytes = objects.get(ref.sha256); if (!bytes || (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)(bytes) !== ref.sha256 || bytes.length.toString() !== ref.byteLength)
+            throw new Error('Corrupt staged revision payload.'); return bytes; };
+        const staged = { object, resolve: (m) => this.revisions.resolve(m, object) }, identities = new Map();
+        // Validate the entire archive before publishing any manifest into live history.
+        for (const m of all) {
+            checkCancel(control);
+            const key = (0,_revisions__WEBPACK_IMPORTED_MODULE_7__.ownerKey)(m.owner) + '/' + m.id, content = (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)(m);
+            if (identities.has(key) && identities.get(key) !== content)
+                throw new Error('Conflicting archived revision identities.');
+            identities.set(key, content);
+            this.revisions.validate(m, object);
+            (0,_recovery__WEBPACK_IMPORTED_MODULE_8__.validateCaptureCatalogs)(m, staged);
+            this.revisions.assertImportable(m);
+            await checkpoint();
+        }
+        checkCancel(control);
+        for (const m of all) {
+            for (const u of m.units)
+                for (const f of u.files)
+                    this.revisions.putObject(m.owner, object(m.owner, f.object));
+            this.revisions.import(m);
+        }
+        return manifest.revision;
+    }
     async registerCompleted(file, control) { const { manifest } = await this.read(file, control); const record = { schemaVersion: 1, id: manifest.id, owner: manifest.revision.owner, sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.hashFile)(file), capturedAt: manifest.capturedAt, completedAt: new Date().toISOString(), locations: [file], evidence: [this.evidence(file)], revisionIds: [manifest.revision, ...manifest.retained].map(m => m.id), state: 'valid' }; const registry = this.registry(), prior = registry.find(r => r.id === record.id); if (prior) {
         if (prior.sha256 !== record.sha256)
             throw new Error('Archive identity/content conflict.');
@@ -2340,6 +2426,653 @@ class ArchiveStorage {
 
 /***/ },
 
+/***/ "./src/infrastructure/captured-state.ts"
+/*!**********************************************!*\
+  !*** ./src/infrastructure/captured-state.ts ***!
+  \**********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveCapturedState: () => (/* binding */ resolveCapturedState),
+/* harmony export */   validCapturedState: () => (/* binding */ validCapturedState),
+/* harmony export */   validateCapturedState: () => (/* binding */ validateCapturedState)
+/* harmony export */ });
+/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
+/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
+/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+
+
+
+
+function validCapturedState(value) {
+    if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_1__.validOwner)(value.owner) || !Array.isArray(value.units) || !value.units.every(_application_contracts_protection__WEBPACK_IMPORTED_MODULE_0__.validCapturedUnit) || value.units.length !== (value.owner.kind === 'project' ? 2 : 1) || new Set(value.units.map(u => u.snapshot.owner.kind + '/' + u.snapshot.owner.id)).size !== value.units.length)
+        return false;
+    const primary = value.units.find(u => u.snapshot.owner.kind === value.owner.kind && u.snapshot.owner.id === value.owner.id);
+    return !!primary && (value.owner.kind === 'universe' || value.units.some(u => u.snapshot.owner.kind === 'universe' && u.snapshot.owner.id === primary.snapshot.universeId));
+}
+function resolveCapturedState(state, object) { return state.units.map(unit => { const { recordIds, ...identity } = unit.snapshot, files = new Map(unit.files.map(f => [f.relativePath, f.object])), records = recordIds.map(id => { const file = unit.files.find(f => f.relativePath.endsWith('/' + id + '.json') && !f.relativePath.startsWith('history/')); if (!file)
+    throw new Error('Missing current record payload.'); return (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.decode)(object(state.owner, file.object)); }), manuscripts = {}; for (const r of records)
+    if (r.recordType === 'chapter') {
+        const ref = files.get(r.data.formatting.text.relativePath);
+        if (!ref)
+            throw new Error('Missing chapter manuscript.');
+        manuscripts[r.id] = new TextDecoder('utf-8', { fatal: true }).decode(object(state.owner, ref));
+    } return { ...identity, records, manuscripts }; }); }
+function validateCapturedState(state, object) {
+    if (!validCapturedState(state))
+        throw new Error('Invalid complete captured state.');
+    const units = resolveCapturedState(state, object);
+    (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.assertWorkspaceState)(units.flatMap(u => u.records));
+    for (let i = 0; i < state.units.length; i++) {
+        const unit = state.units[i], snapshot = units[i], files = new Map(unit.files.map(f => [f.relativePath, object(state.owner, f.object)]));
+        if (!files.has('writingtool.json') || !files.has('database/catalog.sqlite'))
+            throw new Error('The complete capture lacks discovery or catalog.');
+        if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_1__.validWorkspaceUnit)(snapshot))
+            throw new Error('Invalid resolved unit.');
+        for (const r of snapshot.records) {
+            const bytes = files.get(`${recordCategory(r.recordType)}/${r.id}.json`);
+            if (!bytes || (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.canonical)((0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.decode)(bytes)) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.canonical)(r))
+                throw new Error('Captured record bytes do not match the saved state.');
+            if (r.recordType === 'chapter') {
+                const text = files.get(r.data.formatting.text.relativePath);
+                if (!text || (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.hash)(text) !== r.data.formatting.text.sha256 || text.toString('utf8') !== snapshot.manuscripts[r.id])
+                    throw new Error('Captured manuscript and formatting do not match.');
+            }
+        }
+        for (const f of unit.files)
+            object(state.owner, f.object);
+    }
+}
+const recordCategory = (type) => _domain_workspace__WEBPACK_IMPORTED_MODULE_2__.recordCategory[type];
+
+
+/***/ },
+
+/***/ "./src/infrastructure/confined-fs.ts"
+/*!*******************************************!*\
+  !*** ./src/infrastructure/confined-fs.ts ***!
+  \*******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   configureConfinedFs: () => (/* binding */ configureConfinedFs),
+/* harmony export */   confinedFs: () => (/* binding */ confinedFs)
+/* harmony export */ });
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_module__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:module */ "node:module");
+/* harmony import */ var node_module__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_module__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_2__);
+/** Trusted main/utility-only filesystem adapter. Never expose handles or this API over IPC. */
+
+
+
+let binding;
+let configuredModule;
+/** Call only from trusted bootstrap, before constructing the coordinator. */
+function configureConfinedFs(modulePath) {
+    if (!node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(modulePath) || node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(modulePath) !== 'confined_fs.node')
+        throw new Error('Invalid trusted native module location');
+    if (binding || (configuredModule !== undefined && configuredModule !== modulePath))
+        throw new Error('Confined filesystem module location is already fixed');
+    configuredModule = modulePath;
+}
+function native() {
+    if (binding)
+        return binding;
+    if (!(process.platform === 'darwin' && ['x64', 'arm64'].includes(process.arch)) && !(process.platform === 'win32' && process.arch === 'x64'))
+        throw new Error('Unsupported confined filesystem platform/architecture');
+    if (process.type === 'renderer')
+        throw new Error('Confined filesystem is restricted to trusted host processes');
+    const runtime = process;
+    const packaged = runtime.resourcesPath && !runtime.defaultApp;
+    const filename = configuredModule ?? (packaged
+        ? node_path__WEBPACK_IMPORTED_MODULE_0___default().join(runtime.resourcesPath, 'native', 'confined-fs', `${process.platform}-${process.arch}`, 'confined_fs.node')
+        : node_path__WEBPACK_IMPORTED_MODULE_0___default().resolve('native/confined-fs/build/Release/confined_fs.node'));
+    try {
+        const loaded = (0,node_module__WEBPACK_IMPORTED_MODULE_1__.createRequire)(node_path__WEBPACK_IMPORTED_MODULE_0___default().join(process.cwd(), 'package.json'))(filename);
+        const operations = ['root', 'open', 'close', 'stat', 'read', 'write', 'sync', 'mkdir', 'rename', 'unlink'];
+        if (loaded.contractVersion !== 1 || operations.some(name => typeof loaded[name] !== 'function'))
+            throw new Error('Incompatible confined filesystem contract');
+        binding = loaded;
+        return loaded;
+    }
+    catch (cause) {
+        throw new Error(`Required confined filesystem addon unavailable: ${filename}`, { cause });
+    }
+}
+function segments(relative) {
+    const result = relative.split('/');
+    if (node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(relative) || result.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)))
+        throw new Error('Unsafe managed path');
+    return result;
+}
+function directory(absolute) { return native().root(node_path__WEBPACK_IMPORTED_MODULE_0___default().resolve(absolute)); }
+function parent(root, relative) {
+    const parts = segments(relative), name = parts.pop();
+    let handle = directory(root);
+    try {
+        for (const part of parts) {
+            const next = native().open(handle, part, 'directory');
+            native().close(handle);
+            handle = next;
+        }
+        return { handle, name };
+    }
+    catch (error) {
+        native().close(handle);
+        throw error;
+    }
+}
+function regular(handle) {
+    const stat = native().stat(handle);
+    if (stat.directory)
+        throw new Error('Invalid managed file');
+    return stat;
+}
+function digest(handle, copy) {
+    const hash = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256');
+    for (;;) {
+        const bytes = native().read(handle, 262144);
+        if (!bytes.length)
+            break;
+        hash.update(bytes);
+        if (copy)
+            native().write(copy, bytes);
+    }
+    regular(handle);
+    return hash.digest('hex');
+}
+function write(handle, data) {
+    regular(handle);
+    for (let offset = 0; offset < data.byteLength; offset += 262144)
+        native().write(handle, Buffer.from(data.buffer, data.byteOffset + offset, Math.min(262144, data.byteLength - offset)));
+    regular(handle);
+    native().sync(handle, false);
+}
+function verify(parent, name, expected, expectedHash) {
+    let handle;
+    try {
+        handle = native().open(parent, name, 'read');
+        if (!expected || regular(handle).id !== expected.id || (expectedHash !== undefined && digest(handle) !== expectedHash))
+            throw new Error('Managed target changed');
+    }
+    catch (error) {
+        if (expected || error.code !== 'ENOENT')
+            throw error;
+    }
+    finally {
+        if (handle)
+            native().close(handle);
+    }
+}
+function previous(parent, name, expectedHash) {
+    let handle;
+    try {
+        handle = native().open(parent, name, 'read');
+        const identity = regular(handle);
+        if (expectedHash === null || digest(handle) !== expectedHash)
+            throw new Error('Unexpected managed bytes');
+        return identity;
+    }
+    catch (error) {
+        if (error.code !== 'ENOENT' || expectedHash !== null)
+            throw error;
+    }
+    finally {
+        if (handle)
+            native().close(handle);
+    }
+}
+function publish(root, relative, content, options) {
+    const p = parent(root, relative), temporary = `.publish-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    let target, original;
+    try {
+        native().sync(p.handle, true);
+        let before;
+        if (options.existing) {
+            original = native().open(p.handle, p.name, 'read');
+            before = regular(original);
+        }
+        else if (options.expectedHash !== undefined)
+            before = previous(p.handle, p.name, options.expectedHash);
+        target = native().open(p.handle, temporary, 'new');
+        regular(target);
+        content(target);
+        regular(target);
+        native().sync(target, false);
+        native().sync(p.handle, true);
+        options.staged?.();
+        verify(p.handle, p.name, before, options.expectedHash ?? undefined);
+        native().rename(p.handle, target, temporary, p.name, before !== undefined);
+        native().sync(p.handle, true);
+    }
+    finally {
+        // Retain staging evidence on failure. No unverified cleanup deletes another object's bytes.
+        if (original)
+            native().close(original);
+        if (target)
+            native().close(target);
+        native().close(p.handle);
+    }
+}
+const confinedFs = {
+    syncDir(absolute) { const h = directory(absolute); try {
+        native().sync(h, true);
+    }
+    finally {
+        native().close(h);
+    } },
+    writeExclusive(absolute, data, reserved) {
+        const p = parent(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(absolute), node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(absolute));
+        let h;
+        try {
+            native().sync(p.handle, true);
+            h = native().open(p.handle, p.name, 'new', reserved);
+            write(h, Buffer.from(data));
+            native().sync(p.handle, true);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    publishMarker(root, relative, data, staged) {
+        publish(root, relative, h => write(h, Buffer.from(data)), { staged });
+    },
+    preserveMarker(root, relative) {
+        const p = parent(root, relative);
+        let h;
+        try {
+            native().sync(p.handle, true);
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            native().rename(p.handle, h, p.name, `${p.name}.damaged-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`, false);
+            native().sync(p.handle, true);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    readManaged(root, relative) {
+        const p = parent(root, relative);
+        let h;
+        try {
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            const chunks = [];
+            for (;;) {
+                const b = native().read(h, 262144);
+                if (!b.length)
+                    break;
+                chunks.push(b);
+            }
+            regular(h);
+            return Buffer.concat(chunks);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    replaceManaged(root, relative, data) { publish(root, relative, h => write(h, Buffer.from(data)), { existing: true }); },
+    ensureManagedDirectory(root, relative) {
+        const parts = segments(relative);
+        let h = directory(root);
+        try {
+            for (const part of parts) {
+                native().sync(h, true);
+                try {
+                    native().mkdir(h, part);
+                    native().sync(h, true);
+                }
+                catch (error) {
+                    if (error.code !== 'EEXIST')
+                        throw error;
+                }
+                const next = native().open(h, part, 'directory');
+                native().close(h);
+                h = next;
+            }
+        }
+        finally {
+            native().close(h);
+        }
+    },
+    publishManagedBytes(root, relative, bytes, expectedHash) {
+        publish(root, relative, h => write(h, bytes), { expectedHash });
+    },
+    removeManagedBytes(root, relative, expectedHash) {
+        const p = parent(root, relative);
+        let h;
+        try {
+            native().sync(p.handle, true);
+            h = native().open(p.handle, p.name, 'read');
+            const identity = regular(h);
+            if (digest(h) !== expectedHash)
+                throw new Error('Unexpected removal target');
+            verify(p.handle, p.name, identity, expectedHash);
+            native().unlink(p.handle, h, p.name);
+            native().close(h);
+            h = undefined;
+            native().sync(p.handle, true);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    publishManagedFile(root, relative, source, expectedHash, expectedSourceHash) {
+        if (segments(relative).length !== 1)
+            throw new Error('Unsafe output filename');
+        const p = parent(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(source), node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(source));
+        let h;
+        try {
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            const sourceHandle = h;
+            publish(root, relative, output => { if (digest(sourceHandle, output) !== expectedSourceHash)
+                throw new Error('Validated private output changed before publication'); }, { expectedHash });
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+    hashFile(absolute) {
+        const p = parent(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(absolute), node_path__WEBPACK_IMPORTED_MODULE_0___default().basename(absolute));
+        let h;
+        try {
+            h = native().open(p.handle, p.name, 'read');
+            regular(h);
+            return digest(h);
+        }
+        finally {
+            if (h)
+                native().close(h);
+            native().close(p.handle);
+        }
+    },
+};
+
+
+/***/ },
+
+/***/ "./src/infrastructure/converter-process.ts"
+/*!*************************************************!*\
+  !*** ./src/infrastructure/converter-process.ts ***!
+  \*************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ConverterTerminationError: () => (/* binding */ ConverterTerminationError),
+/* harmony export */   runConverter: () => (/* binding */ runConverter)
+/* harmony export */ });
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:child_process */ "node:child_process");
+/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_child_process__WEBPACK_IMPORTED_MODULE_2__);
+
+
+
+class ConverterTerminationError extends Error {
+    constructor(message) { super(message); this.name = 'ConverterTerminationError'; }
+}
+const delay = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+function groupRunning(pid) {
+    try {
+        process.kill(-pid, 0);
+    }
+    catch (error) {
+        if (error.code === 'ESRCH')
+            return false;
+        throw error;
+    }
+    if (process.platform !== 'linux')
+        return true;
+    // Orphan zombies cannot touch conversion files; some init processes reap them late.
+    for (const name of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync('/proc')) {
+        if (!/^[0-9]+$/.test(name))
+            continue;
+        let stat;
+        try {
+            stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readFileSync(`/proc/${name}/stat`, 'utf8');
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                continue;
+            return true;
+        }
+        const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+        if (Number(fields[2]) === pid && fields[0] !== 'Z' && fields[0] !== 'X')
+            return true;
+    }
+    return false;
+}
+async function terminateTree(pid, graceMs) {
+    if (process.platform === 'win32') {
+        await new Promise((resolve, reject) => {
+            const killer = (0,node_child_process__WEBPACK_IMPORTED_MODULE_2__.spawn)(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'taskkill.exe'), ['/PID', String(pid), '/T', '/F'], { shell: false, windowsHide: true, stdio: 'ignore' });
+            const timer = setTimeout(() => { killer.kill(); reject(new Error('Windows taskkill did not finish confirming process-tree termination.')); }, 15000);
+            killer.once('error', error => { clearTimeout(timer); reject(error); });
+            killer.once('close', code => { clearTimeout(timer); if (code === 0)
+                resolve();
+            else
+                reject(new Error('Windows taskkill did not confirm process-tree termination.')); });
+        });
+        return;
+    }
+    const signal = (value) => { try {
+        process.kill(-pid, value);
+    }
+    catch (error) {
+        if (error.code !== 'ESRCH')
+            throw error;
+    } };
+    signal('SIGTERM');
+    const graceEnd = Date.now() + graceMs;
+    while (groupRunning(pid) && Date.now() < graceEnd)
+        await delay(Math.min(25, Math.max(1, graceEnd - Date.now())));
+    if (!groupRunning(pid))
+        return;
+    signal('SIGKILL');
+    const killEnd = Date.now() + 5000;
+    while (groupRunning(pid) && Date.now() < killEnd)
+        await delay(25);
+    if (groupRunning(pid))
+        throw new Error('The original converter process group did not finish terminating.');
+}
+/** Host-only converter runner. Cancellation/timeout waits for the original tree before returning. */
+async function runConverter(command, args, control, options = {}) {
+    const child = (0,node_child_process__WEBPACK_IMPORTED_MODULE_2__.spawn)(command, args, { shell: false, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+    let stderr = '', timedOut = false, termination, terminationFailure;
+    let rejectTermination;
+    const failedTermination = new Promise((_resolve, reject) => { rejectTermination = reject; });
+    const terminate = () => {
+        if (termination || !child.pid)
+            return;
+        termination = terminateTree(child.pid, options.graceMs ?? 3000).catch(error => { terminationFailure = new ConverterTerminationError(`Converter termination could not be confirmed; temporary files were retained. ${error instanceof Error ? error.message : String(error)}`); rejectTermination(terminationFailure); });
+    };
+    child.stderr.on('data', bytes => { if (stderr.length < 8192)
+        stderr += String(bytes).slice(0, 8192 - stderr.length); });
+    const poll = setInterval(() => { if (control.canceled)
+        terminate(); }, 100);
+    const timeout = setTimeout(() => { timedOut = true; terminate(); }, options.timeoutMs ?? 300000);
+    try {
+        const closed = new Promise((resolve, reject) => { child.once('error', reject); child.once('close', resolve); });
+        const code = await Promise.race([closed, failedTermination]);
+        if (control.canceled || timedOut)
+            terminate();
+        // A close from the wrapper is independent of the descendant termination promise.
+        if (termination)
+            await termination;
+        if (terminationFailure)
+            throw terminationFailure;
+        return { code, stderr, timedOut };
+    }
+    catch (error) {
+        if (termination)
+            await termination;
+        if (terminationFailure)
+            throw terminationFailure;
+        throw error;
+    }
+    finally {
+        clearInterval(poll);
+        clearTimeout(timeout);
+    }
+}
+
+
+/***/ },
+
+/***/ "./src/infrastructure/export-captures.ts"
+/*!***********************************************!*\
+  !*** ./src/infrastructure/export-captures.ts ***!
+  \***********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ExportCaptureStorage: () => (/* binding */ ExportCaptureStorage)
+/* harmony export */ });
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _captured_state__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./captured-state */ "./src/infrastructure/captured-state.ts");
+/* harmony import */ var _recovery__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./recovery */ "./src/infrastructure/recovery.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+
+
+
+
+
+
+
+const scopeOf = ({ owner, format, storyId, chapterIds }) => ({ owner, format, storyId, chapterIds });
+/** Immutable saved-generation pins are separate from user-visible revision history. */
+class ExportCaptureStorage {
+    workspace;
+    userData;
+    gate;
+    constructor(workspace, userData, gate) {
+        this.workspace = workspace;
+        this.userData = userData;
+        this.gate = gate;
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.ensureManagedDirectory)(userData, 'protection/export-captures');
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.ensureManagedDirectory)(userData, 'protection/export-objects');
+    }
+    relative(id) { if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(id))
+        throw new Error('Invalid export operation identity.'); return `protection/export-captures/${id}.json`; }
+    parse(bytes, id) {
+        const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.decode)(bytes);
+        if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value, ['schemaVersion', 'kind', 'operationId', 'capturedAt', 'scope', 'units']) || value.schemaVersion !== 1 || value.kind !== 'export-capture' || value.operationId !== id || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(value.operationId) || typeof value.capturedAt !== 'string' || !Number.isFinite(Date.parse(value.capturedAt)) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value.scope, ['owner', 'format', 'storyId', 'chapterIds']) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__.validProtectionRequest)({ protocolVersion: 1, requestId: id, command: 'protection.export', ...value.scope }) || !(0,_captured_state__WEBPACK_IMPORTED_MODULE_4__.validCapturedState)({ owner: value.scope.owner, units: value.units }))
+            throw new Error('The original export capture is invalid. Preserve its recovery evidence.');
+        return value;
+    }
+    bytes(ref) {
+        const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.readManaged)(this.userData, `protection/export-objects/${ref.sha256}`);
+        if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.hash)(bytes) !== ref.sha256 || bytes.length.toString() !== ref.byteLength)
+            throw new Error('The original export payload is missing or corrupt.');
+        return bytes;
+    }
+    object = (_owner, ref) => this.bytes(ref);
+    put(bytes) {
+        const ref = { sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.hash)(bytes), byteLength: bytes.length.toString() }, relative = `protection/export-objects/${ref.sha256}`;
+        if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative)))
+            this.bytes(ref);
+        else
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.publishManagedBytes)(this.userData, relative, bytes, null);
+        return ref;
+    }
+    state(pin) { return { owner: pin.scope.owner, units: pin.units }; }
+    validate(pin) {
+        const state = this.state(pin);
+        (0,_captured_state__WEBPACK_IMPORTED_MODULE_4__.validateCapturedState)(state, this.object);
+        (0,_recovery__WEBPACK_IMPORTED_MODULE_5__.validateCaptureCatalogs)(state, { resolve: captured => (0,_captured_state__WEBPACK_IMPORTED_MODULE_4__.resolveCapturedState)(captured, this.object), object: this.object });
+    }
+    load(request) {
+        return this.gate(() => {
+            const relative = this.relative(request.requestId);
+            let pin;
+            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative))) {
+                pin = this.parse((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.readManaged)(this.userData, relative), request.requestId);
+                if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(pin.scope) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(scopeOf(request)))
+                    throw new Error('The export operation scope does not match its saved capture.');
+            }
+            else {
+                const before = this.workspace.snapshot(), primary = request.owner.kind === 'project' ? before.project : before.universe;
+                if (!primary || (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(primary.owner) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(request.owner))
+                    throw new Error('Open the selected owning unit before exporting.');
+                const capturedAt = new Date().toISOString(), captures = [this.workspace.capture(request.owner)];
+                if (request.owner.kind === 'project') {
+                    if (!before.universe)
+                        throw new Error('The matching universe is required to pin chapter order.');
+                    captures.push(this.workspace.capture(before.universe.owner));
+                }
+                const units = captures.map(capture => { const { records, manuscripts: _manuscripts, ...identity } = capture.snapshot; return { snapshot: { ...identity, recordIds: records.map(record => record.id) }, files: capture.files.map(file => { const bytes = Buffer.from(file.base64, 'base64'); if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.hash)(bytes) !== file.sha256)
+                        throw new Error('Export capture payload hash mismatch.'); return { relativePath: file.relativePath, object: this.put(bytes) }; }) }; });
+                if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(before) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(this.workspace.snapshot()))
+                    throw new Error('The saved generation changed during export capture.');
+                pin = { schemaVersion: 1, kind: 'export-capture', operationId: request.requestId, capturedAt, scope: scopeOf(request), units };
+                this.validate(pin);
+                (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.publishManagedBytes)(this.userData, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.jsonBytes)(pin)), null);
+            }
+            this.validate(pin);
+            const state = this.state(pin), units = (0,_captured_state__WEBPACK_IMPORTED_MODULE_4__.resolveCapturedState)(state, this.object), unit = units.find(candidate => (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(candidate.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(request.owner)), source = pin.units.find(candidate => (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(candidate.snapshot.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.canonical)(request.owner)), catalog = source.files.find(file => file.relativePath === 'database/catalog.sqlite');
+            if (!catalog)
+                throw new Error('The pinned export has no consistent catalog.');
+            const universe = units.find(candidate => candidate.owner.kind === 'universe'), calendar = universe?.records.find(record => record.recordType === 'calendar');
+            return { unit, calendar: calendar?.recordType === 'calendar' ? calendar.data : null, catalog: this.object(request.owner, catalog.object), files: source.files.map(file => ({ relativePath: file.relativePath, sha256: file.object.sha256 })), capturedAt: pin.capturedAt };
+        });
+    }
+    ids() { return node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, 'protection/export-captures')).map(name => { if (!name.endsWith('.json') || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(name.slice(0, -5)))
+        throw new Error('Unrecognized export-capture evidence.'); return name.slice(0, -5); }); }
+    /** Caller must first durably record that this operation is terminal. */
+    release(id) {
+        this.gate(() => {
+            const relative = this.relative(id), retained = new Set();
+            for (const other of this.ids()) {
+                const pin = this.parse((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.readManaged)(this.userData, this.relative(other)), other);
+                if (other !== id)
+                    for (const unit of pin.units)
+                        for (const file of unit.files)
+                            retained.add(file.object.sha256);
+            }
+            // The shared coordinator gate covers creation and reclamation across hosts.
+            // Keep the terminal pin until its unshared objects are removed, so interruption
+            // can repeat cleanup without needing the captured payloads to remain readable.
+            for (const name of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, 'protection/export-objects'))) {
+                if (!/^[a-f0-9]{64}$/.test(name))
+                    throw new Error('Unrecognized immutable export payload.');
+                if (!retained.has(name))
+                    (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.removeManagedBytes)(this.userData, `protection/export-objects/${name}`, name);
+            }
+            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative)))
+                (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.removeManagedBytes)(this.userData, relative, (0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_6__.readManaged)(this.userData, relative)));
+        });
+    }
+}
+
+
+/***/ },
+
 /***/ "./src/infrastructure/exports.ts"
 /*!***************************************!*\
   !*** ./src/infrastructure/exports.ts ***!
@@ -2357,8 +3090,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var node_os__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:os */ "node:os");
 /* harmony import */ var node_os__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_os__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! node:child_process */ "node:child_process");
-/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(node_child_process__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _converter_process__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./converter-process */ "./src/infrastructure/converter-process.ts");
 /* harmony import */ var fflate__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! fflate */ "./node_modules/fflate/esm/index.mjs");
 /* harmony import */ var node_url__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! node:url */ "node:url");
 /* harmony import */ var node_url__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(node_url__WEBPACK_IMPORTED_MODULE_5__);
@@ -2381,9 +3113,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const xml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const xmlText = (s) => xml(s).replace(/ /g, '<text:s/>').replace(/\t/g, '<text:tab/>');
-const md = (s) => s.replace(/[\\`*_{}\[\]<>#+.!|~-]/g, '\\$&');
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
+const xml = (s) => { if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/u.test(s))
+    throw new Error('DOCX/PDF cannot represent a saved control character. Export Markdown or text to preserve those bytes.'); return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+const xmlText = (s) => xml(s).replace(/ /g, '<text:s/>').replace(/\t/g, '<text:tab/>').replace(/\n/g, '<text:line-break/>').replace(/\r/g, '&#13;');
+const md = (s) => s.replace(/[\\`*_{}[\]<>#+.!|~-]/g, '\\$&');
 function spans(c, p, format) { const chars = Array.from(c.text), start = Number(p.start), end = Number(p.end); let at = start, out = ''; const escape = format === 'md' ? md : xmlText; for (const m of p.marks) {
     out += escape(chars.slice(at, Number(m.start)).join(''));
     let text = escape(chars.slice(Number(m.start), Number(m.end)).join(''));
@@ -2411,21 +3145,19 @@ function serializeManuscript(chapters, format) {
     if (format === 'md')
         return chapters.map(c => '# ' + md(c.title) + '\n\n' + c.paragraphs.map(p => p.kind === 'scene-break' ? '\\*\\*\\*' : (p.kind === 'heading' ? '#'.repeat(p.headingLevel) + ' ' : '') + spans(c, p, 'md')).join('\n\n')).join('\n\n') + '\n';
     const styles = new Map();
-    const para = (p) => { const key = `P${p.indent}_${p.kind === 'heading' ? p.headingLevel : 0}`; styles.set(key, `<style:style style:name="${key}" style:family="paragraph" style:parent-style-name="Body"><style:paragraph-properties fo:margin-left="${Number(p.indent) * 0.5}in"/></style:style>`); return key; };
-    const body = chapters.map((c, i) => `<text:h text:style-name="${i ? 'Chapter' : 'FirstChapter'}" text:outline-level="1">${xml(c.title)}</text:h>` + c.paragraphs.map(p => { const style = para(p), tag = p.kind === 'heading' ? 'text:h' : 'text:p'; return `<${tag} text:style-name="${style}"${p.kind === 'heading' ? ` text:outline-level="${p.headingLevel}"` : ''}>${spans(c, p, 'xml').replace(/\t/g, '<text:tab/>').replace(/ {2,}/g, m => `<text:s text:c="${m.length}"/>`)}</${tag}>`; }).join('')).join('');
+    const para = (p) => { const key = `P${p.indent}_${p.kind === 'heading' ? p.headingLevel : 0}`; styles.set(key, `<style:style style:name="${key}" style:family="paragraph" style:parent-style-name="Body"><style:paragraph-properties fo:margin-left="${BigInt(p.indent) / 2n}${BigInt(p.indent) % 2n ? '.5' : ''}in"/></style:style>`); return key; };
+    const body = chapters.map((c, i) => `<text:h text:style-name="${i ? 'Chapter' : 'FirstChapter'}" text:outline-level="1">${xmlText(c.title)}</text:h>` + c.paragraphs.map(p => { const style = para(p), tag = p.kind === 'heading' ? 'text:h' : 'text:p'; return `<${tag} text:style-name="${style}"${p.kind === 'heading' ? ` text:outline-level="${p.headingLevel}"` : ''}>${spans(c, p, 'xml').replace(/\t/g, '<text:tab/>').replace(/ {2,}/g, m => `<text:s text:c="${m.length}"/>`)}</${tag}>`; }).join('')).join('');
     return `<?xml version="1.0" encoding="UTF-8"?><office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.text"><office:styles><style:default-style style:family="paragraph"><style:paragraph-properties fo:line-height="150%"/><style:text-properties style:font-name="Liberation Serif" fo:font-family="Liberation Serif" fo:font-size="12pt"/></style:default-style><style:style style:name="Body" style:family="paragraph"/><style:style style:name="FirstChapter" style:family="paragraph" style:parent-style-name="Body" style:master-page-name="Standard"/><style:style style:name="Chapter" style:family="paragraph" style:parent-style-name="Body"><style:paragraph-properties fo:break-before="page"/></style:style><style:style style:name="B" style:family="text"><style:text-properties fo:font-weight="bold"/></style:style><style:style style:name="I" style:family="text"><style:text-properties fo:font-style="italic"/></style:style><style:style style:name="BI" style:family="text"><style:text-properties fo:font-style="italic" fo:font-weight="bold"/></style:style></office:styles><office:automatic-styles><style:page-layout style:name="A4"><style:page-layout-properties fo:page-width="21cm" fo:page-height="29.7cm" fo:margin="2.54cm" style:print-orientation="portrait"/></style:page-layout>${[...styles.values()].join('')}</office:automatic-styles><office:master-styles><style:master-page style:name="Standard" style:page-layout-name="A4"/></office:master-styles><office:body><office:text>${body}</office:text></office:body></office:document>`;
 }
-async function exportSaved(workspace, owner, format, storyId, chapterIds, destination, runtime, control) {
-    const capture = workspace.capture(owner), unit = capture.snapshot, temp = node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdtempSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_os__WEBPACK_IMPORTED_MODULE_2___default().tmpdir(), 'writingtool-export-'));
+async function exportSaved(source, format, storyId, chapterIds, destination, runtime, control) {
+    const unit = source.unit, owner = unit.owner, temp = node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdtempSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(node_os__WEBPACK_IMPORTED_MODULE_2___default().tmpdir()), 'writingtool-export-'));
+    let retainTemp = false;
     try {
         (0,_archives__WEBPACK_IMPORTED_MODULE_11__.checkCancel)(control);
         let output;
         if (format === 'sqlite') {
-            const file = capture.files.find(f => f.relativePath === 'database/catalog.sqlite');
-            if (!file)
-                throw new Error('The consistent catalog capture is missing.');
             output = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, 'catalog.sqlite');
-            node_fs__WEBPACK_IMPORTED_MODULE_0___default().writeFileSync(output, Buffer.from(file.base64, 'base64'), { flag: 'wx', mode: 0o600 });
+            node_fs__WEBPACK_IMPORTED_MODULE_0___default().writeFileSync(output, source.catalog, { flag: 'wx', mode: 0o600 });
             const db = new node_sqlite__WEBPACK_IMPORTED_MODULE_6__.DatabaseSync(output);
             try {
                 if (db.prepare('PRAGMA quick_check').get()?.quick_check !== 'ok')
@@ -2434,7 +3166,7 @@ async function exportSaved(workspace, owner, format, storyId, chapterIds, destin
                 if (m?.ownerId !== owner.id || m.rootId !== unit.rootId || m.generation !== unit.generation)
                     throw new Error('Catalog capture identity mismatch.');
                 db.exec('CREATE TABLE writingtool_export_metadata(schemaVersion INTEGER NOT NULL,sourceKind TEXT NOT NULL,ownerId TEXT NOT NULL,rootId TEXT NOT NULL,generation TEXT NOT NULL,capturedAt TEXT NOT NULL,scope TEXT NOT NULL,dependencyNotice TEXT NOT NULL,externalDependencies TEXT NOT NULL)');
-                db.prepare('INSERT INTO writingtool_export_metadata VALUES(1,?,?,?,?,?,?,?,?)').run(owner.kind, owner.id, unit.rootId, unit.generation, new Date().toISOString(), 'catalog-only', _application_contracts_protection__WEBPACK_IMPORTED_MODULE_9__.CATALOG_NOTICE, (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)({ universeId: unit.universeId, externalFiles: capture.files.filter(f => f.relativePath !== 'database/catalog.sqlite').map(f => ({ relativePath: f.relativePath, sha256: f.sha256 })) }));
+                db.prepare('INSERT INTO writingtool_export_metadata VALUES(1,?,?,?,?,?,?,?,?)').run(owner.kind, owner.id, unit.rootId, unit.generation, source.capturedAt, 'catalog-only', _application_contracts_protection__WEBPACK_IMPORTED_MODULE_9__.CATALOG_NOTICE, (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)({ universeId: unit.universeId, externalFiles: source.files.filter(f => f.relativePath !== 'database/catalog.sqlite').map(f => ({ relativePath: f.relativePath, sha256: f.sha256 })) }));
                 if (db.prepare('PRAGMA quick_check').get()?.quick_check !== 'ok')
                     throw new Error('Catalog metadata validation failed.');
             }
@@ -2445,7 +3177,7 @@ async function exportSaved(workspace, owner, format, storyId, chapterIds, destin
         else {
             if (owner.kind !== 'project' || !storyId || !unit.records.some(r => r.recordType === 'story' && r.id === storyId))
                 throw new Error('Select one active project story.');
-            const universe = workspace.snapshot().universe, calendar = universe?.records.find((r) => r.recordType === 'calendar')?.data ?? null;
+            const calendar = source.calendar;
             const eligible = (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_7__.orderedChapters)(unit.records.filter((r) => r.recordType === 'chapter' && r.data.storyId === storyId), calendar);
             if (chapterIds && chapterIds.some(id => !eligible.some(c => c.id === id)))
                 throw new Error('Selected chapters do not belong to this story.');
@@ -2464,7 +3196,7 @@ async function exportSaved(workspace, owner, format, storyId, chapterIds, destin
                 control.phase = 'Converting with bundled LibreOffice';
                 await convert(runtime, input, temp, format, control);
                 output = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, `manuscript.${format}`);
-                const bytes = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readFileSync(output);
+                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(temp, node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(output));
                 validateConverted(bytes, format, chapters);
             }
         }
@@ -2475,34 +3207,65 @@ async function exportSaved(workspace, owner, format, storyId, chapterIds, destin
         control.phase = 'Validating export';
         (0,_archives__WEBPACK_IMPORTED_MODULE_11__.publishOutput)(destination, output, control);
     }
+    catch (error) {
+        retainTemp = error instanceof _converter_process__WEBPACK_IMPORTED_MODULE_3__.ConverterTerminationError;
+        throw error;
+    }
     finally {
-        node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmSync(temp, { recursive: true, force: true });
+        if (!retainTemp)
+            node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmSync(temp, { recursive: true, force: true });
     }
 }
-async function convert(runtime, input, temp, format, control) { await new Promise((resolve, reject) => { const child = (0,node_child_process__WEBPACK_IMPORTED_MODULE_3__.spawn)(runtime, [`-env:UserInstallation=${(0,node_url__WEBPACK_IMPORTED_MODULE_5__.pathToFileURL)(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, 'profile')).href}`, '--headless', '--nologo', '--nodefault', '--norestore', '--nolockcheck', '--convert-to', format === 'docx' ? 'docx:Office Open XML Text' : 'pdf:writer_pdf_Export', '--outdir', temp, input], { shell: false, detached: process.platform !== 'win32', stdio: ['ignore', 'ignore', 'pipe'] }); let stderr = '', killTimer; child.stderr.on('data', b => { if (stderr.length < 8192)
-    stderr += String(b); }); const terminate = () => { if (child.pid) {
-    if (process.platform === 'win32')
-        (0,node_child_process__WEBPACK_IMPORTED_MODULE_3__.spawn)('taskkill', ['/PID', String(child.pid), '/T', '/F'], { shell: false, windowsHide: true });
-    else
-        try {
-            process.kill(-child.pid, 'SIGTERM');
-            killTimer = setTimeout(() => { try {
-                process.kill(-child.pid, 'SIGKILL');
-            }
-            catch { } }, 3000);
+async function convert(runtime, input, temp, format, control) {
+    const result = await (0,_converter_process__WEBPACK_IMPORTED_MODULE_3__.runConverter)(runtime, [`-env:UserInstallation=${(0,node_url__WEBPACK_IMPORTED_MODULE_5__.pathToFileURL)(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, 'profile')).href}`, '--headless', '--nologo', '--nodefault', '--norestore', '--nolockcheck', '--convert-to', format === 'docx' ? 'docx:Office Open XML Text' : 'pdf:writer_pdf_Export', '--outdir', temp, input], control);
+    if (control.canceled)
+        throw new _archives__WEBPACK_IMPORTED_MODULE_11__.OperationCanceled();
+    if (result.timedOut)
+        throw new Error('LibreOffice conversion timed out. Previous output was preserved.');
+    if (result.code !== 0)
+        throw new Error(`LibreOffice conversion failed: ${result.stderr}`);
+}
+function validateConverted(bytes, format, chapters) {
+    if (format === 'pdf') {
+        // Structural completion only; rendered text/format fidelity remains a release gate.
+        if (!bytes.subarray(0, 5).equals(Buffer.from('%PDF-')) || !bytes.subarray(Math.max(0, bytes.length - 2048)).includes(Buffer.from('%%EOF')) || !bytes.includes(Buffer.from('/Pages')))
+            throw new Error('The converted PDF is incomplete.');
+        return;
+    }
+    const files = (0,fflate__WEBPACK_IMPORTED_MODULE_4__.unzipSync)(bytes), document = files['word/document.xml'];
+    if (!files['[Content_Types].xml'] || !files['_rels/.rels'] || !document)
+        throw new Error('Converted DOCX lacks required package/document parts.');
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(document);
+    if (!text.includes('wordprocessingml/2006/main') || /<!DOCTYPE|<!ENTITY/i.test(text))
+        throw new Error('Invalid converted DOCX XML.');
+    const decodeText = (value) => {
+        if (/&(?!(?:amp|lt|gt|quot|apos|#x[0-9a-fA-F]+|#[0-9]+);)/.test(value))
+            throw new Error('Invalid DOCX text entity.');
+        const decoded = value.replace(/&(?:amp|lt|gt|quot|apos|#x[0-9a-fA-F]+|#[0-9]+);/g, entity => {
+            const named = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" };
+            return named[entity] ?? String.fromCodePoint(parseInt(entity.slice(entity[2] === 'x' ? 3 : 2, -1), entity[2] === 'x' ? 16 : 10));
+        });
+        xml(decoded);
+        return decoded;
+    };
+    // Empty paragraphs and explicit text line breaks are content too. Page/column
+    // breaks affect layout and must not introduce extra manuscript characters.
+    const paragraphs = [...text.matchAll(/<w:p(?=[\s/>])(?:[^>]*\/>|[^>]*>([\s\S]*?)<\/w:p>)/g)].map(paragraph => {
+        let result = '';
+        for (const token of (paragraph[1] ?? '').matchAll(/<w:t(?=[\s/>])(?:[^>]*\/>|[^>]*>([\s\S]*?)<\/w:t>)|<w:(tab|cr|br)(?=[\s/>])([^>]*?)(?:\/>|>\s*<\/w:\2>)/g)) {
+            if (token[0].startsWith('<w:t') && !token[2])
+                result += decodeText(token[1] ?? '');
+            else if (token[2] === 'tab')
+                result += '\t';
+            else if (token[2] === 'cr' || token[2] === 'br' && !/w:type\s*=\s*["'](?:page|column)["']/.test(token[3]))
+                result += '\n';
         }
-        catch { }
-} }; const poll = setInterval(() => { if (control.canceled)
-    terminate(); }, 100); const timeout = setTimeout(() => { stderr += ' Conversion timed out.'; terminate(); }, 300000); const done = () => { clearInterval(poll); clearTimeout(timeout); if (killTimer)
-    clearTimeout(killTimer); }; child.once('error', e => { done(); reject(e); }); child.once('close', code => { done(); control.canceled ? reject(new _archives__WEBPACK_IMPORTED_MODULE_11__.OperationCanceled()) : code === 0 ? resolve() : reject(new Error(`LibreOffice conversion failed: ${stderr}`)); }); }); }
-function validateConverted(bytes, format, chapters) { if (format === 'pdf') {
-    if (!bytes.subarray(0, 5).equals(Buffer.from('%PDF-')) || !bytes.subarray(Math.max(0, bytes.length - 2048)).includes(Buffer.from('%%EOF')) || !bytes.includes(Buffer.from('/Pages')))
-        throw new Error('The converted PDF is incomplete.');
-    return;
-} const files = (0,fflate__WEBPACK_IMPORTED_MODULE_4__.unzipSync)(bytes), document = files['word/document.xml']; if (!files['[Content_Types].xml'] || !files['_rels/.rels'] || !document)
-    throw new Error('Converted DOCX lacks required package/document parts.'); const text = new TextDecoder('utf-8', { fatal: true }).decode(document); if (!text.includes('wordprocessingml/2006/main') || /<!DOCTYPE|<!ENTITY/i.test(text))
-    throw new Error('Invalid converted DOCX XML.'); const decodeText = (s) => s.replace(/&(?:amp|lt|gt|quot|apos|#x[0-9a-f]+|#[0-9]+);/gi, m => m === '&amp;' ? '&' : m === '&lt;' ? '<' : m === '&gt;' ? '>' : m === '&quot;' ? '"' : m === '&apos;' ? "'" : String.fromCodePoint(parseInt(m.slice(m[2] === 'x' ? 3 : 2, -1), m[2] === 'x' ? 16 : 10))); const paragraphs = [...text.matchAll(/<w:p(?:\s[^>]*)?>([\s\S]*?)<\/w:p>/g)].map(match => [...match[1].matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:tab\s*\/>/g)].map(m => m[0].startsWith('<w:tab') ? '\t' : decodeText(m[1])).join('')); const expected = chapters.flatMap(c => [c.title, ...c.text.split('\n')]); if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(paragraphs) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(expected))
-    throw new Error('Converted DOCX manuscript/title content did not match the saved selection.'); }
+        return result;
+    });
+    const expected = chapters.flatMap(chapter => [chapter.title, ...chapter.text.split('\n')]);
+    if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(paragraphs) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(expected))
+        throw new Error('Converted DOCX manuscript/title content did not match the saved selection.');
+}
 
 
 /***/ },
@@ -2619,7 +3382,7 @@ class FileProjectStorage {
             store.workspace.attach();
             return { store, receipt };
         }
-        catch (e) {
+        catch {
             try {
                 db?.close();
             }
@@ -2635,6 +3398,8 @@ class FileProjectStorage {
     }
     open(basePath, expectedCreationOperationId) {
         const root = this.physicalPath(basePath);
+        if (node_fs__WEBPACK_IMPORTED_MODULE_3___default().readdirSync(root).length === 0)
+            throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('VALIDATION', 'This folder is empty and does not contain a saved project. Use Create project, select its existing universe, then choose this empty folder.');
         let db, lease, store;
         try {
             const d = discovery(root);
@@ -2840,11 +3605,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _archives__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./archives */ "./src/infrastructure/archives.ts");
 /* harmony import */ var _recovery__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./recovery */ "./src/infrastructure/recovery.ts");
 /* harmony import */ var _exports__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./exports */ "./src/infrastructure/exports.ts");
-/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
-/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
-/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
+/* harmony import */ var _export_captures__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./export-captures */ "./src/infrastructure/export-captures.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
 /* harmony import */ var _domain_capture_time__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../domain/capture-time */ "./src/domain/capture-time.ts");
 /* harmony import */ var _project_storage__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./project-storage */ "./src/infrastructure/project-storage.ts");
+/* harmony import */ var _recovery_activation__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./recovery-activation */ "./src/infrastructure/recovery-activation.ts");
+
 
 
 
@@ -2870,70 +3637,180 @@ class ProtectionService {
     revisions;
     archives;
     recovery;
+    exportCaptures;
     operations = new Map();
-    recoveredRoots = new Map();
     constructor(workspace, settings, userData, coordinator, openRecovered = () => { }) {
         this.workspace = workspace;
         this.settings = settings;
         this.userData = userData;
         this.coordinator = coordinator;
         this.openRecovered = openRecovered;
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(userData, 'protection/recovered');
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(userData, 'protection/jobs');
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(userData, 'protection/recovered');
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(userData, 'protection/jobs');
         this.revisions = new _revisions__WEBPACK_IMPORTED_MODULE_6__.RevisionStorage(workspace, owner => { try {
             return workspace.location(owner);
         }
         catch {
             const relative = `protection/recovered/${owner.kind}/${owner.id}`;
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(userData, relative);
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(userData, relative);
             return node_path__WEBPACK_IMPORTED_MODULE_1___default().join(userData, relative);
         } });
         this.archives = new _archives__WEBPACK_IMPORTED_MODULE_7__.ArchiveStorage(this.revisions, userData);
         this.recovery = new _recovery__WEBPACK_IMPORTED_MODULE_8__.RecoveryStorage(workspace, this.revisions, userData);
-        this.replayActivations();
+        this.exportCaptures = new _export_captures__WEBPACK_IMPORTED_MODULE_10__.ExportCaptureStorage(workspace, userData, fn => coordinator.settingsGate(fn));
+        this.cleanupExportCaptures();
     }
     cancel(id) { const control = this.operations.get(id); if (!control || !control.cancelable)
         return false; control.canceled = true; return true; }
     get busy() { return this.operations.size > 0; }
     progress() { return [...this.operations].map(([operationId, c]) => ({ operationId, phase: c.phase, cancelable: c.cancelable })); }
-    job(id, value) { const relative = `protection/jobs/${id}.json`, old = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative)) ? (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.userData, relative)) : null; (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.userData, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)(value)), old); }
-    async execute(request) {
+    job(id, value) { const relative = `protection/jobs/${id}.json`, old = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative)) ? (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.userData, relative)) : null; (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishManagedBytes)(this.userData, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.jsonBytes)(value)), old); }
+    readJob(id) {
+        const relative = `protection/jobs/${id}.json`;
+        if (!node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative)))
+            throw new Error('No durable protection job exists for that operation. Preserve its original recovery evidence.');
+        const decoded = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.userData, relative));
+        if (!decoded || typeof decoded !== 'object' || !('state' in decoded) || !['ready', 'started', 'prepared', 'complete', 'aborted'].includes(String(decoded.state)))
+            throw new Error('The original protection job evidence is invalid.');
+        const value = decoded;
+        const outputEvidence = Object.hasOwn(value, 'destination') || Object.hasOwn(value, 'digest'), keys = ['schemaVersion', 'state', 'request', ...(value.state === 'complete' ? ['value'] : []), ...(value.state === 'prepared' || value.state === 'complete' && outputEvidence ? ['destination', 'digest'] : [])];
+        if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_12__.closed)(value, keys))
+            throw new Error('The original protection job evidence is invalid.');
+        if (value.schemaVersion !== 1 || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.validProtectionRequest)(value.request, true) || value.request.nativePrepareOnly || value.request.command === 'protection.reconcile' || value.request.command === 'protection.cancel' || value.request.requestId !== id || value.state === 'complete' && (!(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.validProtectionValue)(value.value) || !!value.value.reconciliation) || outputEvidence && (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_12__.closed)(value.destination, ['path', 'expectedHash']) || typeof value.destination.path !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(value.destination.path) || value.destination.expectedHash !== null && !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.digest)(value.destination.expectedHash) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.digest)(value.digest)) || value.state === 'prepared' && !outputEvidence || outputEvidence && !['protection.backup', 'protection.apply', 'protection.export'].includes(value.request.command))
+            throw new Error('The original protection job evidence is invalid.');
+        return value;
+    }
+    prepare(request) {
+        if (this.busy)
+            throw new Error('Wait for the current protection operation before preparing another.');
+        if (request.command === 'protection.reconcile' || request.command === 'protection.cancel')
+            throw new Error('Only an original protection command can be prepared.');
+        const relative = `protection/jobs/${request.requestId}.json`;
+        if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative))) {
+            const prior = this.readJob(request.requestId);
+            if (prior.state !== 'ready' || (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(prior.request) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(request))
+                throw new Error('The protection request identity already has different durable evidence.');
+            return;
+        }
+        this.job(request.requestId, { schemaVersion: 1, state: 'ready', request });
+    }
+    releaseExportCapture(id) {
+        try {
+            this.exportCaptures.release(id);
+            return [];
+        }
+        catch {
+            return ['The output result is recorded, but temporary export-capture cleanup was deferred.'];
+        }
+    }
+    cleanupExportCaptures() {
+        let ids;
+        try {
+            ids = this.exportCaptures.ids();
+        }
+        catch {
+            return;
+        }
+        for (const id of ids)
+            try {
+                const job = this.readJob(id);
+                if (job.request.command === 'protection.export' && (job.state === 'complete' || job.state === 'aborted'))
+                    this.releaseExportCapture(id);
+            }
+            catch { /* Preserve ambiguous or incomplete evidence. */ }
+    }
+    completeJob(id, request, value, prepared) {
+        if (value.output && (!prepared?.destination || !prepared.digest || prepared.destination.path !== value.output.path))
+            throw new Error('The completed output lacks matching publication evidence.');
+        const evidence = prepared?.destination && prepared.digest ? { destination: prepared.destination, digest: prepared.digest } : {};
+        this.job(id, { schemaVersion: 1, state: 'complete', request, value, ...evidence });
+        if (request.command === 'protection.export') {
+            const warnings = this.releaseExportCapture(id);
+            if (warnings.length)
+                value = { ...value, warnings: [...(value.warnings ?? []), ...warnings] };
+        }
+        return value;
+    }
+    async execute(request, replaying = false) {
+        if (request.nativePrepareOnly) {
+            const { nativePrepareOnly: _nativePrepareOnly, ...original } = request;
+            this.prepare(original);
+            return {};
+        }
         if (request.command === 'protection.reconcile') {
-            const relative = `protection/jobs/${request.operationId}.json`;
-            if (!node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative)))
-                throw new Error('No durable protection job exists for that operation.');
-            const job = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.userData, relative));
-            if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_11__.closed)(job, ['schemaVersion', 'state', 'request', ...(Object.hasOwn(job, 'value') ? ['value'] : []), ...(Object.hasOwn(job, 'destination') ? ['destination', 'digest'] : [])]) || job.schemaVersion !== 1 || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.validProtectionRequest)(job.request, true) || job.request.requestId !== request.operationId || !['started', 'prepared', 'complete'].includes(job.state) || job.state === 'complete' && !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.validProtectionValue)(job.value) || job.state === 'prepared' && (!job.destination || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_11__.closed)(job.destination, ['path', 'expectedHash']) || typeof job.destination.path !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(job.destination.path) || job.destination.expectedHash !== null && !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.digest)(job.destination.expectedHash) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.digest)(job.digest)))
-                throw new Error('The original protection job evidence is invalid.');
-            if (job.state === 'complete')
+            const job = this.readJob(request.operationId);
+            if (job.request.command === 'protection.apply') {
+                this.relocateActivation(job.request, request.nativeActivationLocations ?? []);
+                // Reopen published roots even when only the ZIP acknowledgement was lost.
+                if (this.readActivation(job.request))
+                    this.resumeActivation(job.request);
+            }
+            if (job.state === 'aborted')
+                return { reconciliation: { operationId: request.operationId, outcome: 'not-committed' } };
+            if (job.state === 'complete') {
+                if (job.value?.output) {
+                    if (!job.destination || !job.digest || job.destination.path !== job.value.output.path)
+                        throw new Error('The completed output lacks original digest evidence. Preserve the output and recovery metadata.');
+                    if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(job.destination.path), node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(job.destination.path))) !== job.digest)
+                        throw new Error('The completed output changed or moved. Preserve the original operation for recovery.');
+                }
+                if (job.request.command === 'protection.export')
+                    this.releaseExportCapture(request.operationId);
                 return job.value;
+            }
             if (job.destination && job.digest && node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(job.destination.path)) {
-                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(job.destination.path), node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(job.destination.path));
-                if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === job.digest) {
+                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(job.destination.path), node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(job.destination.path));
+                if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === job.digest) {
                     if (job.request.command === 'protection.backup' || job.request.command === 'protection.apply') {
                         await this.archives.registerCompleted(job.destination.path, { canceled: false, phase: 'Reconciling published archive', cancelable: false });
                         if (job.request.command === 'protection.apply')
                             this.recovery.markApplied(job.request.proposalId);
                     }
-                    const value = { output: { id: request.operationId, path: job.destination.path, notice: job.request.command === 'protection.export' && job.request.format === 'sqlite' ? _application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.CATALOG_NOTICE : null } };
-                    this.job(request.operationId, { ...job, state: 'complete', value });
-                    return value;
+                    const value = { output: { id: request.operationId, path: job.destination.path, notice: job.request.command === 'protection.export' && job.request.format === 'sqlite' ? _application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.CATALOG_NOTICE : null }, ...(job.request.command === 'protection.apply' ? { recovery: this.recovery.view(job.request.proposalId) } : {}) };
+                    return this.completeJob(request.operationId, job.request, value, job);
                 }
-                if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) !== job.destination.expectedHash)
+                if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) !== job.destination.expectedHash)
                     throw new Error('Output evidence changed. Preserve the original operation for recovery.');
             }
+            if (request.nativeDestination && job.request.command === 'protection.export')
+                job.request = { ...job.request, nativeDestination: request.nativeDestination, nativeRuntime: request.nativeRuntime ?? job.request.nativeRuntime };
             if (request.nativeBackupFolder && (job.request.command === 'protection.backup' || job.request.command === 'protection.apply')) {
                 job.request = { ...job.request, nativeBackupFolder: request.nativeBackupFolder };
                 delete job.request.nativeDestination;
             }
-            return this.execute(job.request);
+            return this.execute(job.request, true);
         }
-        const value = await this.executeRecorded(request);
-        if (request.command !== 'protection.cancel')
-            this.job(request.requestId, { schemaVersion: 1, state: 'complete', request, value });
+        const previous = replaying ? this.readJob(request.requestId) : undefined;
+        let value;
+        try {
+            value = await this.executeRecorded(request, previous);
+        }
+        catch (error) {
+            if (request.command === 'protection.export' && !replaying && !(error instanceof _application_universe__WEBPACK_IMPORTED_MODULE_4__.UniverseFailure && error.outcome !== 'not-committed')) {
+                // Record definite failure/cancellation before reclaiming its private capture.
+                // If recording is unconfirmed, reconciliation still owns the original pin.
+                try {
+                    this.job(request.requestId, { schemaVersion: 1, state: 'aborted', request });
+                }
+                catch (recording) {
+                    throw new _application_universe__WEBPACK_IMPORTED_MODULE_4__.UniverseFailure('RECOVERY_REQUIRED', recording instanceof Error ? recording.message : 'The export failure outcome needs reconciliation.', 'unknown');
+                }
+                this.releaseExportCapture(request.requestId);
+            }
+            throw error;
+        }
+        if ((0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.protectionHasDurableEffects)(request)) {
+            try {
+                const prepared = value.output ? this.readJob(request.requestId) : undefined;
+                value = this.completeJob(request.requestId, request, value, prepared);
+            }
+            catch (error) {
+                throw new _application_universe__WEBPACK_IMPORTED_MODULE_4__.UniverseFailure('RECOVERY_REQUIRED', error instanceof Error ? error.message : 'Completion recording failed. Reconcile the original operation.', 'unknown');
+            }
+        }
         return value;
     }
-    async executeRecorded(request) {
+    async executeRecorded(request, previous) {
         if (request.command === 'protection.cancel') {
             this.cancel(request.operationId);
             return {};
@@ -2942,9 +3819,10 @@ class ProtectionService {
             throw new Error('Wait for the current protection operation to finish.');
         const control = { canceled: false, phase: 'Preparing saved capture', cancelable: true };
         this.operations.set(request.requestId, control);
-        this.job(request.requestId, { schemaVersion: 1, state: 'started', request });
-        control.beforePublish = (destination, digest) => this.job(request.requestId, { schemaVersion: 1, state: 'prepared', request, destination, digest });
         try {
+            if ((0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.protectionHasDurableEffects)(request) && previous?.state !== 'prepared')
+                this.job(request.requestId, { schemaVersion: 1, state: 'started', request });
+            control.beforePublish = (destination, digest) => this.job(request.requestId, { schemaVersion: 1, state: 'prepared', request, destination, digest });
             switch (request.command) {
                 case 'protection.archives':
                     await this.archives.discover(request.owner, [this.settings.get().backupDestination], control);
@@ -2960,7 +3838,7 @@ class ProtectionService {
                 case 'protection.capture': {
                     const manifest = this.revisions.capture(request.owner, request.reason, request.requestId);
                     (0,_recovery__WEBPACK_IMPORTED_MODULE_8__.validateCaptureCatalogs)(manifest, this.revisions);
-                    return { manifest };
+                    return { manifest, warnings: this.retentionWarnings(request.owner) };
                 }
                 case 'protection.inspect':
                     {
@@ -2972,15 +3850,14 @@ class ProtectionService {
                 case 'protection.backup': {
                     const manifest = this.revisions.capture(request.owner, request.reason, request.requestId), destination = this.backupDestination(request.nativeDestination, request.owner, manifest, request.nativeBackupFolder);
                     const record = await this.archives.write(manifest, destination, control, request.requestId);
-                    this.retain(request.owner);
-                    return { manifest, output: { id: record.id, path: destination.path, notice: null } };
+                    return { manifest, output: { id: record.id, path: destination.path, notice: null }, warnings: this.retentionWarnings(request.owner) };
                 }
                 case 'protection.delete': {
                     const settings = this.settings.get();
                     if (request.kind === 'archive')
                         this.archives.remove(request.owner, request.id, settings.retentionDays, true);
                     else
-                        this.revisions.remove(request.owner, request.id, this.protectedIds(), settings.retentionDays, true);
+                        this.revisions.remove(request.owner, request.id, this.protectedIds(request.owner), settings.retentionDays, true);
                     return { deleted: request.id };
                 }
                 case 'protection.recover': {
@@ -2999,40 +3876,13 @@ class ProtectionService {
 
                 case 'protection.resolve': return { recovery: this.recovery.resolve(request.proposalId, request.resolution) };
                 case 'protection.cancel-recovery': return { recovery: this.recovery.cancel(request.proposalId) };
-                case 'protection.apply': {
-                    const result = this.recovery.apply(request.proposalId);
-                    if (!result.needsActivation)
-                        control.cancelable = false;
-                    if (result.needsActivation) {
-                        if (!request.nativeActivation)
-                            throw new Error('Choose an empty recovery destination before activation.');
-                        const live = this.workspace.snapshot();
-                        if (live.universe && result.manifest.owner.kind === 'project') {
-                            const locations = { ...request.nativeActivation, universe: this.workspace.location(live.universe.owner) };
-                            control.cancelable = false;
-                            await this.activateProjectWithUniverse(request.proposalId, result.manifest, locations);
-                            this.openRecovered(locations);
-                            const manifest = this.revisions.capture(result.manifest.owner, 'Recovered'), destination = this.backupDestination(request.nativeDestination, manifest.owner, manifest, request.nativeBackupFolder), record = await this.archives.write(manifest, destination, control, request.requestId);
-                            this.recovery.markApplied(request.proposalId);
-                            return { recovery: this.recovery.view(request.proposalId), activated: locations, output: { id: record.id, path: destination.path, notice: null } };
-                        }
-                        const locations = { project: result.manifest.owner.kind === 'project' ? request.nativeActivation.project : null, universe: request.nativeActivation.universe };
-                        control.cancelable = false;
-                        this.activate(result.manifest, locations);
-                        this.openRecovered(locations);
-                        const recovered = this.revisions.capture(result.manifest.owner, 'Recovered'), destination = this.backupDestination(request.nativeDestination, recovered.owner, recovered, request.nativeBackupFolder), record = await this.archives.write(recovered, destination, control);
-                        this.recovery.markApplied(request.proposalId);
-                        return { recovery: this.recovery.view(request.proposalId), activated: locations, output: { id: record.id, path: destination.path, notice: null } };
-                    }
-                    const destination = this.backupDestination(request.nativeDestination, result.manifest.owner, result.manifest, request.nativeBackupFolder);
-                    const record = await this.archives.write(result.manifest, destination, control);
-                    this.recovery.markApplied(request.proposalId);
-                    return { recovery: this.recovery.view(request.proposalId), output: { id: record.id, path: destination.path, notice: null } };
-                }
+                case 'protection.apply': return await this.applyRecovery(request, control);
                 case 'protection.export': {
                     if (!request.nativeDestination)
                         throw new _archives__WEBPACK_IMPORTED_MODULE_7__.OperationCanceled();
-                    await (0,_exports__WEBPACK_IMPORTED_MODULE_9__.exportSaved)(this.workspace, request.owner, request.format, request.storyId, request.chapterIds, request.nativeDestination, request.nativeRuntime, control);
+                    this.assertOutputOutsideRoots(request.nativeDestination.path, true);
+                    control.phase = 'Pinning the saved export generation';
+                    await (0,_exports__WEBPACK_IMPORTED_MODULE_9__.exportSaved)(this.exportCaptures.load(request), request.format, request.storyId, request.chapterIds, request.nativeDestination, request.nativeRuntime, control);
                     return { output: { id: (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)(), path: request.nativeDestination.path, notice: request.format === 'sqlite' ? _application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.CATALOG_NOTICE : null } };
                 }
                 case 'protection.reconcile': throw new Error('Reconciliation must retain its original job.');
@@ -3050,11 +3900,36 @@ class ProtectionService {
     }
     inspection(manifest) { const assets = manifest.units.flatMap(unit => unit.snapshot.assets.map(asset => { const file = unit.files.find(f => f.relativePath.startsWith(`images/${asset.id}.`)); if (!file)
         throw new Error('Captured profile image is missing from the immutable closure.'); return { ...asset, base64: this.revisions.object(manifest.owner, file.object).toString('base64') }; })); return { manifest, units: this.revisions.resolve(manifest), assets }; }
-    backupDestination(selected, owner, manifest, nativeFolder) { if (selected)
-        return selected; const folder = nativeFolder ?? this.settings.get().backupDestination; if (!folder)
-        throw new Error('Choose a backup destination.'); const stem = `${(0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_13__.safeDisplayName)(manifest.displayName)}${owner.kind === 'project' ? '_' + (0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_13__.safeDisplayName)(manifest.universeDisplayName) : ''}_${manifest.localCaptureStart}`; let name = stem + '.zip', suffix = 2; while (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(folder, name)))
-        name = `${stem}_${suffix++}.zip`; return { path: node_path__WEBPACK_IMPORTED_MODULE_1___default().join(folder, name), expectedHash: null }; }
-    protectedIds() { const ids = this.archives.protectedRevisionIds(); for (const name of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, 'protection/proposals')).filter(n => /^[a-f0-9-]{36}\.json$/.test(n))) {
+    assertOutputOutsideRoots(file, includeUserData = false) {
+        const resolved = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(file)), node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(file)), snapshot = this.workspace.snapshot(), roots = [snapshot.project?.owner, snapshot.universe?.owner].filter((owner) => !!owner).map(owner => this.workspace.location(owner));
+        if (includeUserData)
+            roots.push(this.userData);
+        for (const root of roots) {
+            const relative = node_path__WEBPACK_IMPORTED_MODULE_1___default().relative(node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(root), resolved);
+            if (!relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_1___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(relative))
+                throw new Error('The output destination is inside an active writing root. Choose another output location.');
+        }
+    }
+    backupDestination(selected, owner, manifest, nativeFolder) {
+        if (selected) {
+            this.assertOutputOutsideRoots(selected.path);
+            return selected;
+        }
+        const folder = nativeFolder ?? this.settings.get().backupDestination;
+        if (!folder)
+            throw new Error('Choose a backup destination.');
+        const stem = `${(0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_13__.safeDisplayName)(manifest.displayName)}${owner.kind === 'project' ? '_' + (0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_13__.safeDisplayName)(manifest.universeDisplayName) : ''}_${manifest.localCaptureStart}`;
+        let name = stem + '.zip', suffix = 2;
+        while (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(folder, name)))
+            name = `${stem}_${suffix++}.zip`;
+        const destination = { path: node_path__WEBPACK_IMPORTED_MODULE_1___default().join(folder, name), expectedHash: null };
+        this.assertOutputOutsideRoots(destination.path);
+        return destination;
+    }
+    protectedIds(owner) { const ids = this.archives.protectedRevisionIds(); const live = this.workspace.snapshot(), owners = [owner, ...[live.project?.owner, live.universe?.owner].filter((o) => !!o)]; for (const candidate of new Map(owners.map(o => [(0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(o), o])).values())
+        for (const manifest of this.revisions.list(candidate))
+            for (const id of manifest.retainedRevisionIds)
+                ids.add(id); for (const name of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, 'protection/proposals')).filter(n => /^[a-f0-9-]{36}\.json$/.test(n))) {
         try {
             const proposal = this.recovery.get(name.replace(/\.json$/, ''));
             if (proposal.status !== 'applied') {
@@ -3067,84 +3942,278 @@ class ProtectionService {
             throw new Error('Uncertain pending recovery evidence blocks retention.');
         }
     } return ids; }
-    retain(owner) { const settings = this.settings.get(), protectedIds = this.protectedIds(); for (const m of this.revisions.list(owner))
-        this.revisions.remove(owner, m.id, protectedIds, settings.retentionDays); for (const a of this.archives.registry().filter(a => (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(a.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(owner)))
-        try {
-            this.archives.remove(owner, a.id, settings.retentionDays);
+    retentionWarnings(owner) { try {
+        this.retain(owner);
+        return [];
+    }
+    catch (error) {
+        return ['The capture completed, but automatic cleanup was deferred. ' + (error instanceof Error ? error.message : 'Retained evidence could not be checked.')];
+    } }
+    retain(owner) {
+        const settings = this.settings.get(), protectedIds = this.protectedIds(owner);
+        for (const m of this.revisions.list(owner).reverse())
+            if (!protectedIds.has(m.id))
+                this.revisions.remove(owner, m.id, protectedIds, settings.retentionDays);
+        const archives = this.archives.registry().filter(a => (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(a.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(owner)).sort((a, b) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt)), newestTen = new Set(archives.slice(0, 10).map(a => a.id));
+        for (const archive of archives.reverse()) {
+            if (newestTen.has(archive.id) || BigInt(Date.now() - Date.parse(archive.capturedAt)) < BigInt(settings.retentionDays) * 86400000n)
+                continue;
+            this.archives.remove(owner, archive.id, settings.retentionDays);
         }
-        catch { /* Protection refusals leave all evidence retained. */ } }
-    activate(manifest, locations) {
-        ;(0,_recovery__WEBPACK_IMPORTED_MODULE_8__.validateCaptureCatalogs)(manifest, this.revisions);
-        const units = this.revisions.resolve(manifest), staged = [];
-        // Refuse duplicate authority while the original binding is still accessible. No guessed takeover.
-        for (let i = 0; i < units.length; i++) {
-            const unit = units[i], destination = unit.owner.kind === 'project' ? locations.project : locations.universe;
-            if (!destination)
-                throw new Error('A project recovery needs both owning destinations.');
-            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(destination) && node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(destination).length)
-                throw new Error('Recovery destinations must be empty.');
-            const stage = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(destination), `.recovery-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`);
-            node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(stage, { mode: 0o700 });
-            staged.push({ stage, destination, owner: unit.owner, rootId: unit.rootId });
-            for (const directory of ['images', 'profiles', 'projects', 'database/operations'])
-                node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, directory), { recursive: true, mode: 0o700 });
-            for (const f of manifest.units[i].files) {
-                const target = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, f.relativePath);
-                node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(target), { recursive: true, mode: 0o700 });
-                node_fs__WEBPACK_IMPORTED_MODULE_0___default().writeFileSync(target, this.revisions.object(manifest.owner, f.object), { flag: 'wx', mode: 0o600 });
-            }
-            const catalog = new node_sqlite__WEBPACK_IMPORTED_MODULE_3__.DatabaseSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, 'database/catalog.sqlite'));
-            try {
-                const binding = catalog.prepare('SELECT basePath FROM root_locations').get();
-                if (binding && node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(String(binding.basePath))) {
-                    const previous = String(binding.basePath);
-                    if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(previous, 'writingtool.json'))) {
-                        const discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(previous, 'writingtool.json'));
-                        if (discovery.id === unit.owner.id || discovery.rootId === unit.rootId)
-                            throw new Error('The original authority is accessible. Locate and reconcile with it before activation.');
-                    }
-                    else if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(previous, 'database/catalog.sqlite')))
-                        throw new Error('The original authority identity is uncertain. Locate it before activation.');
+    }
+    async applyRecovery(request, control) {
+        let activated, manifest;
+        const existing = this.readActivation(request);
+        if (existing) {
+            control.cancelable = false;
+            control.phase = 'Resuming confirmed activation';
+            activated = this.resumeActivation(request);
+            manifest = this.revisions.capture(this.recovery.get(request.proposalId).owner, 'Recovered', request.requestId);
+        }
+        else {
+            const result = this.recovery.apply(request.proposalId, undefined, () => { control.cancelable = false; control.phase = 'Applying confirmed recovery'; }, request.requestId);
+            manifest = result.manifest;
+            if (result.needsActivation) {
+                if (!request.nativeActivation)
+                    throw new Error('Choose an empty recovery destination before activation.');
+                const live = this.workspace.snapshot(), coordinated = !!live.universe && manifest.owner.kind === 'project';
+                const locations = { project: manifest.owner.kind === 'project' ? request.nativeActivation.project : null, universe: coordinated ? this.workspace.location(live.universe.owner) : request.nativeActivation.universe };
+                if (!coordinated && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(result.units) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(this.revisions.resolve(manifest)))
+                    throw new Error('The confirmed recovery differs from the captured catalogs. Preserve the proposal for reconciliation.');
+                const proposal = this.recovery.get(request.proposalId);
+                (0,_recovery__WEBPACK_IMPORTED_MODULE_8__.validateCaptureCatalogs)(manifest, this.revisions);
+                const staged = new Map();
+                let decision;
+                try {
+                    const participants = this.revisions.resolve(manifest).filter(u => !coordinated || u.owner.kind === 'project').map(unit => this.stageActivation(manifest, unit, locations, staged));
+                    decision = { schemaVersion: 2, requestId: request.requestId, proposalId: proposal.id, manifestId: manifest.id, operationId: proposal.operationId, state: coordinated ? 'await-coordinator' : 'commit', locations, participants };
+                    if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.validActivationDecision)(decision))
+                        throw new Error('Recovery destinations must be separate from every owning and staging root.');
                 }
+                catch (error) {
+                    this.discardUnpublishedStages(staged);
+                    throw error;
+                }
+                // Every staged tree is durable before the one publication decision is made.
+                control.cancelable = false;
+                control.phase = 'Activating confirmed recovery';
+                (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishManagedBytes)(this.userData, (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationPath)(request.requestId), Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.jsonBytes)(decision)), null);
+                activated = this.resumeActivation(request);
+                manifest = this.revisions.capture(manifest.owner, 'Recovered', request.requestId);
+            }
+            else
+                control.cancelable = false;
+        }
+        const destination = this.backupDestination(request.nativeDestination, manifest.owner, manifest, request.nativeBackupFolder), record = await this.archives.write(manifest, destination, control, request.requestId);
+        this.recovery.markApplied(request.proposalId);
+        return { recovery: this.recovery.view(request.proposalId), ...(activated ? { activated } : {}), output: { id: record.id, path: destination.path, notice: null } };
+    }
+    readActivation(request) {
+        const relative = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationPath)(request.requestId), proposal = this.recovery.get(request.proposalId);
+        if (!node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, relative))) {
+            // Legacy decisions lack a binding to the original Apply request. Never guess.
+            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, `protection/activation-${proposal.revisionId}.json`)))
+                throw new Error('Legacy activation evidence needs explicit identity reconciliation. Preserve the existing roots and decision.');
+            return undefined;
+        }
+        const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.userData, relative));
+        if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.validActivationDecision)(value) || value.requestId !== request.requestId || value.proposalId !== proposal.id || value.manifestId !== proposal.revisionId || value.operationId !== proposal.operationId)
+            throw new Error('The original activation decision is invalid. Preserve all recovery evidence.');
+        const manifest = this.recovery.manifest(proposal);
+        if (!value.participants.every(p => manifest.units.some(u => (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(u.snapshot.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(p.owner) && u.snapshot.rootId === p.rootId)) || proposal.owner.kind === 'project' && value.locations.project === null || !value.participants.some(p => (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(p.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(proposal.owner)))
+            throw new Error('Activation participants do not match the confirmed capture.');
+        return value;
+    }
+    saveActivation(decision) { const relative = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationPath)(decision.requestId); (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishManagedBytes)(this.userData, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.jsonBytes)(decision)), (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.userData, relative))); }
+    assertActivationIdentity(root, participant) {
+        const discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(root, 'writingtool.json'));
+        if (!discovery || typeof discovery !== 'object' || !('kind' in discovery) || !('id' in discovery) || !('rootId' in discovery) || discovery.kind !== participant.owner.kind || discovery.id !== participant.owner.id || discovery.rootId !== participant.rootId)
+            throw new Error('An activation participant identity changed. Locate the original owning root.');
+    }
+    stageActivation(manifest, unit, locations, staged) {
+        const destination = unit.owner.kind === 'project' ? locations.project : locations.universe;
+        if (!destination)
+            throw new Error('A project recovery needs both owning destinations.');
+        this.assertEmptyDestination(destination);
+        const stage = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(destination), `.recovery-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`);
+        node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(stage, { mode: 0o700 });
+        const identity = node_fs__WEBPACK_IMPORTED_MODULE_0___default().lstatSync(stage);
+        staged.set(stage, { dev: identity.dev, ino: identity.ino });
+        for (const directory of ['images', 'profiles', 'projects', 'database/operations'])
+            node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, directory), { recursive: true, mode: 0o700 });
+        for (const file of manifest.units.find(u => (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(u.snapshot.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(unit.owner)).files) {
+            const target = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, file.relativePath);
+            node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(target), { recursive: true, mode: 0o700 });
+            node_fs__WEBPACK_IMPORTED_MODULE_0___default().writeFileSync(target, this.revisions.object(manifest.owner, file.object), { flag: 'wx', mode: 0o600 });
+        }
+        const catalog = new node_sqlite__WEBPACK_IMPORTED_MODULE_3__.DatabaseSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, 'database/catalog.sqlite'));
+        try {
+            const binding = catalog.prepare('SELECT basePath FROM root_locations').get();
+            if (binding && node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(String(binding.basePath))) {
+                const previous = String(binding.basePath);
+                if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(previous, 'writingtool.json'))) {
+                    const discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(previous, 'writingtool.json'));
+                    if (discovery.id === unit.owner.id || discovery.rootId === unit.rootId)
+                        throw new Error('The original authority is accessible. Locate and reconcile with it before activation.');
+                }
+                else if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(previous, 'database/catalog.sqlite')))
+                    throw new Error('The original authority identity is uncertain. Locate it before activation.');
+            }
+        }
+        finally {
+            catalog.close();
+        }
+        ;(0,_recovery__WEBPACK_IMPORTED_MODULE_8__.rebindCapturedCatalog)(stage, unit, locations.universe);
+        this.copyProtectionClosure(stage, unit.owner);
+        this.flushTree(stage);
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(stage));
+        return { stage, destination, owner: unit.owner, rootId: unit.rootId };
+    }
+    discardUnpublishedStages(staged) {
+        for (const [stage, identity] of staged)
+            try {
+                const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().lstatSync(stage);
+                if (!stat.isDirectory() || stat.isSymbolicLink() || stat.dev !== identity.dev || stat.ino !== identity.ino || node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(stage) !== stage)
+                    continue;
+                node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmSync(stage, { recursive: true });
+                (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(stage));
+            }
+            catch { /* Uncertain private staging evidence is preserved; no activation decision was published. */ }
+    }
+    assertEmptyDestination(destination) {
+        if (!node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(destination))
+            return;
+        const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().lstatSync(destination);
+        if (!stat.isDirectory() || stat.isSymbolicLink() || node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(destination).length)
+            throw new Error('Recovery destination changed. Preserve the staged roots and original decision.');
+    }
+    relocateActivation(request, locations) {
+        if (!locations.length)
+            return;
+        const decision = this.readActivation(request);
+        if (!decision)
+            throw new Error('No original activation decision exists for these locations.');
+        if (new Set(locations.map(p => p.rootId)).size !== locations.length)
+            throw new Error('Duplicate activation location capabilities.');
+        for (const selected of locations) {
+            const participant = decision.participants.find(p => p.rootId === selected.rootId && (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(p.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(selected.owner));
+            if (!participant) {
+                const universe = this.recovery.manifest(this.recovery.get(request.proposalId)).units.find(u => u.snapshot.owner.kind === 'universe').snapshot;
+                if (selected.destination)
+                    throw new Error('A universe location cannot change a staged publication destination.');
+                if (decision.participants.length !== 1 || decision.participants[0].owner.kind !== 'project' || (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(selected.owner) !== (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(universe.owner) || selected.rootId !== universe.rootId)
+                    throw new Error('The selected root is outside the original activation.');
+                this.assertActivationIdentity(selected.location, { owner: universe.owner, rootId: universe.rootId });
+                decision.locations.universe = selected.location;
+                continue;
+            }
+            const staged = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(participant.stage, participant), published = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(participant.destination, participant), location = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(selected.location, participant);
+            if (!location)
+                throw new Error('The selected activation location has a different permanent identity.');
+            if (published && published !== location || staged && staged !== location)
+                throw new Error('An original activation authority remains accessible. Reconcile it before rebinding.');
+            if (selected.destination) {
+                if (published)
+                    throw new Error('A published activation retains its located publication root.');
+                if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationDestinationAvailable)(selected.destination, location))
+                    throw new Error('Choose an empty publication destination on the same filesystem as the staged recovery root.');
+                participant.stage = location;
+                participant.destination = selected.destination;
+                if (participant.owner.kind === 'project')
+                    decision.locations.project = selected.destination;
+                else
+                    decision.locations.universe = selected.destination;
+            }
+            else if (decision.state === 'await-coordinator')
+                throw new Error('Choose the empty publication destination for the relocated staged project.');
+            else {
+                participant.destination = location;
+                if (participant.owner.kind === 'project')
+                    decision.locations.project = location;
+                else
+                    decision.locations.universe = location;
+            }
+        }
+        if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.validActivationDecision)(decision))
+            throw new Error('The selected activation locations overlap.');
+        this.saveActivation(decision);
+    }
+    resumeActivation(request) {
+        const decision = this.readActivation(request);
+        if (!decision)
+            throw new Error('No activation decision exists.');
+        if (decision.participants.length === 1 && decision.participants[0].owner.kind === 'project') {
+            const universe = this.recovery.manifest(this.recovery.get(request.proposalId)).units.find(u => u.snapshot.owner.kind === 'universe').snapshot;
+            this.assertActivationIdentity(decision.locations.universe, { owner: universe.owner, rootId: universe.rootId });
+            const project = decision.participants[0], projectRoot = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(project.stage, project) ?? (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(project.destination, project);
+            if (!projectRoot)
+                throw new Error('Locate the original recovered project before activation reconciliation.');
+            this.assertActivationIdentity(projectRoot, project);
+            this.coordinator.locateActivationParticipant(universe.owner, universe.rootId, universe.universeId, decision.locations.universe);
+            this.coordinator.locateActivationParticipant(project.owner, project.rootId, universe.universeId, projectRoot);
+            const current = this.workspace.snapshot();
+            if (!current.universe)
+                this.openRecovered({ project: null, universe: decision.locations.universe });
+            else if (current.universe.rootId !== universe.rootId || (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(current.universe.owner) !== (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(universe.owner))
+                throw new Error('The original universe is required for activation reconciliation.');
+        }
+        if (decision.state === 'await-coordinator') {
+            const live = this.workspace.snapshot(), manifest = this.recovery.manifest(this.recovery.get(request.proposalId)), universe = manifest.units.find(u => u.snapshot.owner.kind === 'universe').snapshot;
+            if (!live.universe || (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(live.universe.owner) !== (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(universe.owner) || live.universe.rootId !== universe.rootId)
+                throw new Error('Reopen the original universe before reconciling its project activation.');
+            decision.locations.universe = this.workspace.location(live.universe.owner);
+            const participant = decision.participants[0];
+            this.assertActivationIdentity(participant.stage, participant);
+            // Opening registers the exact staged root at its current location before coordinator recovery.
+            const store = new _project_storage__WEBPACK_IMPORTED_MODULE_14__.FileProjectStorage(this.coordinator).open(participant.stage);
+            try {
+                store.bind(decision.locations.universe);
+                this.workspace.withRecoveryProject(store.workspace, participant.stage, () => {
+                    const proposal = this.recovery.get(request.proposalId);
+                    if (!proposal.expected.some(e => (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(e.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(participant.owner)))
+                        this.recovery.bindStaged(proposal.id, participant.owner, store.workspace.snapshot().generation);
+                    if (proposal.status === 'review')
+                        this.recovery.apply(proposal.id, live.universe.owner, () => { }, request.requestId);
+                    if (!this.workspace.reconcile(decision.operationId))
+                        throw new Error('Activation remains pending its original coordinator decision.');
+                });
             }
             finally {
-                catalog.close();
+                store.close();
             }
-            ;(0,_recovery__WEBPACK_IMPORTED_MODULE_8__.rebindCapturedCatalog)(stage, unit, locations.universe);
-            this.copyProtectionClosure(stage, unit.owner);
-            this.flushTree(stage);
+            decision.state = 'commit';
+            this.saveActivation(decision);
         }
-        const decision = `protection/activation-${manifest.id}.json`;
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.userData, decision, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)({ schemaVersion: 1, state: 'commit', manifestId: manifest.id, participants: staged })), null);
-        // One durable activation decision; restart completes publication of every participant.
-        for (let i = 0; i < staged.length; i++) {
-            const p = staged[i];
-            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(p.destination))
-                node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmdirSync(p.destination);
-            node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(p.stage, p.destination);
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(p.destination));
-            this.recoveredRoots.set((0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(units[i].owner), p.destination);
+        // Validate the whole participant set before publishing even the first rename.
+        const stagedParticipants = decision.participants.filter(participant => {
+            const staged = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(participant.stage, participant), published = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(participant.destination, participant);
+            if (staged && published)
+                throw new Error('Both recovery locations contain the original identity. Preserve both roots before reconciliation.');
+            if (!staged && !published)
+                throw new Error('Locate the original recovered owning root before activation reconciliation.');
+            if (staged && !(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationDestinationAvailable)(participant.destination, staged))
+                throw new Error('Choose an empty publication destination on the staged recovery filesystem.');
+            return !!staged;
+        });
+        if (decision.state !== 'complete' || stagedParticipants.length) {
+            for (const participant of stagedParticipants) {
+                this.assertActivationIdentity(participant.stage, participant);
+                this.assertEmptyDestination(participant.destination);
+                if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(participant.destination))
+                    node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmdirSync(participant.destination);
+                node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(participant.stage, participant.destination);
+                (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(participant.destination));
+                if (node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(participant.stage) !== node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(participant.destination))
+                    (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(participant.stage));
+            }
+            decision.state = 'complete';
+            this.saveActivation(decision);
         }
-        const evidence = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.userData, decision);
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.userData, decision, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)({ schemaVersion: 1, state: 'complete', manifestId: manifest.id, participants: staged })), (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(evidence));
+        // Choice locking survives failure to open or publish the mandatory reconciled ZIP.
+        this.recovery.markBackupRequired(request.proposalId);
+        this.openRecovered(decision.locations);
+        return decision.locations;
     }
-    async activateProjectWithUniverse(proposalId, manifest, locations) { const unit = manifest.units.find(u => u.snapshot.owner.kind === 'project'); if (!unit || !locations.project)
-        throw new Error('Select a project recovery destination.'); const destination = locations.project, stage = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(destination), `.recovery-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`); node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(stage, { mode: 0o700 }); for (const directory of ['images', 'projects', 'database/operations'])
-        node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, directory), { recursive: true, mode: 0o700 }); for (const file of unit.files) {
-        const target = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(stage, file.relativePath);
-        node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(target), { recursive: true, mode: 0o700 });
-        node_fs__WEBPACK_IMPORTED_MODULE_0___default().writeFileSync(target, this.revisions.object(manifest.owner, file.object), { flag: 'wx', mode: 0o600 });
-    } const snapshot = this.revisions.resolve(manifest).find(u => u.owner.kind === 'project'); (0,_recovery__WEBPACK_IMPORTED_MODULE_8__.rebindCapturedCatalog)(stage, snapshot, locations.universe); this.copyProtectionClosure(stage, unit.snapshot.owner); this.flushTree(stage); const store = new _project_storage__WEBPACK_IMPORTED_MODULE_14__.FileProjectStorage(this.coordinator).open(stage), proposal = this.recovery.get(proposalId), relative = `protection/activation-${manifest.id}.json`, decision = { schemaVersion: 1, state: 'await-coordinator', manifestId: manifest.id, operationId: proposal.operationId, participants: [{ stage, destination, owner: snapshot.owner, rootId: snapshot.rootId }] }; (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.userData, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)(decision)), null); try {
-        this.workspace.withRecoveryProject(store.workspace, stage, () => { this.recovery.bindStaged(proposalId, snapshot.owner, snapshot.generation); this.recovery.apply(proposalId, this.workspace.snapshot().universe.owner); });
-    }
-    finally {
-        store.close();
-    } const receipt = this.workspace.reconcile(proposal.operationId); if (!receipt)
-        throw new Error('Activation remains pending its coordinator decision.'); if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(destination)) {
-        if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(destination).length)
-            throw new Error('Recovery destination changed.');
-        node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmdirSync(destination);
-    } node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(stage, destination); (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(destination)); (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.userData, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)({ ...decision, state: 'complete' })), (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.userData, relative))); }
     flushTree(root) { for (const entry of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(root, { withFileTypes: true })) {
         const file = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, entry.name);
         if (entry.isDirectory())
@@ -3158,46 +4227,107 @@ class ProtectionService {
                 node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
             }
         }
-    } ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.syncDir)(root); }
-    copyProtectionClosure(root, owner) { ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(root, 'history/protection/manifests'); (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(root, 'history/protection/objects'); for (const m of this.revisions.list(owner)) {
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(root, `history/protection/manifests/${m.id}.json`, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)(m)), null);
+    } ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(root); }
+    copyProtectionClosure(root, owner) { ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(root, 'history/protection/manifests'); (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(root, 'history/protection/objects'); for (const m of this.revisions.list(owner)) {
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishManagedBytes)(root, `history/protection/manifests/${m.id}.json`, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.jsonBytes)(m)), null);
         for (const u of m.units)
             for (const f of u.files) {
                 const relative = `history/protection/objects/${f.object.sha256}`;
                 if (!node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative)))
-                    (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(root, relative, this.revisions.object(owner, f.object), null);
+                    (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishManagedBytes)(root, relative, this.revisions.object(owner, f.object), null);
             }
     } }
-    replayActivations() { for (const name of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, 'protection')).filter(n => /^activation-[a-f0-9-]{36}\.json$/.test(n))) {
-        const relative = `protection/${name}`, bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.userData, relative), decision = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(bytes);
-        if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_11__.closed)(decision, ['schemaVersion', 'state', 'manifestId', 'participants', ...(Object.hasOwn(decision, 'operationId') ? ['operationId'] : [])]) || decision.schemaVersion !== 1 || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_11__.isUuid)(decision.manifestId) || decision.operationId !== undefined && !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_11__.isUuid)(decision.operationId) || !Array.isArray(decision.participants) || decision.participants.length < 1 || decision.participants.length > 2 || !decision.participants.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_11__.closed)(p, ['stage', 'destination', 'owner', 'rootId']) && typeof p.stage === 'string' && node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(p.stage) && typeof p.destination === 'string' && node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(p.destination) && node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(p.stage) === node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(p.destination) && /^\.recovery-[a-f0-9-]{36}$/.test(node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(p.stage)) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_12__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_11__.isUuid)(p.rootId)))
-            throw new Error('Unsupported activation evidence.');
-        if (decision.state === 'complete')
-            continue;
-        if (decision.state === 'await-coordinator') {
-            if (!decision.operationId || !this.workspace.reconcile(decision.operationId))
-                continue;
-        }
-        else if (decision.state !== 'commit')
-            throw new Error('Uncertain activation decision.');
-        for (const p of decision.participants) {
-            const source = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(p.stage) ? p.stage : p.destination, discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(source, 'writingtool.json'));
-            if (discovery.kind !== p.owner.kind || discovery.id !== p.owner.id || discovery.rootId !== p.rootId)
-                throw new Error('Activation participant identity changed. Preserve recovery evidence.');
-            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(p.stage)) {
-                if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(p.destination)) {
-                    if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(p.destination).length)
-                        throw new Error('Recovery destination changed during activation.');
-                    node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmdirSync(p.destination);
-                }
-                node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(p.stage, p.destination);
-                (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(p.destination));
-            }
-            else if (!node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(p.destination, 'writingtool.json')))
-                throw new Error('A committed activation participant is unavailable.');
-        }
-        ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.userData, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)({ ...decision, state: 'complete' })), (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes));
-    } }
+}
+
+
+/***/ },
+
+/***/ "./src/infrastructure/recovery-activation.ts"
+/*!***************************************************!*\
+  !*** ./src/infrastructure/recovery-activation.ts ***!
+  \***************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   activationDestinationAvailable: () => (/* binding */ activationDestinationAvailable),
+/* harmony export */   activationPath: () => (/* binding */ activationPath),
+/* harmony export */   activationRootAt: () => (/* binding */ activationRootAt),
+/* harmony export */   validActivationDecision: () => (/* binding */ validActivationDecision)
+/* harmony export */ });
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+
+
+
+
+
+const activationPath = (requestId) => `protection/activation-${requestId}.json`;
+const absolute = (value) => typeof value === 'string' && node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(value) && !value.includes('\0');
+const inside = (file, root) => { const relative = node_path__WEBPACK_IMPORTED_MODULE_0___default().relative(root, file); return !relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_0___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(relative); };
+/** An empty/foreign replacement at an old path is not the missing participant. */
+function activationRootAt(root, participant) {
+    let location;
+    try {
+        location = node_fs__WEBPACK_IMPORTED_MODULE_1___default().realpathSync(root);
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return null;
+        throw error;
+    }
+    let discovery;
+    try {
+        discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_4__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_4__.readManaged)(location, 'writingtool.json'));
+    }
+    catch (error) {
+        if (error.code === 'ENOENT' && !['database', '.writingtool-creation.json'].some(name => node_fs__WEBPACK_IMPORTED_MODULE_1___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_0___default().join(location, name))))
+            return null;
+        throw new Error('An original recovery path has unreadable authority evidence. Preserve it before locating the participant.');
+    }
+    if (!discovery || typeof discovery !== 'object' || !('kind' in discovery) || !('id' in discovery) || !('rootId' in discovery))
+        throw new Error('An original recovery path has invalid authority evidence.');
+    if (discovery.kind === participant.owner.kind && discovery.id === participant.owner.id && discovery.rootId === participant.rootId)
+        return location;
+    if (discovery.id === participant.owner.id || discovery.rootId === participant.rootId)
+        throw new Error('A recovery path has conflicting permanent owner identity.');
+    return null;
+}
+function activationDestinationAvailable(destination, stage) {
+    try {
+        const stat = node_fs__WEBPACK_IMPORTED_MODULE_1___default().lstatSync(destination);
+        if (!stat.isDirectory() || stat.isSymbolicLink() || node_fs__WEBPACK_IMPORTED_MODULE_1___default().readdirSync(destination).length)
+            return false;
+    }
+    catch (error) {
+        if (error.code !== 'ENOENT')
+            throw error;
+    }
+    try {
+        return node_fs__WEBPACK_IMPORTED_MODULE_1___default().statSync(node_fs__WEBPACK_IMPORTED_MODULE_1___default().realpathSync(node_path__WEBPACK_IMPORTED_MODULE_0___default().dirname(destination))).dev === node_fs__WEBPACK_IMPORTED_MODULE_1___default().statSync(stage).dev;
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return false;
+        throw error;
+    }
+}
+function validActivationDecision(value) {
+    if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value, ['schemaVersion', 'requestId', 'proposalId', 'manifestId', 'operationId', 'state', 'locations', 'participants']) || value.schemaVersion !== 2 || ![value.requestId, value.proposalId, value.manifestId, value.operationId].every(_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid) || !['await-coordinator', 'commit', 'complete'].includes(String(value.state)) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value.locations, ['project', 'universe']) || value.locations.project !== null && !absolute(value.locations.project) || !absolute(value.locations.universe) || !Array.isArray(value.participants) || !value.participants.length || value.participants.length > 2)
+        return false;
+    const locations = value.locations;
+    if (!value.participants.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(p, ['stage', 'destination', 'owner', 'rootId']) && absolute(p.stage) && absolute(p.destination) && p.stage !== p.destination && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_2__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(p.rootId) && p.destination === (p.owner.kind === 'project' ? locations.project : locations.universe)))
+        return false;
+    const participants = value.participants;
+    const roots = participants.flatMap(p => [p.stage, p.destination]);
+    if (!participants.some(p => p.owner.kind === 'universe'))
+        roots.push(locations.universe);
+    return new Set(participants.map(p => p.owner.kind)).size === participants.length && new Set(participants.map(p => p.rootId)).size === participants.length && roots.every((root, index) => roots.slice(index + 1).every(other => !inside(root, other) && !inside(other, root))) && (value.state !== 'await-coordinator' || participants.length === 1 && participants[0].owner.kind === 'project');
 }
 
 
@@ -3288,7 +4418,7 @@ function rebindCapturedCatalog(root, unit, universeRoot) {
 }
 /** Full existing-store readers verify exact schemas, creation receipts, generations, history, chapter pairs and indexes. */
 function validateCaptureCatalogs(manifest, revisions) {
-    const temp = node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdtempSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_os__WEBPACK_IMPORTED_MODULE_2___default().tmpdir(), 'writingtool-validate-')), units = revisions.resolve(manifest);
+    const units = revisions.resolve(manifest), temp = node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdtempSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(node_os__WEBPACK_IMPORTED_MODULE_2___default().tmpdir()), 'writingtool-validate-'));
     try {
         for (let i = 0; i < units.length; i++) {
             const root = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, units[i].owner.kind);
@@ -3348,6 +4478,7 @@ class RecoveryStorage {
     get(id) { const v = (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(this.userData, this.path(id))); if (!(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_6__.validProposal)(v) || v.id !== id)
         throw new Error('Unsupported recovery proposal.'); return v; }
     manifest(p) { return this.manifestByProposal.get(p.id) ?? this.revisions.get(p.owner, p.revisionId); }
+    // oxlint-disable-next-line unicorn/no-useless-spread -- Snapshot the selected scope before adding linked birth records.
     begin(manifest, scope) { this.revisions.validate(manifest); validateCaptureCatalogs(manifest, this.revisions); this.pin(manifest); const units = this.live(); if (units.length && !units.some(u => (0,_revisions__WEBPACK_IMPORTED_MODULE_8__.ownerKey)(u.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_8__.ownerKey)(manifest.owner)) && !(manifest.owner.kind === 'project' && units.length === 1 && units[0].owner.kind === 'universe' && units[0].owner.id === manifest.units.find(u => u.snapshot.owner.kind === 'project')?.snapshot.universeId))
         throw new Error('Close the current roots before recovering another identity.'); if (scope?.some(id => !this.revisions.resolve(manifest).some(u => u.records.some(r => r.id === id))))
         throw new Error('Selected restore item is absent from this capture.'); if (scope) {
@@ -3370,7 +4501,7 @@ class RecoveryStorage {
     live() { const s = this.workspace.snapshot(); return [s.project, s.universe].filter((u) => !!u); }
     view(id) {
         const proposal = this.get(id), manifest = this.manifest(proposal), live = this.live(), recovered = this.revisions.resolve(manifest), current = live.flatMap(u => u.records), incoming = recovered.flatMap(u => u.records).filter(r => !proposal.scope || proposal.scope.includes(r.id));
-        const terminal = proposal.status === 'applied' || proposal.status === 'backup-required';
+        const terminal = proposal.status !== 'review';
         let changed = false;
         const recoveredRecords = recovered.flatMap(u => u.records);
         const conflicts = incoming.filter(r => { const l = current.find(c => c.id === r.id); return !!l && fingerprint(l) !== fingerprint(r) || proposal.choices.some(c => c.recordId === r.id && c.liveFingerprint !== contextualFingerprint(l, current)); }).map(r => { const l = current.find(c => c.id === r.id); const choice = proposal.choices.find(c => c.recordId === r.id); if (!terminal && choice && (choice.liveFingerprint !== contextualFingerprint(l, current) || choice.recoveredFingerprint !== contextualFingerprint(r, recoveredRecords))) {
@@ -3398,11 +4529,13 @@ class RecoveryStorage {
         const missing = candidates.flatMap(u => u.records.flatMap(r => (0,_domain_references__WEBPACK_IMPORTED_MODULE_12__.recordReferences)(r).filter(ref => !known.has(ref.targetId)).map(ref => ({ sourceId: r.id, targetId: ref.targetId, label: ref.label, canRemove: ref.canRemove }))));
         return { proposal, conflicts, issues, missing };
     }
-    resolve(id, resolution) { const view = this.view(id), conflict = view.conflicts.find(c => c.id === resolution.recordId); if (!conflict)
+    resolve(id, resolution) { const view = this.view(id); if (view.proposal.status !== 'review')
+        throw new Error('Resume a canceled proposal before editing; committed recovery choices cannot be changed.'); const conflict = view.conflicts.find(c => c.id === resolution.recordId); if (!conflict)
         throw new Error('This conflict changed. Review the current proposal.'); if (resolution.liveFingerprint !== conflict.liveFingerprint || resolution.recoveredFingerprint !== conflict.recoveredFingerprint)
         throw new Error('Conflict values changed. Review them again.'); if (resolution.choice === 'combined' && (!resolution.record || !(0,_domain_workspace__WEBPACK_IMPORTED_MODULE_7__.validateWorkspaceRecord)(resolution.record) || resolution.record.id !== resolution.recordId))
         throw new Error('The combined record is invalid.'); view.proposal.choices = view.proposal.choices.filter(c => c.recordId !== resolution.recordId); view.proposal.choices.push(resolution); view.proposal.status = 'review'; this.save(view.proposal); return this.view(id); }
-    reference(id, sourceId, targetId, action, replacementId) { const p = this.get(id), manifest = this.manifest(p), historical = this.revisions.resolve(manifest).flatMap(u => u.records), live = this.live().flatMap(u => u.records), source = this.candidates(p).flatMap(u => u.records).find(r => r.id === sourceId), ref = source && (0,_domain_references__WEBPACK_IMPORTED_MODULE_12__.recordReferences)(source).find(r => r.targetId === targetId); if (!source || !ref)
+    reference(id, sourceId, targetId, action, replacementId) { const p = this.get(id); if (p.status !== 'review')
+        throw new Error('Resume a canceled proposal before editing; committed recovery choices cannot be changed.'); const manifest = this.manifest(p), historical = this.revisions.resolve(manifest).flatMap(u => u.records), live = this.live().flatMap(u => u.records), source = this.candidates(p).flatMap(u => u.records).find(r => r.id === sourceId), ref = source && (0,_domain_references__WEBPACK_IMPORTED_MODULE_12__.recordReferences)(source).find(r => r.targetId === targetId); if (!source || !ref)
         throw new Error('The missing reference changed. Review the proposal.'); if (action === 'restore') {
         if (!historical.some(r => r.id === targetId))
             throw new Error('This backup has no matching dependency to restore.');
@@ -3499,22 +4632,27 @@ class RecoveryStorage {
     } return this.view(id); }
     cancel(id) { const p = this.get(id); if (p.status === 'applied' || p.status === 'backup-required')
         throw new Error('This recovery is already committed. Complete its required reconciled backup.'); p.status = 'canceled'; this.save(p); return this.view(id); }
-    apply(id, protectiveOwner) {
+    apply(id, protectiveOwner, beforeRestore = () => { }, captureId) {
         let p = this.get(id);
         const attemptPath = `protection/proposals/${id}.attempt.json`;
         if (p.status === 'applied')
             throw new Error('This recovery has already been applied.');
-        if (p.status === 'backup-required')
-            return { manifest: this.revisions.capture(p.owner, 'Recovered'), needsActivation: false, units: this.live() };
+        if (p.status === 'canceled')
+            throw new Error('Resume and review the canceled recovery proposal before applying it.');
+        if (p.status === 'backup-required') {
+            beforeRestore();
+            return { manifest: this.revisions.capture(p.owner, 'Recovered', captureId), needsActivation: false, units: this.live() };
+        }
         if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, attemptPath))) {
             const attempt = (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(this.userData, attemptPath));
             if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_13__.closed)(attempt, ['schemaVersion', 'operationId', 'expected', 'candidates']) || attempt.schemaVersion !== 1 || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_13__.isUuid)(attempt.operationId) || attempt.operationId !== p.operationId || !Array.isArray(attempt.expected) || !attempt.expected.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_13__.closed)(e, ['owner', 'generation']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validOwner)(e.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_14__.unsignedInteger)(e.generation)) || !Array.isArray(attempt.candidates) || !attempt.candidates.every(c => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_13__.closed)(c, ['snapshot', 'assets']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validWorkspaceUnit)(c.snapshot) && Array.isArray(c.assets) && c.assets.every(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validAssetData)))
                 throw new Error('The frozen restore attempt is invalid. Preserve all recovery evidence.');
             const receipt = this.workspace.reconcile(attempt.operationId);
             if (receipt) {
+                beforeRestore();
                 p.status = 'backup-required';
                 this.save(p);
-                return { manifest: this.revisions.capture(p.owner, 'Recovered'), needsActivation: false, units: this.live() };
+                return { manifest: this.revisions.capture(p.owner, 'Recovered', captureId), needsActivation: false, units: this.live() };
             }
             if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)(attempt.expected) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)(this.live().map(u => ({ owner: u.owner, generation: u.generation })))) {
                 node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, attemptPath), node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, attemptPath + '.noncommit-' + (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()));
@@ -3524,10 +4662,11 @@ class RecoveryStorage {
                 this.view(id);
                 throw new Error('Live work changed after the previous attempt was confirmed not committed. Review affected choices and confirm again.');
             }
+            beforeRestore();
             this.workspace.restore(attempt.operationId, attempt.expected, attempt.candidates);
             p.status = 'backup-required';
             this.save(p);
-            return { manifest: this.revisions.capture(p.owner, 'Recovered'), needsActivation: false, units: this.live() };
+            return { manifest: this.revisions.capture(p.owner, 'Recovered', captureId), needsActivation: false, units: this.live() };
         }
         const expectedBefore = (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)(p.expected), view = this.view(id);
         p = view.proposal;
@@ -3545,12 +4684,18 @@ class RecoveryStorage {
             throw new Error('Recovered image closure is missing.'); return { ...asset, base64: this.revisions.object(manifest.owner, file.object).toString('base64') }; }));
         const candidates = units.map(snapshot => ({ snapshot, assets: assets.filter(() => snapshot.owner.kind === 'universe') }));
         (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(this.userData, attemptPath, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.jsonBytes)({ schemaVersion: 1, operationId: p.operationId, expected: p.expected, candidates })), null);
+        beforeRestore();
         this.workspace.restore(p.operationId, p.expected, candidates);
         p.status = 'backup-required';
         this.save(p);
-        return { manifest: this.revisions.capture(p.owner, 'Recovered'), needsActivation: false, units };
+        return { manifest: this.revisions.capture(p.owner, 'Recovered', captureId), needsActivation: false, units };
     }
     bindStaged(id, owner, generation) { const p = this.get(id); p.expected = [...p.expected.filter(e => (0,_revisions__WEBPACK_IMPORTED_MODULE_8__.ownerKey)(e.owner) !== (0,_revisions__WEBPACK_IMPORTED_MODULE_8__.ownerKey)(owner)), { owner, generation }].sort((a, b) => a.owner.kind.localeCompare(b.owner.kind)); this.save(p); }
+    markBackupRequired(id) { const p = this.get(id); if (p.status === 'canceled')
+        throw new Error('The recovery proposal was canceled. Preserve its activation evidence.'); if (p.status === 'review') {
+        p.status = 'backup-required';
+        this.save(p);
+    } }
     markApplied(id) { const p = this.get(id); p.status = 'applied'; this.save(p); }
 }
 
@@ -3570,19 +4715,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   safeRelative: () => (/* binding */ safeRelative),
 /* harmony export */   validRevision: () => (/* binding */ validRevision)
 /* harmony export */ });
-/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs */ "node:fs");
-/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:crypto */ "node:crypto");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
-/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
-/* harmony import */ var _domain_capture_time__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../domain/capture-time */ "./src/domain/capture-time.ts");
-/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
-/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
-/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
-
+/* harmony import */ var _captured_state__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./captured-state */ "./src/infrastructure/captured-state.ts");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _domain_capture_time__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../domain/capture-time */ "./src/domain/capture-time.ts");
+/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
 
 
 
@@ -3592,9 +4735,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const ownerKey = (o) => `${o.kind}/${o.id}`;
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 function safeRelative(p) { return typeof p === 'string' && p.length > 0 && !p.startsWith('/') && !p.split('/').some(s => !s || s === '.' || s === '..' || /[\\\0:\x00-\x1f]/.test(s) || /[. ]$/.test(s) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(s)); }
-const refValid = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(v, ['sha256', 'byteLength']) && typeof v.sha256 === 'string' && /^[a-f0-9]{64}$/.test(v.sha256) && typeof v.byteLength === 'string' && /^(0|[1-9][0-9]*)$/.test(v.byteLength);
-const validRevision = _application_contracts_protection__WEBPACK_IMPORTED_MODULE_6__.validRevisionManifest;
+const validRevision = _application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.validRevisionManifest;
 /** Complete manifests point to immutable saved bytes, never to current-file replay. */
 class RevisionStorage {
     workspace;
@@ -3603,24 +4746,24 @@ class RevisionStorage {
         this.workspace = workspace;
         this.rootFor = rootFor;
     }
-    base(owner) { const root = this.rootFor(owner); (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.ensureManagedDirectory)(root, 'history/protection/manifests'); (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.ensureManagedDirectory)(root, 'history/protection/objects'); return root; }
-    list(owner) { const root = this.base(owner); return node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, 'history/protection/manifests')).map(name => { if (!/^[a-f0-9-]{36}\.json$/.test(name))
-        throw new Error('Unrecognized retained revision evidence.'); const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(root, `history/protection/manifests/${name}`)); if (!validRevision(value) || ownerKey(value.owner) !== ownerKey(owner))
+    base(owner) { const root = this.rootFor(owner); (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.ensureManagedDirectory)(root, 'history/protection/manifests'); (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.ensureManagedDirectory)(root, 'history/protection/objects'); return root; }
+    list(owner) { const root = this.base(owner); return node_fs__WEBPACK_IMPORTED_MODULE_1___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, 'history/protection/manifests')).map(name => { if (!/^[a-f0-9-]{36}\.json$/.test(name))
+        throw new Error('Unrecognized retained revision evidence.'); const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(root, `history/protection/manifests/${name}`)); if (!validRevision(value) || ownerKey(value.owner) !== ownerKey(owner))
         throw new Error('Invalid retained revision manifest.'); return value; }).sort((a, b) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt)); }
-    get(owner, id) { if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(id))
-        throw new Error('Invalid revision identity.'); const v = (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(this.base(owner), `history/protection/manifests/${id}.json`)); if (!validRevision(v) || ownerKey(v.owner) !== ownerKey(owner))
+    get(owner, id) { if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_6__.isUuid)(id))
+        throw new Error('Invalid revision identity.'); const v = (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(this.base(owner), `history/protection/manifests/${id}.json`)); if (!validRevision(v) || ownerKey(v.owner) !== ownerKey(owner))
         throw new Error('Invalid complete revision.'); this.validate(v); return v; }
-    object(owner, ref) { const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(this.base(owner), `history/protection/objects/${ref.sha256}`); if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.hash)(bytes) !== ref.sha256 || bytes.length.toString() !== ref.byteLength)
+    object(owner, ref) { const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(this.base(owner), `history/protection/objects/${ref.sha256}`); if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)(bytes) !== ref.sha256 || bytes.length.toString() !== ref.byteLength)
         throw new Error('Immutable revision payload is missing or corrupt.'); return bytes; }
-    putObject(owner, bytes) { const root = this.base(owner), ref = { sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.hash)(bytes), byteLength: bytes.length.toString() }, relative = `history/protection/objects/${ref.sha256}`; if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative)))
+    putObject(owner, bytes) { const root = this.base(owner), ref = { sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)(bytes), byteLength: bytes.length.toString() }, relative = `history/protection/objects/${ref.sha256}`; if (node_fs__WEBPACK_IMPORTED_MODULE_1___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative)))
         this.object(owner, ref);
     else
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.publishManagedBytes)(root, relative, bytes, null); return ref; }
-    capture(owner, reason, id = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()) {
-        if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.base(owner), `history/protection/manifests/${id}.json`)))
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.publishManagedBytes)(root, relative, bytes, null); return ref; }
+    capture(owner, reason, id = (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()) {
+        if (node_fs__WEBPACK_IMPORTED_MODULE_1___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(this.base(owner), `history/protection/manifests/${id}.json`)))
             return this.get(owner, id);
         // This synchronous pin occurs within the utility authority's one serialized event.
-        const time = (0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_5__.captureTime)(), capturedAt = time.utc, before = this.workspace.snapshot(), primary = owner.kind === 'project' ? before.project : before.universe;
+        const time = (0,_domain_capture_time__WEBPACK_IMPORTED_MODULE_4__.captureTime)(), capturedAt = time.utc, before = this.workspace.snapshot(), primary = owner.kind === 'project' ? before.project : before.universe;
         if (!primary || ownerKey(primary.owner) !== ownerKey(owner))
             throw new Error('Open the owning unit before capturing.');
         const captures = [this.workspace.capture(owner)];
@@ -3629,56 +4772,27 @@ class RevisionStorage {
                 throw new Error('The matching universe authority is required.');
             captures.push(this.workspace.capture(before.universe.owner));
         }
-        const units = captures.map(c => ({ snapshot: (() => { const { records, manuscripts, ...identity } = c.snapshot; return { ...identity, recordIds: records.map(r => r.id) }; })(), files: c.files.map(f => { const bytes = Buffer.from(f.base64, 'base64'); if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.hash)(bytes) !== f.sha256)
+        const units = captures.map(c => ({ snapshot: (() => { const { records, manuscripts: _manuscripts, ...identity } = c.snapshot; return { ...identity, recordIds: records.map(r => r.id) }; })(), files: c.files.map(f => { const bytes = Buffer.from(f.base64, 'base64'); if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)(bytes) !== f.sha256)
                 throw new Error('Capture payload hash mismatch.'); return { relativePath: f.relativePath, object: this.putObject(owner, bytes) }; }) }));
-        if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.canonical)(before) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.canonical)(this.workspace.snapshot()))
+        if ((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.canonical)(before) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.canonical)(this.workspace.snapshot()))
             throw new Error('The saved generation changed during capture.');
-        const manifest = { schemaVersion: 1, kind: 'complete-revision', id, owner, reason, capturedAt, completedAt: new Date().toISOString(), localCaptureStart: time.local, offsetMinutes: time.offsetMinutes, timeZone: time.zone, displayName: owner.kind === 'project' ? node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(this.rootFor(owner)) : this.workspace.displayName(owner), universeDisplayName: this.workspace.displayName({ kind: 'universe', id: primary.universeId }), units, retainedRevisionIds: [] };
+        const manifest = { schemaVersion: 1, kind: 'complete-revision', id, owner, reason, capturedAt, completedAt: new Date().toISOString(), localCaptureStart: time.local, offsetMinutes: time.offsetMinutes, timeZone: time.zone, displayName: owner.kind === 'project' ? node_path__WEBPACK_IMPORTED_MODULE_2___default().basename(this.rootFor(owner)) : this.workspace.displayName(owner), universeDisplayName: this.workspace.displayName({ kind: 'universe', id: primary.universeId }), units, retainedRevisionIds: [] };
         this.validate(manifest);
         this.import(manifest);
         return manifest;
     }
+    assertImportable(manifest) { const root = this.base(manifest.owner), relative = `history/protection/manifests/${manifest.id}.json`; if (node_fs__WEBPACK_IMPORTED_MODULE_1___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative)) && !(0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(root, relative).equals(Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.jsonBytes)(manifest))))
+        throw new Error('Revision identity/content conflict.'); }
     import(manifest) { if (!validRevision(manifest))
-        throw new Error('Unsupported revision schema.'); this.validate(manifest); const root = this.base(manifest.owner), relative = `history/protection/manifests/${manifest.id}.json`, bytes = Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.jsonBytes)(manifest)); if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative))) {
-        if (!(0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(root, relative).equals(bytes))
-            throw new Error('Revision identity/content conflict.');
-    }
-    else
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.publishManagedBytes)(root, relative, bytes, null); }
-    resolve(manifest) { return manifest.units.map(unit => { const { recordIds, ...identity } = unit.snapshot, files = new Map(unit.files.map(f => [f.relativePath, f.object])), records = recordIds.map(id => { const file = unit.files.find(f => f.relativePath.endsWith('/' + id + '.json') && !f.relativePath.startsWith('history/')); if (!file)
-        throw new Error('Missing current record payload.'); return (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)(this.object(manifest.owner, file.object)); }), manuscripts = {}; for (const r of records)
-        if (r.recordType === 'chapter') {
-            const ref = files.get(r.data.formatting.text.relativePath);
-            if (!ref)
-                throw new Error('Missing chapter manuscript.');
-            manuscripts[r.id] = new TextDecoder('utf-8', { fatal: true }).decode(this.object(manifest.owner, ref));
-        } return { ...identity, records, manuscripts }; }); }
-    validate(manifest) { if (!validRevision(manifest))
-        throw new Error('Invalid revision schema.'); const units = this.resolve(manifest); (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_3__.assertWorkspaceState)(units.flatMap(u => u.records)); for (let i = 0; i < manifest.units.length; i++) {
-        const unit = manifest.units[i], snapshot = units[i], files = new Map(unit.files.map(f => [f.relativePath, this.object(manifest.owner, f.object)]));
-        if (!files.has('writingtool.json') || !files.has('database/catalog.sqlite'))
-            throw new Error('The complete capture lacks discovery or catalog.');
-        if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validWorkspaceUnit)(snapshot))
-            throw new Error('Invalid resolved unit.');
-        for (const r of snapshot.records) {
-            const bytes = files.get(`${importCategory(r.recordType)}/${r.id}.json`);
-            if (!bytes || (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.canonical)((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.decode)(bytes)) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.canonical)(r))
-                throw new Error('Revision record closure mismatch.');
-            if (r.recordType === 'chapter') {
-                const text = files.get(r.data.formatting.text.relativePath);
-                if (!text || (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.hash)(text) !== r.data.formatting.text.sha256 || text.toString('utf8') !== snapshot.manuscripts[r.id])
-                    throw new Error('Revision chapter pair mismatch.');
-            }
-        }
-        for (const f of unit.files)
-            this.object(manifest.owner, f.object);
-    } }
+        throw new Error('Unsupported revision schema.'); this.validate(manifest); this.assertImportable(manifest); const root = this.base(manifest.owner), relative = `history/protection/manifests/${manifest.id}.json`; if (!node_fs__WEBPACK_IMPORTED_MODULE_1___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative)))
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.publishManagedBytes)(root, relative, Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.jsonBytes)(manifest)), null); }
+    resolve(manifest, object = (owner, ref) => this.object(owner, ref)) { return (0,_captured_state__WEBPACK_IMPORTED_MODULE_0__.resolveCapturedState)(manifest, object); }
+    validate(manifest, object = (owner, ref) => this.object(owner, ref)) { if (!validRevision(manifest))
+        throw new Error('Invalid revision schema.'); (0,_captured_state__WEBPACK_IMPORTED_MODULE_0__.validateCapturedState)(manifest, object); }
     remove(owner, id, protectedIds, retentionDays, manual = false) { const m = this.get(owner, id); if (protectedIds.has(id))
         throw new Error('A retained capture or archive references this revision.'); if (!manual && BigInt(Date.now() - Date.parse(m.capturedAt)) < BigInt(retentionDays) * 86400000n)
-        return; const relative = `history/protection/manifests/${id}.json`, root = this.base(owner); (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.removeManagedBytes)(root, relative, (0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_8__.readManaged)(root, relative))); /* Objects remain until all known archive/reference evidence is available. */ }
+        return; const relative = `history/protection/manifests/${id}.json`, root = this.base(owner); (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.removeManagedBytes)(root, relative, (0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_7__.readManaged)(root, relative))); /* Objects remain until all known archive/reference evidence is available. */ }
 }
-;
-const importCategory = (type) => _domain_workspace__WEBPACK_IMPORTED_MODULE_3__.recordCategory[type];
 
 
 /***/ },
@@ -3799,14 +4913,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs */ "node:fs");
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:crypto */ "node:crypto");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _confined_fs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./confined-fs */ "./src/infrastructure/confined-fs.ts");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_3__);
 
 
 
-const hash = (bytes) => (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256').update(bytes).digest('hex');
+
+const hash = (bytes) => (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.createHash)('sha256').update(bytes).digest('hex');
 // RFC8785 for the closed JSON-only slice: keys are UTF-16 sorted; no domain numbers.
 function canonical(v) {
     if (v === null || typeof v !== 'object')
@@ -3919,7 +5035,7 @@ function directoryHandle(p) {
         throw new Error('Verified directory-relative I/O is unavailable on this platform');
     let fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync('/', (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_DIRECTORY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
     try {
-        for (const segment of node_path__WEBPACK_IMPORTED_MODULE_1___default().resolve(p).split('/').filter(Boolean)) {
+        for (const segment of node_path__WEBPACK_IMPORTED_MODULE_2___default().resolve(p).split('/').filter(Boolean)) {
             const next = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(`/proc/self/fd/${fd}/${segment}`, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_DIRECTORY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
             node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
             fd = next;
@@ -3932,8 +5048,8 @@ function directoryHandle(p) {
     }
 }
 function anchored(p) {
-    const fd = directoryHandle(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(p));
-    return { fd, file: `/proc/self/fd/${fd}/${node_path__WEBPACK_IMPORTED_MODULE_1___default().basename(p)}` };
+    const fd = directoryHandle(node_path__WEBPACK_IMPORTED_MODULE_2___default().dirname(p));
+    return { fd, file: `/proc/self/fd/${fd}/${node_path__WEBPACK_IMPORTED_MODULE_2___default().basename(p)}` };
 }
 function regular(fd) {
     const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().fstatSync(fd);
@@ -3942,6 +5058,8 @@ function regular(fd) {
     return stat;
 }
 function syncDir(p) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.syncDir(p);
     const fd = directoryHandle(p);
     try {
         node_fs__WEBPACK_IMPORTED_MODULE_0___default().fsyncSync(fd);
@@ -3951,6 +5069,8 @@ function syncDir(p) {
     }
 }
 function writeExclusive(p, data, reserved) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.writeExclusive(p, data, reserved);
     const parent = anchored(p);
     let fd;
     try {
@@ -3969,8 +5089,10 @@ function writeExclusive(p, data, reserved) {
 }
 // Atomically publish metadata; keep a torn legacy marker under a distinct name.
 function publishMarker(root, relative, data, staged) {
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative));
-    const temporary = `/proc/self/fd/${parent.fd}/.marker-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.publishMarker(root, relative, data, staged);
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative));
+    const temporary = `/proc/self/fd/${parent.fd}/.marker-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     try {
         const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(temporary, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_WRONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_CREAT | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_EXCL | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW, 0o600);
         try {
@@ -3999,7 +5121,9 @@ function publishMarker(root, relative, data, staged) {
     }
 }
 function preserveMarker(root, relative) {
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative));
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.preserveMarker(root, relative);
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative));
     try {
         const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(parent.file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
         try {
@@ -4008,7 +5132,7 @@ function preserveMarker(root, relative) {
         finally {
             node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
         }
-        node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(parent.file, parent.file + '.damaged-' + (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)());
+        node_fs__WEBPACK_IMPORTED_MODULE_0___default().renameSync(parent.file, parent.file + '.damaged-' + (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)());
         node_fs__WEBPACK_IMPORTED_MODULE_0___default().fsyncSync(parent.fd);
     }
     finally {
@@ -4017,11 +5141,11 @@ function preserveMarker(root, relative) {
 }
 function checked(root, relative, directory = false) {
     const segments = relative.split('/');
-    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(relative))
+    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_2___default().isAbsolute(relative))
         throw new Error('Unsafe managed path');
     let p = root;
     for (let i = 0; i < segments.length; i++) {
-        p = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(p, segments[i]);
+        p = node_path__WEBPACK_IMPORTED_MODULE_2___default().join(p, segments[i]);
         const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().lstatSync(p);
         const dir = i < segments.length - 1 || directory;
         if (stat.isSymbolicLink() || (dir ? !stat.isDirectory() : (!stat.isFile() || stat.nlink !== 1)))
@@ -4030,6 +5154,8 @@ function checked(root, relative, directory = false) {
     return p;
 }
 function readManaged(root, relative) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.readManaged(root, relative);
     const p = checked(root, relative);
     const parent = anchored(p);
     let fd;
@@ -4045,9 +5171,11 @@ function readManaged(root, relative) {
     }
 }
 function replaceManaged(root, relative, data) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.replaceManaged(root, relative, data);
     const target = checked(root, relative);
     const parent = anchored(target);
-    const temporary = `/proc/self/fd/${parent.fd}/.publish-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    const temporary = `/proc/self/fd/${parent.fd}/.publish-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     let original;
     try {
         original = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(parent.file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
@@ -4076,6 +5204,8 @@ function replaceManaged(root, relative, data) {
 }
 /** Managed binary publication shares the anchored, durable primitive used by WRT/JSON. */
 function ensureManagedDirectory(root, relative) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.ensureManagedDirectory(root, relative);
     const segments = relative.split('/');
     if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)))
         throw new Error('Unsafe managed directory');
@@ -4101,10 +5231,12 @@ function ensureManagedDirectory(root, relative) {
     }
 }
 function publishManagedBytes(root, relative, data, expectedHash) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.publishManagedBytes(root, relative, data, expectedHash);
     const segments = relative.split('/');
-    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_1___default().isAbsolute(relative))
+    if (segments.some(s => !s || s === '.' || s === '..' || /[\\\0:]/.test(s)) || node_path__WEBPACK_IMPORTED_MODULE_2___default().isAbsolute(relative))
         throw new Error('Unsafe managed path');
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.workspace-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.workspace-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     try {
         let previous;
         try {
@@ -4155,7 +5287,9 @@ function publishManagedBytes(root, relative, data, expectedHash) {
     }
 }
 function removeManagedBytes(root, relative, expectedHash) {
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative));
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.removeManagedBytes(root, relative, expectedHash);
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative));
     try {
         const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(parent.file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
         try {
@@ -4175,9 +5309,11 @@ function removeManagedBytes(root, relative, expectedHash) {
 }
 /** Stream a verified private artifact through the same anchored destination publication protocol. */
 function publishManagedFile(root, relative, source, expectedHash, expectedSourceHash) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.publishManagedFile(root, relative, source, expectedHash, expectedSourceHash);
     if (relative.includes('/') || !relative || /[\\\0:]/.test(relative) || relative === '.' || relative === '..')
         throw new Error('Unsafe output filename');
-    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.output-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)()}`;
+    const parent = anchored(node_path__WEBPACK_IMPORTED_MODULE_2___default().join(root, relative)), temporary = `/proc/self/fd/${parent.fd}/.output-${(0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)()}`;
     let sourceFd, targetFd;
     try {
         let before;
@@ -4199,7 +5335,7 @@ function publishManagedFile(root, relative, source, expectedHash, expectedSource
         sourceFd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(source, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
         regular(sourceFd);
         targetFd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(temporary, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_WRONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_CREAT | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_EXCL | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW, 0o600);
-        const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256'), buffer = Buffer.alloc(262144);
+        const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.createHash)('sha256'), buffer = Buffer.alloc(262144);
         let count;
         while ((count = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readSync(sourceFd, buffer)) > 0) {
             const bytes = buffer.subarray(0, count);
@@ -4244,17 +5380,22 @@ function publishManagedFile(root, relative, source, expectedHash, expectedSource
         node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(parent.fd);
     }
 }
-function hashFile(file) { const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW); try {
-    regular(fd);
-    const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.createHash)('sha256'), bytes = Buffer.alloc(262144);
-    let n;
-    while ((n = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readSync(fd, bytes)) > 0)
-        digest.update(bytes.subarray(0, n));
-    return digest.digest('hex');
+function hashFile(file) {
+    if (process.platform !== 'linux')
+        return _confined_fs__WEBPACK_IMPORTED_MODULE_1__.confinedFs.hashFile(file);
+    const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
+    try {
+        regular(fd);
+        const digest = (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.createHash)('sha256'), bytes = Buffer.alloc(262144);
+        let n;
+        while ((n = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readSync(fd, bytes)) > 0)
+            digest.update(bytes.subarray(0, n));
+        return digest.digest('hex');
+    }
+    finally {
+        node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
+    }
 }
-finally {
-    node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
-} }
 
 
 /***/ },
@@ -5002,12 +6143,26 @@ class WorkspaceCoordinator {
         this.id = String(identity.id);
     }
     register(store) { const m = store.identity(); this.db.prepare('INSERT INTO coordinator_bindings VALUES(?,?,?,?,?) ON CONFLICT(rootId) DO UPDATE SET basePath=excluded.basePath').run(m.rootId, m.owner.kind, m.owner.id, m.universeId, store.location); this.stores.set(m.rootId, store); }
+    /** Purpose-bound recovery location, before opening either side of an interrupted coordinated activation. */
+    locateActivationParticipant(owner, rootId, universeId, location) {
+        const root = node_fs__WEBPACK_IMPORTED_MODULE_2___default().realpathSync(location), discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(root, 'writingtool.json'));
+        if (discovery.kind !== owner.kind || discovery.id !== owner.id || discovery.rootId !== rootId)
+            throw new Error('The activation location has a different permanent identity.');
+        const prior = this.db.prepare('SELECT * FROM coordinator_bindings WHERE rootId=?').get(rootId);
+        if (prior) {
+            if (prior.ownerKind !== owner.kind || prior.ownerId !== owner.id || prior.universeId !== universeId)
+                throw new Error('The original coordinator binding has a different owner.');
+            if (String(prior.basePath) !== root && node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(String(prior.basePath)) && node_fs__WEBPACK_IMPORTED_MODULE_2___default().realpathSync(String(prior.basePath)) !== root && ['writingtool.json', 'database', '.writingtool-creation.json'].some(name => node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_3___default().join(String(prior.basePath), name))))
+                throw new Error('The original activation authority is still accessible.');
+        }
+        this.db.prepare('INSERT INTO coordinator_bindings VALUES(?,?,?,?,?) ON CONFLICT(rootId) DO UPDATE SET basePath=excluded.basePath').run(rootId, owner.kind, owner.id, universeId, root);
+    }
     unregister(store) { for (const [id, current] of this.stores)
         if (current === store)
             this.stores.delete(id); }
     record(id, digest) { const row = this.db.prepare('SELECT * FROM coordinator_operations WHERE operationId=?').get(id); if (!row || typeof row.record !== 'string')
         throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The original coordinated decision is unavailable.', 'unknown'); const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(Buffer.from(row.record)); if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(value, ['schemaVersion', 'operationId', 'requestDigest', 'participants', 'receipt', 'state']))
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The coordinator record schema is invalid.', 'unknown'); const r = value; if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_6__.validWorkspaceReceipt)(r.receipt) || r.receipt.operationId !== id || !Array.isArray(r.participants) || r.participants.length !== 2 || !r.participants.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(p, ['owner', 'rootId', 'expectedGeneration', 'targetGeneration', 'fencingToken', 'planDigest']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_6__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(p.rootId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(p.expectedGeneration) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(p.targetGeneration) && BigInt(p.targetGeneration) === BigInt(p.expectedGeneration) + 1n && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(p.fencingToken) && (p.planDigest === '' && r.state === 'preparing' || /^[a-f0-9]{64}$/.test(p.planDigest))) || new Set(r.participants.map(p => p.rootId)).size !== r.participants.length || !['preparing', 'prepared', 'commit', 'complete', 'aborted'].includes(r.state))
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The coordinator record schema is invalid.', 'unknown'); const r = value; if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_6__.validWorkspaceReceipt)(r.receipt) || r.receipt.operationId !== id || !Array.isArray(r.participants) || r.participants.length !== 2 || !r.participants.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(p, ['owner', 'rootId', 'expectedGeneration', 'targetGeneration', 'fencingToken', 'planDigest']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_6__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(p.rootId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(p.expectedGeneration) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(p.targetGeneration) && BigInt(p.targetGeneration) === BigInt(p.expectedGeneration) + 1n && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(p.fencingToken) && (p.planDigest === '' && (r.state === 'preparing' || r.state === 'aborted') || /^[a-f0-9]{64}$/.test(p.planDigest))) || new Set(r.participants.map(p => p.rootId)).size !== r.participants.length || !['preparing', 'prepared', 'commit', 'complete', 'aborted'].includes(r.state))
         throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The coordinator plan is invalid.', 'unknown'); if (r.schemaVersion !== 1 || r.operationId !== id || r.requestDigest !== row.requestDigest || r.state !== row.state || digest && digest !== r.requestDigest)
         throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('OPERATION_CONFLICT', 'The coordinated operation does not match its original request.', 'unknown'); return r; }
     save(record) { const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(record); (0,_universe_storage__WEBPACK_IMPORTED_MODULE_9__.transaction)(this.db, () => { this.db.prepare('INSERT INTO coordinator_operations VALUES(?,?,?,?) ON CONFLICT(operationId) DO UPDATE SET state=excluded.state,record=excluded.record').run(record.operationId, record.requestDigest, record.state, bytes); }); }
@@ -5018,7 +6173,8 @@ class WorkspaceCoordinator {
             this.recover(id);
         return r.receipt;
     } if (r.state !== 'aborted')
-        this.recover(id); return; }
+        this.recover(id); const reconciled = this.record(id, digest); if (digest && reconciled.state === 'aborted' && reconciled.participants.some(p => !p.planDigest))
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('OPERATION_CONFLICT', 'This operation was confirmed not committed before every participant was prepared. Retry the retained edits with a new operation ID.', 'not-committed'); return; }
     commit(operationId, digest, plans, receipt, request) {
         const prior = this.receipt(operationId, digest);
         if (prior)
@@ -5087,8 +6243,14 @@ class WorkspaceCoordinator {
                 lease.close();
                 throw e;
             } });
-            const plans = stores.map(({ store, p }) => { const journal = store.readJournal(id); if (journal.scope !== 'coordinated' || journal.coordinatorId !== this.id || journal.requestDigest !== r.requestDigest || (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(journal.receipt) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(r.receipt) || (p.planDigest && p.planDigest !== journal.planDigest))
-                throw new Error('Coordinated plan mismatch'); return { store, journal }; });
+            const plans = stores.flatMap(({ store, p }) => {
+                if (r.state === 'preparing' && !p.planDigest && store.abortUnprepared(id, p.expectedGeneration))
+                    return [];
+                const journal = store.readJournal(id);
+                if (journal.scope !== 'coordinated' || journal.coordinatorId !== this.id || journal.requestDigest !== r.requestDigest || (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(journal.receipt) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(r.receipt) || (p.planDigest && p.planDigest !== journal.planDigest))
+                    throw new Error('Coordinated plan mismatch');
+                return [{ store, journal }];
+            });
             if (r.state === 'commit') {
                 plans.forEach(p => p.store.publish(p.journal, true));
                 plans.forEach(p => p.store.apply(p.journal, true));
@@ -5097,11 +6259,11 @@ class WorkspaceCoordinator {
             }
             else {
                 plans.forEach(p => p.store.undo(p.journal));
-                r = { ...r, state: 'aborted' };
+                r = { ...r, state: 'aborted', participants: r.participants.map(p => ({ ...p, planDigest: plans.find(plan => plan.journal.rootId === p.rootId)?.journal.planDigest ?? p.planDigest })) };
             }
             this.save(r);
         }
-        catch (e) {
+        catch {
             try {
                 for (const participant of this.record(id).participants)
                     this.stores.get(participant.rootId)?.markBlocked();
@@ -5119,6 +6281,18 @@ class WorkspaceCoordinator {
             }
             this.recovering.delete(id);
         }
+    }
+    /** Empty participant staging is recoverable only under its original durable abort. */
+    recoverUnprepared(operationId, rootId) {
+        if (!this.db.prepare('SELECT operationId FROM coordinator_operations WHERE operationId=?').get(operationId))
+            return false;
+        let record = this.record(operationId);
+        const participant = record.participants.find(p => p.rootId === rootId);
+        if (!participant || participant.planDigest || !['preparing', 'aborted'].includes(record.state))
+            return false;
+        this.recover(operationId);
+        record = this.record(operationId);
+        return record.state === 'aborted';
     }
     assertUnreferenced(universeId, removedIds, validatedProjectIds) {
         if (!removedIds.length)
@@ -5219,17 +6393,20 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:crypto */ "node:crypto");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var node_sqlite__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! node:sqlite */ "node:sqlite");
-/* harmony import */ var node_sqlite__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(node_sqlite__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
-/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
-/* harmony import */ var _domain_manuscript__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../domain/manuscript */ "./src/domain/manuscript.ts");
-/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
-/* harmony import */ var _domain_calendar__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../domain/calendar */ "./src/domain/calendar.ts");
-/* harmony import */ var _application_universe__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../application/universe */ "./src/application/universe.ts");
-/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+/* harmony import */ var node_os__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:os */ "node:os");
+/* harmony import */ var node_os__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_os__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var node_sqlite__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! node:sqlite */ "node:sqlite");
+/* harmony import */ var node_sqlite__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(node_sqlite__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
+/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
+/* harmony import */ var _domain_manuscript__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../domain/manuscript */ "./src/domain/manuscript.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _domain_calendar__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../domain/calendar */ "./src/domain/calendar.ts");
+/* harmony import */ var _application_universe__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../application/universe */ "./src/application/universe.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+
 
 
 
@@ -5256,7 +6433,7 @@ CREATE TABLE workspace_versions(recordVersion TEXT PRIMARY KEY,recordId TEXT NOT
 const WORKSPACE_TABLES = ['workspace_assets', 'workspace_codes', 'workspace_counters', 'workspace_features', 'workspace_files', 'workspace_records', 'workspace_relationships', 'workspace_versions'];
 const lexical = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const ensure = (v, message = 'Workspace integrity validation failed.') => { if (!v)
-    throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('INTEGRITY_MISMATCH', message, 'unknown'); };
+    throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('INTEGRITY_MISMATCH', message, 'unknown'); };
 function transact(db, fn) { db.exec('BEGIN IMMEDIATE'); try {
     fn();
     db.exec('COMMIT');
@@ -5293,7 +6470,7 @@ class WorkspaceStore {
         }
         const features = this.db.prepare('SELECT * FROM workspace_features').all();
         if (features.length !== 1 || features[0].name !== 'workspace-content' || features[0].version !== 1)
-            throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('UNSUPPORTED_VERSION', 'This workspace feature schema is unsupported.');
+            throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('UNSUPPORTED_VERSION', 'This workspace feature schema is unsupported.');
         this.installed = true;
     }
     attach() { this.ledger?.register(this); }
@@ -5301,12 +6478,12 @@ class WorkspaceStore {
     featureInstalled() { return this.installed; }
     initializeFeature() { this.health(); if (!this.installed) {
         transact(this.db, () => this.db.exec(WORKSPACE_DDL));
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, 'database'));
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, 'database'));
         this.installed = true;
-    } for (const category of new Set([...Object.values(_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory), 'images', 'history/objects', 'database/operations']))
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(this.location, category); }
+    } for (const category of new Set([...Object.values(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory), 'images', 'history/objects', 'database/operations']))
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(this.location, category); }
     assertReady() { if (this.blocked)
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('RECOVERY_REQUIRED', 'Reconcile the original workspace operation before continuing.', 'unknown'); this.health(); }
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('RECOVERY_REQUIRED', 'Reconcile the original workspace operation before continuing.', 'unknown'); this.health(); }
     identity() { this.health(); return this.authority(); }
     indexes() { if (!this.installed)
         return { records: [], files: [], relationships: [], codes: [], counters: { event: '0', decision: '0', story: '0', chapter: '0' }, assets: [], versions: [] }; return { records: this.db.prepare('SELECT * FROM workspace_records ORDER BY id').all(), files: this.db.prepare('SELECT * FROM workspace_files ORDER BY relativePath').all(), relationships: this.db.prepare('SELECT * FROM workspace_relationships ORDER BY sourceId,relation,targetId').all(), codes: this.db.prepare('SELECT * FROM workspace_codes ORDER BY recordId').all(), counters: { event: String(this.db.prepare("SELECT issued FROM workspace_counters WHERE kind='event'").get()?.issued), decision: String(this.db.prepare("SELECT issued FROM workspace_counters WHERE kind='decision'").get()?.issued), story: String(this.db.prepare("SELECT issued FROM workspace_counters WHERE kind='story'").get()?.issued), chapter: String(this.db.prepare("SELECT issued FROM workspace_counters WHERE kind='chapter'").get()?.issued) }, assets: this.db.prepare('SELECT * FROM workspace_assets ORDER BY id').all(), versions: this.db.prepare('SELECT * FROM workspace_versions ORDER BY recordVersion').all() }; }
@@ -5315,98 +6492,98 @@ class WorkspaceStore {
         const m = this.authority(), indexes = this.indexes();
         this.assertPlan(indexes);
         const records = [], manuscripts = {};
-        ensure((0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(indexes.counters.event) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(indexes.counters.decision));
+        ensure((0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(indexes.counters.event) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(indexes.counters.decision));
         for (const r of indexes.records) {
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(r.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(r.recordVersion) && [0, 1].includes(r.tombstone) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory, r.recordType) && r.relativePath === `${_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory[r.recordType]}/${r.id}.json`);
-            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, r.relativePath);
-            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === r.sha256, 'Workspace file/catalog mismatch.');
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.recordVersion) && [0, 1].includes(r.tombstone) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory, r.recordType) && r.relativePath === `${_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory[r.recordType]}/${r.id}.json`);
+            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, r.relativePath);
+            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === r.sha256, 'Workspace file/catalog mismatch.');
             if (r.tombstone)
                 continue;
-            const record = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(bytes);
-            ensure((0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.validateWorkspaceRecord)(record));
+            const record = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)(bytes);
+            ensure((0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.validateWorkspaceRecord)(record));
             const typed = record;
-            ensure(typed.id === r.id && typed.recordVersion === r.recordVersion && typed.recordType === r.recordType && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(typed.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(m.owner) && typed.universeId === m.universeId);
+            ensure(typed.id === r.id && typed.recordVersion === r.recordVersion && typed.recordType === r.recordType && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(typed.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(m.owner) && typed.universeId === m.universeId);
             records.push(typed);
             if (typed.recordType === 'chapter') {
-                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, typed.data.formatting.text.relativePath);
+                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, typed.data.formatting.text.relativePath);
                 const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === typed.data.formatting.text.sha256 && bytes.length.toString() === typed.data.formatting.text.byteLength && Array.from(text).length.toString() === typed.data.formatting.text.scalarLength);
-                (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_6__.assertManuscript)(text, typed.data.formatting.paragraphs);
+                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === typed.data.formatting.text.sha256 && bytes.length.toString() === typed.data.formatting.text.byteLength && Array.from(text).length.toString() === typed.data.formatting.text.scalarLength);
+                (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_7__.assertManuscript)(text, typed.data.formatting.paragraphs);
                 manuscripts[typed.id] = text;
             }
         }
         for (const f of indexes.files) {
-            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, f.relativePath);
-            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === f.sha256 && bytes.length.toString() === f.byteLength);
+            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, f.relativePath);
+            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === f.sha256 && bytes.length.toString() === f.byteLength);
         }
         for (const a of indexes.assets) {
-            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, a.relativePath);
-            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === a.sha256 && bytes.length.toString() === a.byteLength);
+            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, a.relativePath);
+            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === a.sha256 && bytes.length.toString() === a.byteLength);
         }
         const relationships = records.flatMap(r => this.relationships(r)).sort((a, b) => lexical(a.sourceId, b.sourceId) || lexical(a.relation, b.relation) || lexical(a.targetId, b.targetId));
-        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(relationships) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(indexes.relationships));
-        const codes = records.filter((r) => r.recordType === 'event' || r.recordType === 'decision').map(r => ({ recordId: r.id, code: r.data.code, codeKey: (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.canonicalCodeKey)(r.data.code) })).sort((a, b) => lexical(a.recordId, b.recordId));
-        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(codes) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(indexes.codes));
+        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(relationships) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(indexes.relationships));
+        const codes = records.filter((r) => r.recordType === 'event' || r.recordType === 'decision').map(r => ({ recordId: r.id, code: r.data.code, codeKey: (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.canonicalCodeKey)(r.data.code) })).sort((a, b) => lexical(a.recordId, b.recordId));
+        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(codes) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(indexes.codes));
         for (const v of indexes.versions) {
-            const r = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, v.jsonPath));
-            ensure((0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.validateWorkspaceRecord)(r));
+            const r = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, v.jsonPath));
+            ensure((0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.validateWorkspaceRecord)(r));
             const record = r;
-            ensure(record.id === v.recordId && record.recordVersion === v.recordVersion && record.recordType === v.recordType && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(record.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(m.owner) && record.universeId === m.universeId);
+            ensure(record.id === v.recordId && record.recordVersion === v.recordVersion && record.recordType === v.recordType && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(record.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(m.owner) && record.universeId === m.universeId);
             if (record.recordType === 'chapter') {
                 ensure(v.manuscriptPath);
-                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, v.manuscriptPath), text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === record.data.formatting.text.sha256 && bytes.length.toString() === record.data.formatting.text.byteLength && Array.from(text).length.toString() === record.data.formatting.text.scalarLength);
-                (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_6__.assertManuscript)(text, record.data.formatting.paragraphs);
+                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, v.manuscriptPath), text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === record.data.formatting.text.sha256 && bytes.length.toString() === record.data.formatting.text.byteLength && Array.from(text).length.toString() === record.data.formatting.text.scalarLength);
+                (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_7__.assertManuscript)(text, record.data.formatting.paragraphs);
             }
         }
         if (m.owner.kind === 'universe')
-            (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.assertWorkspaceState)(records);
+            (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.assertWorkspaceState)(records);
         return { owner: m.owner, rootId: m.rootId, universeId: m.universeId, generation: m.generation, records, manuscripts, assets: indexes.assets.map(({ id, sha256, mediaType }) => ({ id, sha256, mediaType })), counters: indexes.counters };
     }
     readAsset(id) { this.assertReady(); const a = this.indexes().assets.find(a => a.id === id); if (!a)
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('VALIDATION', 'The managed image does not exist.'); const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, a.relativePath); ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === a.sha256); return { id: a.id, sha256: a.sha256, mediaType: a.mediaType, base64: bytes.toString('base64') }; }
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('VALIDATION', 'The managed image does not exist.'); const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, a.relativePath); ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === a.sha256); return { id: a.id, sha256: a.sha256, mediaType: a.mediaType, base64: bytes.toString('base64') }; }
     hasIdentity(id) { if (!this.installed)
         return false; return !!this.db.prepare('SELECT id FROM workspace_records WHERE id=?').get(id); }
     receipt(operationId, digest) { this.assertReady(); const op = this.db.prepare('SELECT * FROM committed_operations WHERE operationId=?').get(operationId); if (!op)
-        return; ensure(typeof op.receiptData === 'string' && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(op.receiptData) === op.resultDigest); if (digest && op.requestDigest !== digest)
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('OPERATION_CONFLICT', 'This operation ID belongs to different content.'); const r = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(Buffer.from(String(op.receiptData))); if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validWorkspaceReceipt)(r))
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('OPERATION_CONFLICT', 'This operation ID belongs to another command.'); return r; }
+        return; ensure(typeof op.receiptData === 'string' && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(op.receiptData) === op.resultDigest); if (digest && op.requestDigest !== digest)
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('OPERATION_CONFLICT', 'This operation ID belongs to different content.'); const r = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)(Buffer.from(String(op.receiptData))); if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validWorkspaceReceipt)(r))
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('OPERATION_CONFLICT', 'This operation ID belongs to another command.'); return r; }
     prepare(operationId, digest, commit, receipt, request, coordinated = false) {
         this.assertReady();
-        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(request)) === digest && this.validOperationRequest(request, operationId), 'The original operation request does not match its digest.');
+        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(request)) === digest && this.validOperationRequest(request, operationId), 'The original operation request does not match its digest.');
         const m = this.authority();
         if (commit.expectedGeneration !== m.generation)
-            throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('GENERATION_CONFLICT', 'The owning unit changed. Reload before saving.');
+            throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('GENERATION_CONFLICT', 'The owning unit changed. Reload before saving.');
         this.initializeFeature();
         const existing = `database/operations/${operationId}/journal.json`;
         if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, existing))) {
             const j = this.readJournal(operationId);
             if (j.requestDigest !== digest)
-                throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('OPERATION_CONFLICT', 'The operation journal belongs to different content.');
-            ensure(j.expectedGeneration === m.generation && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.before) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(this.indexes()), 'Retry no longer matches its original prepared state.');
+                throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('OPERATION_CONFLICT', 'The operation journal belongs to different content.');
+            ensure(j.expectedGeneration === m.generation && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.before) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(this.indexes()), 'Retry no longer matches its original prepared state.');
             const aborted = `database/operations/${operationId}/aborted.json`;
             ensure(node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, aborted)), 'Reconcile the original unfinished operation before retrying.');
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.removeManagedBytes)(this.location, aborted, (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, aborted)));
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.removeManagedBytes)(this.location, aborted, (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, aborted)));
             return j;
         }
         const before = this.indexes(), after = { records: [], files: [], relationships: [], codes: [], counters: commit.counters, assets: [...before.assets], versions: [...before.versions] }, files = [];
         const stage = (relativePath, bytes) => { let prior = null; try {
-            prior = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, relativePath);
+            prior = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, relativePath);
         }
         catch (e) {
             if (e.code !== 'ENOENT')
                 throw e;
-        } if (prior && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(prior) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes))
-            return; files.push({ relativePath, before: prior?.toString('base64') ?? null, after: bytes.toString('base64'), beforeHash: prior ? (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(prior) : null, afterHash: (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes), beforeByteLength: prior?.length.toString() ?? null, byteLength: bytes.length.toString() }); };
+        } if (prior && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(prior) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes))
+            return; files.push({ relativePath, before: prior?.toString('base64') ?? null, after: bytes.toString('base64'), beforeHash: prior ? (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(prior) : null, afterHash: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), beforeByteLength: prior?.length.toString() ?? null, byteLength: bytes.length.toString() }); };
         const live = new Set(commit.records.map(r => r.id));
         for (const r of before.records)
             if (!live.has(r.id))
-                after.records.push({ ...r, tombstone: 1, deletedVersion: r.deletedVersion ?? receipt.units.flatMap(u => u.records).find(x => x.id === r.id && x.deleted)?.recordVersion ?? (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)() });
+                after.records.push({ ...r, tombstone: 1, deletedVersion: r.deletedVersion ?? receipt.units.flatMap(u => u.records).find(x => x.id === r.id && x.deleted)?.recordVersion ?? (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)() });
         for (const record of commit.records) {
-            const relativePath = `${_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory[record.recordType]}/${record.id}.json`, bytes = Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)(record));
-            after.records.push({ id: record.id, recordType: record.recordType, recordVersion: record.recordVersion, relativePath, sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes), tombstone: 0, deletedVersion: null });
+            const relativePath = `${_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory[record.recordType]}/${record.id}.json`, bytes = Buffer.from((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.jsonBytes)(record));
+            after.records.push({ id: record.id, recordType: record.recordType, recordVersion: record.recordVersion, relativePath, sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), tombstone: 0, deletedVersion: null });
             stage(relativePath, bytes);
-            after.files.push({ relativePath, recordId: record.id, recordVersion: record.recordVersion, role: 'json', sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes), byteLength: bytes.length.toString() });
+            after.files.push({ relativePath, recordId: record.id, recordVersion: record.recordVersion, role: 'json', sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), byteLength: bytes.length.toString() });
             const jsonPath = `history/objects/${record.recordVersion}/${relativePath}`, manuscriptPath = record.recordType === 'chapter' ? `history/objects/${record.recordVersion}/chapters/${record.id}.wrt` : null;
             if (!after.versions.some(v => v.recordVersion === record.recordVersion)) {
                 stage(jsonPath, bytes);
@@ -5415,23 +6592,23 @@ class WorkspaceStore {
             if (record.recordType === 'chapter') {
                 const text = commit.manuscripts[record.id];
                 ensure(typeof text === 'string');
-                (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_6__.assertManuscript)(text, record.data.formatting.paragraphs);
+                (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_7__.assertManuscript)(text, record.data.formatting.paragraphs);
                 const bytes = Buffer.from(text);
-                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === record.data.formatting.text.sha256);
+                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === record.data.formatting.text.sha256);
                 const p = record.data.formatting.text.relativePath;
                 stage(p, bytes);
                 if (manuscriptPath)
                     stage(manuscriptPath, bytes);
-                after.files.push({ relativePath: p, recordId: record.id, recordVersion: record.recordVersion, role: 'wrt', sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes), byteLength: bytes.length.toString() });
+                after.files.push({ relativePath: p, recordId: record.id, recordVersion: record.recordVersion, role: 'wrt', sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), byteLength: bytes.length.toString() });
             }
             if (record.recordType === 'event' || record.recordType === 'decision')
-                after.codes.push({ recordId: record.id, code: record.data.code, codeKey: (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.canonicalCodeKey)(record.data.code) });
+                after.codes.push({ recordId: record.id, code: record.data.code, codeKey: (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.canonicalCodeKey)(record.data.code) });
             this.relationships(record).forEach(r => after.relationships.push(r));
         }
         for (const asset of commit.assets) {
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(asset.id) && /^[a-f0-9]{64}$/.test(asset.sha256) && ['image/png', 'image/jpeg', 'image/webp'].includes(asset.mediaType));
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(asset.id) && /^[a-f0-9]{64}$/.test(asset.sha256) && ['image/png', 'image/jpeg', 'image/webp'].includes(asset.mediaType));
             const bytes = Buffer.from(asset.base64, 'base64');
-            ensure(bytes.toString('base64') === asset.base64 && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === asset.sha256);
+            ensure(bytes.toString('base64') === asset.base64 && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === asset.sha256);
             const existing = after.assets.find(a => a.id === asset.id);
             if (existing) {
                 ensure(existing.sha256 === asset.sha256 && existing.mediaType === asset.mediaType);
@@ -5448,10 +6625,10 @@ class WorkspaceStore {
         after.relationships.sort((a, b) => lexical(a.sourceId, b.sourceId) || lexical(a.relation, b.relation) || lexical(a.targetId, b.targetId));
         after.codes.sort((a, b) => lexical(a.recordId, b.recordId));
         const plan = { schemaVersion: 1, scope: coordinated ? 'coordinated' : 'single-unit', command: 'workspace.publish', owner: m.owner, rootId: m.rootId, universeId: m.universeId, operationId, requestDigest: digest, request, expectedGeneration: m.generation, targetGeneration: (BigInt(m.generation) + 1n).toString(), fencingToken: m.sessionToken, coordinatorId: coordinated ? this.ledger.id : null, before, after, files, receipt };
-        const journal = { ...plan, planDigest: (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(plan)) };
+        const journal = { ...plan, planDigest: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(plan)) };
         this.validateJournalPlans(journal);
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(this.location, `database/operations/${operationId}`);
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.writeExclusive)(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, existing), (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)(journal));
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(this.location, `database/operations/${operationId}`);
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.writeExclusive)(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, existing), (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.jsonBytes)(journal));
         return journal;
     }
     relationships(r) { const result = []; const add = (relation, targetId) => result.push({ sourceId: r.id, relation, targetId, targetUniverseId: r.universeId }); switch (r.recordType) {
@@ -5497,10 +6674,10 @@ class WorkspaceStore {
     } return result; }
     publish(j, recovery = false) { this.health(); const m = this.authority(); ensure(m.generation === j.expectedGeneration || recovery && m.generation === j.targetGeneration); if (!recovery)
         ensure(m.sessionToken === j.fencingToken); for (const file of j.files) {
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(this.location, node_path__WEBPACK_IMPORTED_MODULE_1___default().posix.dirname(file.relativePath));
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(this.location, node_path__WEBPACK_IMPORTED_MODULE_1___default().posix.dirname(file.relativePath));
         let current = null;
         try {
-            current = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, file.relativePath));
+            current = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, file.relativePath));
         }
         catch (e) {
             if (e.code !== 'ENOENT')
@@ -5508,12 +6685,12 @@ class WorkspaceStore {
         }
         ensure(current === file.beforeHash || current === file.afterHash, 'Unexpected live file preserved.');
         if (current !== file.afterHash)
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.location, file.relativePath, Buffer.from(file.after, 'base64'), current);
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishManagedBytes)(this.location, file.relativePath, Buffer.from(file.after, 'base64'), current);
     } }
     apply(j, recovery = false) { this.health(); const op = this.db.prepare('SELECT * FROM committed_operations WHERE operationId=?').get(j.operationId); if (op) {
-        ensure(op.requestDigest === j.requestDigest && op.receiptData === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.receipt));
+        ensure(op.requestDigest === j.requestDigest && op.receiptData === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.receipt));
         return;
-    } transact(this.db, () => { const m = this.authority(); ensure(m.generation === j.expectedGeneration && (!recovery ? m.sessionToken === j.fencingToken : true)); ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.before), 'Prepared catalog expectations changed.'); this.writeIndexes(j.after); this.db.prepare('UPDATE unit_meta SET generation=? WHERE singleton=1').run(j.targetGeneration); const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.receipt); this.db.prepare('INSERT INTO committed_operations VALUES(?,?,?,?,?)').run(j.operationId, j.requestDigest, j.targetGeneration, (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes), bytes); }); }
+    } transact(this.db, () => { const m = this.authority(); ensure(m.generation === j.expectedGeneration && (!recovery ? m.sessionToken === j.fencingToken : true)); ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.before), 'Prepared catalog expectations changed.'); this.writeIndexes(j.after); this.db.prepare('UPDATE unit_meta SET generation=? WHERE singleton=1').run(j.targetGeneration); const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.receipt); this.db.prepare('INSERT INTO committed_operations VALUES(?,?,?,?,?)').run(j.operationId, j.requestDigest, j.targetGeneration, (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), bytes); }); }
     writeIndexes(p) { for (const table of ['workspace_records', 'workspace_files', 'workspace_relationships', 'workspace_codes', 'workspace_counters', 'workspace_assets', 'workspace_versions'])
         this.db.exec(`DELETE FROM ${table}`); for (const r of p.records)
         this.db.prepare('INSERT INTO workspace_records VALUES(?,?,?,?,?,?,?)').run(r.id, r.recordType, r.recordVersion, r.relativePath, r.sha256, r.tombstone, r.deletedVersion); for (const f of p.files)
@@ -5523,16 +6700,16 @@ class WorkspaceStore {
         this.db.prepare('INSERT INTO workspace_counters VALUES(?,?)').run(kind, p.counters[kind]); for (const a of p.assets)
         this.db.prepare('INSERT INTO workspace_assets VALUES(?,?,?,?,?)').run(a.id, a.sha256, a.mediaType, a.relativePath, a.byteLength); for (const v of p.versions)
         this.db.prepare('INSERT INTO workspace_versions VALUES(?,?,?,?,?)').run(v.recordVersion, v.recordId, v.recordType, v.jsonPath, v.manuscriptPath); }
-    finalize(j) { this.health(); ensure(this.authority().generation === j.targetGeneration && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.after)); for (const f of j.files)
-        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, f.relativePath)) === f.afterHash); this.marker(j, 'finalized'); this.blocked = false; }
+    finalize(j) { this.health(); ensure(this.authority().generation === j.targetGeneration && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.after)); for (const f of j.files)
+        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, f.relativePath)) === f.afterHash); this.marker(j, 'finalized'); this.blocked = false; }
     marker(j, state) { const relative = `database/operations/${j.operationId}/${state}.json`, value = { schemaVersion: 1, operationId: j.operationId, requestDigest: j.requestDigest }; if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, relative)))
-        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, relative))) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(value));
+        ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, relative))) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(value));
     else
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishMarker)(this.location, relative, (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.jsonBytes)(value)); }
-    undo(j) { this.health(); ensure(this.authority().generation === j.expectedGeneration && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.before)); for (const f of [...j.files].reverse()) {
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishMarker)(this.location, relative, (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.jsonBytes)(value)); }
+    undo(j) { this.health(); ensure(this.authority().generation === j.expectedGeneration && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.before)); for (const f of [...j.files].reverse()) {
         let current = null;
         try {
-            current = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, f.relativePath));
+            current = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, f.relativePath));
         }
         catch (e) {
             if (e.code !== 'ENOENT')
@@ -5542,11 +6719,27 @@ class WorkspaceStore {
         if (current === f.beforeHash)
             continue;
         if (f.before === null)
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.removeManagedBytes)(this.location, f.relativePath, f.afterHash);
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.removeManagedBytes)(this.location, f.relativePath, f.afterHash);
         else
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.publishManagedBytes)(this.location, f.relativePath, Buffer.from(f.before, 'base64'), current);
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.publishManagedBytes)(this.location, f.relativePath, Buffer.from(f.before, 'base64'), current);
     } this.marker(j, 'aborted'); this.blocked = false; }
     markBlocked() { this.blocked = true; }
+    /** Before a coordinator reaches prepared, a participant may have no journal yet. */
+    abortUnprepared(operationId, expectedGeneration) {
+        this.health();
+        ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(operationId));
+        try {
+            node_fs__WEBPACK_IMPORTED_MODULE_0___default().lstatSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, `database/operations/${operationId}/journal.json`));
+            return false;
+        }
+        catch (error) {
+            if (error.code !== 'ENOENT')
+                throw error;
+        }
+        ensure(this.authority().generation === expectedGeneration && !this.db.prepare('SELECT operationId FROM committed_operations WHERE operationId=?').get(operationId), 'The unprepared participant changed or has committed publication evidence.');
+        this.blocked = false;
+        return true;
+    }
     validOperationRequest(value, operationId) {
         if (typeof value !== 'object' || !value)
             return false;
@@ -5554,39 +6747,39 @@ class WorkspaceStore {
         if (v.protocolVersion !== 1)
             return false;
         if (v.command === 'workspace.mutate')
-            return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(v, ['protocolVersion', 'command', 'submittedEditorRevision', 'units']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validWorkspaceMutation)({ operationId, submittedEditorRevision: v.submittedEditorRevision, units: v.units });
+            return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(v, ['protocolVersion', 'command', 'submittedEditorRevision', 'units']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validWorkspaceMutation)({ operationId, submittedEditorRevision: v.submittedEditorRevision, units: v.units });
         if (v.command === 'workspace.asset.import')
-            return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(v, ['protocolVersion', 'command', 'owner', 'expectedGeneration', 'asset']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validOwner)(v.owner) && v.owner.kind === 'universe' && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(v.expectedGeneration) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validAssetData)(v.asset);
+            return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(v, ['protocolVersion', 'command', 'owner', 'expectedGeneration', 'asset']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validOwner)(v.owner) && v.owner.kind === 'universe' && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(v.expectedGeneration) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validAssetData)(v.asset);
         if (v.command === 'workspace.restore')
-            return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(v, ['protocolVersion', 'command', 'submittedEditorRevision', 'plans']) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(v.submittedEditorRevision) && Array.isArray(v.plans) && v.plans.length > 0 && v.plans.length <= 2 && v.plans.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(p, ['owner', 'plan']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(p.plan, ['expectedGeneration', 'records', 'manuscripts', 'counters', 'assets']) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(p.plan.expectedGeneration) && Array.isArray(p.plan.records) && p.plan.records.every(_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.validateWorkspaceRecord) && typeof p.plan.manuscripts === 'object' && p.plan.manuscripts !== null && !Array.isArray(p.plan.manuscripts) && Object.values(p.plan.manuscripts).every(t => typeof t === 'string') && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(p.plan.counters, ['event', 'decision', 'story', 'chapter']) && Object.values(p.plan.counters).every(_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger) && Array.isArray(p.plan.assets) && p.plan.assets.every(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validAssetData));
+            return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(v, ['protocolVersion', 'command', 'submittedEditorRevision', 'plans']) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(v.submittedEditorRevision) && Array.isArray(v.plans) && v.plans.length > 0 && v.plans.length <= 2 && v.plans.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(p, ['owner', 'plan']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(p.plan, ['expectedGeneration', 'records', 'manuscripts', 'counters', 'assets']) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(p.plan.expectedGeneration) && Array.isArray(p.plan.records) && p.plan.records.every(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.validateWorkspaceRecord) && typeof p.plan.manuscripts === 'object' && p.plan.manuscripts !== null && !Array.isArray(p.plan.manuscripts) && Object.values(p.plan.manuscripts).every(t => typeof t === 'string') && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(p.plan.counters, ['event', 'decision', 'story', 'chapter']) && Object.values(p.plan.counters).every(_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger) && Array.isArray(p.plan.assets) && p.plan.assets.every(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validAssetData));
         return false;
     }
     assertPlan(value) {
-        ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(value, ['records', 'files', 'relationships', 'codes', 'counters', 'assets', 'versions']));
+        ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(value, ['records', 'files', 'relationships', 'codes', 'counters', 'assets', 'versions']));
         const p = value, m = this.authority();
-        ensure([p.records, p.files, p.relationships, p.codes, p.assets, p.versions].every(Array.isArray) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(p.counters, ['event', 'decision', 'story', 'chapter']) && Object.values(p.counters).every(_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger));
+        ensure([p.records, p.files, p.relationships, p.codes, p.assets, p.versions].every(Array.isArray) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(p.counters, ['event', 'decision', 'story', 'chapter']) && Object.values(p.counters).every(_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger));
         const digest = (s) => typeof s === 'string' && /^[a-f0-9]{64}$/.test(s), unique = (values) => new Set(values).size === values.length;
         for (const r of p.records)
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(r, ['id', 'recordType', 'recordVersion', 'relativePath', 'sha256', 'tombstone', 'deletedVersion']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(r.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(r.recordVersion) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory, r.recordType) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.ownerKindForType)(r.recordType) === m.owner.kind && r.relativePath === `${_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory[r.recordType]}/${r.id}.json` && digest(r.sha256) && [0, 1].includes(r.tombstone) && (r.tombstone ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(r.deletedVersion) : r.deletedVersion === null));
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(r, ['id', 'recordType', 'recordVersion', 'relativePath', 'sha256', 'tombstone', 'deletedVersion']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.recordVersion) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory, r.recordType) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.ownerKindForType)(r.recordType) === m.owner.kind && r.relativePath === `${_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory[r.recordType]}/${r.id}.json` && digest(r.sha256) && [0, 1].includes(r.tombstone) && (r.tombstone ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.deletedVersion) : r.deletedVersion === null));
         ensure(unique(p.records.map(r => r.id)) && unique(p.records.map(r => r.relativePath)));
         for (const f of p.files) {
             const r = p.records.find(r => r.id === f.recordId && !r.tombstone);
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(f, ['relativePath', 'recordId', 'recordVersion', 'role', 'sha256', 'byteLength']) && r && f.recordVersion === r.recordVersion && digest(f.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(f.byteLength) && (f.role === 'json' && f.relativePath === r.relativePath && f.sha256 === r.sha256 || f.role === 'wrt' && r.recordType === 'chapter' && f.relativePath === `chapters/${r.id}.wrt`));
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(f, ['relativePath', 'recordId', 'recordVersion', 'role', 'sha256', 'byteLength']) && r && f.recordVersion === r.recordVersion && digest(f.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(f.byteLength) && (f.role === 'json' && f.relativePath === r.relativePath && f.sha256 === r.sha256 || f.role === 'wrt' && r.recordType === 'chapter' && f.relativePath === `chapters/${r.id}.wrt`));
         }
         ensure(unique(p.files.map(f => f.relativePath)) && p.records.filter(r => !r.tombstone).every(r => p.files.filter(f => f.recordId === r.id).length === (r.recordType === 'chapter' ? 2 : 1)));
         for (const a of p.assets)
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(a, ['id', 'sha256', 'mediaType', 'relativePath', 'byteLength']) && m.owner.kind === 'universe' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(a.id) && digest(a.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(a.byteLength) && ['image/png', 'image/jpeg', 'image/webp'].includes(a.mediaType) && a.relativePath === `images/${a.id}.${a.mediaType === 'image/png' ? 'png' : a.mediaType === 'image/jpeg' ? 'jpg' : 'webp'}`);
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(a, ['id', 'sha256', 'mediaType', 'relativePath', 'byteLength']) && m.owner.kind === 'universe' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(a.id) && digest(a.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(a.byteLength) && ['image/png', 'image/jpeg', 'image/webp'].includes(a.mediaType) && a.relativePath === `images/${a.id}.${a.mediaType === 'image/png' ? 'png' : a.mediaType === 'image/jpeg' ? 'jpg' : 'webp'}`);
         ensure(unique(p.assets.map(a => a.id)) && unique(p.assets.map(a => a.sha256 + '/' + a.mediaType)));
         for (const v of p.versions)
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(v, ['recordVersion', 'recordId', 'recordType', 'jsonPath', 'manuscriptPath']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(v.recordVersion) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(v.recordId) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory, v.recordType) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.ownerKindForType)(v.recordType) === m.owner.kind && v.jsonPath === `history/objects/${v.recordVersion}/${_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.recordCategory[v.recordType]}/${v.recordId}.json` && (v.recordType === 'chapter' ? v.manuscriptPath === `history/objects/${v.recordVersion}/chapters/${v.recordId}.wrt` : v.manuscriptPath === null));
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(v, ['recordVersion', 'recordId', 'recordType', 'jsonPath', 'manuscriptPath']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(v.recordVersion) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(v.recordId) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory, v.recordType) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.ownerKindForType)(v.recordType) === m.owner.kind && v.jsonPath === `history/objects/${v.recordVersion}/${_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory[v.recordType]}/${v.recordId}.json` && (v.recordType === 'chapter' ? v.manuscriptPath === `history/objects/${v.recordVersion}/chapters/${v.recordId}.wrt` : v.manuscriptPath === null));
         ensure(unique(p.versions.map(v => v.recordVersion)));
         for (const c of p.codes) {
             const r = p.records.find(r => r.id === c.recordId && !r.tombstone);
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(c, ['recordId', 'code', 'codeKey']) && r && ['event', 'decision'].includes(r.recordType) && typeof c.code === 'string' && c.codeKey === (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.canonicalCodeKey)(c.code));
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(c, ['recordId', 'code', 'codeKey']) && r && ['event', 'decision'].includes(r.recordType) && typeof c.code === 'string' && c.codeKey === (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.canonicalCodeKey)(c.code));
         }
         ensure(unique(p.codes.map(c => c.recordId)) && unique(p.codes.map(c => c.codeKey)));
         for (const r of p.relationships)
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(r, ['sourceId', 'relation', 'targetId', 'targetUniverseId']) && p.records.some(s => s.id === r.sourceId && !s.tombstone) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(r.targetId) && r.targetUniverseId === m.universeId && ['volume', 'story', 'character', 'depicts:main', 'depicts:flashback', 'decision', 'type', 'relevant-character', 'result-event', 'following-decision', 'maker', 'birth', 'background', 'faction'].includes(r.relation));
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(r, ['sourceId', 'relation', 'targetId', 'targetUniverseId']) && p.records.some(s => s.id === r.sourceId && !s.tombstone) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.targetId) && r.targetUniverseId === m.universeId && ['volume', 'story', 'character', 'depicts:main', 'depicts:flashback', 'decision', 'type', 'relevant-character', 'result-event', 'following-decision', 'maker', 'birth', 'background', 'faction'].includes(r.relation));
         ensure(unique(p.relationships.map(r => r.sourceId + '/' + r.relation + '/' + r.targetId)));
     }
     validateJournalPlans(j) {
@@ -5594,9 +6787,9 @@ class WorkspaceStore {
         this.assertPlan(j.after);
         ensure(BigInt(j.after.counters.event) >= BigInt(j.before.counters.event) && BigInt(j.after.counters.decision) >= BigInt(j.before.counters.decision) && BigInt(j.after.counters.story) >= BigInt(j.before.counters.story) && BigInt(j.after.counters.chapter) >= BigInt(j.before.counters.chapter));
         for (const a of j.before.assets)
-            ensure(j.after.assets.some(v => (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(v) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(a)));
+            ensure(j.after.assets.some(v => (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(v) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(a)));
         for (const v of j.before.versions)
-            ensure(j.after.versions.some(x => (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(x) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(v)));
+            ensure(j.after.versions.some(x => (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(x) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(v)));
         const allowed = new Map();
         for (const r of j.after.records)
             allowed.set(r.relativePath, r.sha256);
@@ -5623,35 +6816,35 @@ class WorkspaceStore {
             if (bytes === null)
                 throw new Error('Missing typed before bytes');
             return Buffer.from(bytes, 'base64');
-        } return (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, relative); };
+        } return (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, relative); };
         for (const p of [j.before, j.after]) {
             const records = [];
             for (const r of p.records) {
                 const bytes = bytesFor(r.relativePath, p === j.after);
-                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === r.sha256);
-                const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(bytes);
-                ensure((0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.validateWorkspaceRecord)(value));
+                ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === r.sha256);
+                const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)(bytes);
+                ensure((0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.validateWorkspaceRecord)(value));
                 const record = value;
-                ensure(record.id === r.id && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(record.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.owner) && record.universeId === j.universeId && record.recordType === r.recordType && record.recordVersion === r.recordVersion);
+                ensure(record.id === r.id && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(record.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.owner) && record.universeId === j.universeId && record.recordType === r.recordType && record.recordVersion === r.recordVersion);
                 if (r.tombstone)
                     continue;
                 records.push(record);
                 if (record.recordType === 'chapter') {
                     const bytes = bytesFor(record.data.formatting.text.relativePath, p === j.after), text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-                    (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_6__.assertManuscript)(text, record.data.formatting.paragraphs);
-                    ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) === record.data.formatting.text.sha256 && bytes.length.toString() === record.data.formatting.text.byteLength && Array.from(text).length.toString() === record.data.formatting.text.scalarLength);
+                    (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_7__.assertManuscript)(text, record.data.formatting.paragraphs);
+                    ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === record.data.formatting.text.sha256 && bytes.length.toString() === record.data.formatting.text.byteLength && Array.from(text).length.toString() === record.data.formatting.text.scalarLength);
                 }
             }
             const expected = records.flatMap(r => this.relationships(r)).sort((a, b) => lexical(a.sourceId, b.sourceId) || lexical(a.relation, b.relation) || lexical(a.targetId, b.targetId));
-            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(expected) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(p.relationships));
-            const codes = records.filter((r) => r.recordType === 'event' || r.recordType === 'decision').map(r => ({ recordId: r.id, code: r.data.code, codeKey: (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.canonicalCodeKey)(r.data.code) })).sort((a, b) => lexical(a.recordId, b.recordId));
-            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(codes) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(p.codes));
+            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(expected) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(p.relationships));
+            const codes = records.filter((r) => r.recordType === 'event' || r.recordType === 'decision').map(r => ({ recordId: r.id, code: r.data.code, codeKey: (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.canonicalCodeKey)(r.data.code) })).sort((a, b) => lexical(a.recordId, b.recordId));
+            ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(codes) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(p.codes));
             if (j.owner.kind === 'universe')
-                (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.assertWorkspaceState)(records);
+                (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.assertWorkspaceState)(records);
         }
     }
-    readJournal(id) { const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, `database/operations/${id}/journal.json`)); ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(value, ['schemaVersion', 'scope', 'command', 'owner', 'rootId', 'universeId', 'operationId', 'requestDigest', 'request', 'expectedGeneration', 'targetGeneration', 'fencingToken', 'coordinatorId', 'before', 'after', 'files', 'receipt', 'planDigest'])); const j = value, { planDigest, ...plan } = j, m = this.authority(); ensure(j.schemaVersion === 1 && j.command === 'workspace.publish' && ['single-unit', 'coordinated'].includes(j.scope) && (j.scope === 'single-unit' ? j.coordinatorId === null : (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(j.coordinatorId)) && j.operationId === id && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(id) && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(m.owner) && j.rootId === m.rootId && j.universeId === m.universeId && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(j.fencingToken) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(j.expectedGeneration) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_8__.unsignedInteger)(j.targetGeneration) && BigInt(j.targetGeneration) === BigInt(j.expectedGeneration) + 1n && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(plan)) === planDigest && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_4__.validWorkspaceReceipt)(j.receipt) && j.receipt.operationId === id && j.receipt.units.length === (j.scope === 'single-unit' ? 1 : 2) && j.receipt.units.some(u => (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(u.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.owner) && u.unitGeneration === j.targetGeneration) && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.request)) === j.requestDigest && this.validOperationRequest(j.request, id) && Array.isArray(j.files)); for (const f of j.files)
-        ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.closed)(f, ['relativePath', 'before', 'after', 'beforeHash', 'afterHash', 'beforeByteLength', 'byteLength']) && typeof f.relativePath === 'string' && typeof f.after === 'string' && Buffer.from(f.after, 'base64').toString('base64') === f.after && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(Buffer.from(f.after, 'base64')) === f.afterHash && Buffer.from(f.after, 'base64').length.toString() === f.byteLength && (f.before === null ? f.beforeHash === null && f.beforeByteLength === null : typeof f.before === 'string' && Buffer.from(f.before, 'base64').toString('base64') === f.before && (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(Buffer.from(f.before, 'base64')) === f.beforeHash && Buffer.from(f.before, 'base64').length.toString() === f.beforeByteLength)); this.assertPlan(j.before); this.assertPlan(j.after); const committed = this.db.prepare('SELECT operationId FROM committed_operations WHERE operationId=?').get(id); const advanced = BigInt(m.generation) > BigInt(committed ? j.targetGeneration : j.expectedGeneration); if (!advanced)
+    readJournal(id) { const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, `database/operations/${id}/journal.json`)); ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(value, ['schemaVersion', 'scope', 'command', 'owner', 'rootId', 'universeId', 'operationId', 'requestDigest', 'request', 'expectedGeneration', 'targetGeneration', 'fencingToken', 'coordinatorId', 'before', 'after', 'files', 'receipt', 'planDigest'])); const j = value, { planDigest, ...plan } = j, m = this.authority(); ensure(j.schemaVersion === 1 && j.command === 'workspace.publish' && ['single-unit', 'coordinated'].includes(j.scope) && (j.scope === 'single-unit' ? j.coordinatorId === null : (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(j.coordinatorId)) && j.operationId === id && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(id) && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(m.owner) && j.rootId === m.rootId && j.universeId === m.universeId && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(j.fencingToken) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(j.expectedGeneration) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(j.targetGeneration) && BigInt(j.targetGeneration) === BigInt(j.expectedGeneration) + 1n && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(plan)) === planDigest && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_5__.validWorkspaceReceipt)(j.receipt) && j.receipt.operationId === id && j.receipt.units.length === (j.scope === 'single-unit' ? 1 : 2) && j.receipt.units.some(u => (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(u.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.owner) && u.unitGeneration === j.targetGeneration) && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.request)) === j.requestDigest && this.validOperationRequest(j.request, id) && Array.isArray(j.files)); for (const f of j.files)
+        ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(f, ['relativePath', 'before', 'after', 'beforeHash', 'afterHash', 'beforeByteLength', 'byteLength']) && typeof f.relativePath === 'string' && typeof f.after === 'string' && Buffer.from(f.after, 'base64').toString('base64') === f.after && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(Buffer.from(f.after, 'base64')) === f.afterHash && Buffer.from(f.after, 'base64').length.toString() === f.byteLength && (f.before === null ? f.beforeHash === null && f.beforeByteLength === null : typeof f.before === 'string' && Buffer.from(f.before, 'base64').toString('base64') === f.before && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(Buffer.from(f.before, 'base64')) === f.beforeHash && Buffer.from(f.before, 'base64').length.toString() === f.beforeByteLength)); this.assertPlan(j.before); this.assertPlan(j.after); const committed = this.db.prepare('SELECT operationId FROM committed_operations WHERE operationId=?').get(id); const advanced = BigInt(m.generation) > BigInt(committed ? j.targetGeneration : j.expectedGeneration); if (!advanced)
         this.validateJournalPlans(j); return j; }
     recover() { try {
         this.health();
@@ -5659,9 +6852,12 @@ class WorkspaceStore {
             this.blocked = false;
             return;
         }
-        for (const id of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.checked)(this.location, 'database/operations', true)).sort()) {
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_7__.isUuid)(id));
-            const raw = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, `database/operations/${id}/journal.json`));
+        for (const id of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(this.location, 'database/operations', true)).sort()) {
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(id));
+            const directory = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(this.location, `database/operations/${id}`, true);
+            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(directory).length === 0 && this.ledger?.recoverUnprepared?.(id, this.authority().rootId))
+                continue;
+            const raw = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, `database/operations/${id}/journal.json`));
             if (!raw || typeof raw !== 'object' || !('command' in raw))
                 throw new Error('Unknown operation journal');
             if (raw.command !== 'workspace.publish') {
@@ -5671,7 +6867,7 @@ class WorkspaceStore {
             const j = this.readJournal(id);
             let op = this.db.prepare('SELECT * FROM committed_operations WHERE operationId=?').get(id);
             if (op)
-                ensure(op.requestDigest === j.requestDigest && op.receiptData === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(j.receipt));
+                ensure(op.requestDigest === j.requestDigest && op.receiptData === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.receipt));
             const finalized = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, `database/operations/${id}/finalized.json`)), aborted = node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, `database/operations/${id}/aborted.json`));
             ensure(!(finalized && aborted));
             if (j.scope === 'coordinated') {
@@ -5712,7 +6908,7 @@ class WorkspaceStore {
     }
     catch (e) {
         this.blocked = true;
-        throw e instanceof _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure ? new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure(e.code, e.message, 'unknown') : new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('RECOVERY_REQUIRED', 'Workspace evidence is incomplete. Preserve the folder and reconcile.', 'unknown');
+        throw e instanceof _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure ? new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure(e.code, e.message, 'unknown') : new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('RECOVERY_REQUIRED', 'Workspace evidence is incomplete. Preserve the folder and reconcile.', 'unknown');
     } }
     commit(operationId, digest, plan, receipt, request) { const prior = this.receipt(operationId, digest); if (prior)
         return prior; try {
@@ -5723,43 +6919,46 @@ class WorkspaceStore {
         this.finalize(j);
         return j.receipt;
     }
-    catch (e) {
+    catch {
         this.blocked = true;
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_9__.UniverseFailure('RECOVERY_REQUIRED', 'The workspace save outcome needs reconciliation. Retain the original operation and edits.', 'unknown');
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_10__.UniverseFailure('RECOVERY_REQUIRED', 'The workspace save outcome needs reconciliation. Retain the original operation and edits.', 'unknown');
     } }
     /** A complete synchronous pin. No renderer path access; callers own the returned immutable bytes. */
     capture() {
-        const snapshot = this.snapshot(), indexes = this.indexes(), captureId = (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)(), relative = `database/captures/${captureId}`;
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(this.location, relative);
-        const destination = node_path__WEBPACK_IMPORTED_MODULE_1___default().join((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.checked)(this.location, relative, true), 'catalog.sqlite');
-        this.db.prepare('VACUUM main INTO ?').run(destination);
-        const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(destination, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
+        const snapshot = this.snapshot(), indexes = this.indexes(), temp = node_fs__WEBPACK_IMPORTED_MODULE_0___default().mkdtempSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(node_os__WEBPACK_IMPORTED_MODULE_2___default().tmpdir()), 'writingtool-capture-')), destination = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(temp, 'catalog.sqlite');
         try {
-            const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().fstatSync(fd);
-            ensure(stat.isFile() && stat.nlink === 1);
-            node_fs__WEBPACK_IMPORTED_MODULE_0___default().fsyncSync(fd);
+            this.db.prepare('VACUUM main INTO ?').run(destination);
+            const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(destination, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
+            try {
+                const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().fstatSync(fd);
+                ensure(stat.isFile() && stat.nlink === 1);
+                node_fs__WEBPACK_IMPORTED_MODULE_0___default().fsyncSync(fd);
+            }
+            finally {
+                node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
+            }
+            ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(destination));
+            const verify = new node_sqlite__WEBPACK_IMPORTED_MODULE_4__.DatabaseSync(destination, { readOnly: true });
+            try {
+                ensure(verify.prepare('PRAGMA quick_check').get()?.quick_check === 'ok');
+                const m = verify.prepare('SELECT * FROM unit_meta WHERE singleton=1').get();
+                ensure(m?.ownerId === snapshot.owner.id && m.rootId === snapshot.rootId && m.generation === snapshot.generation);
+            }
+            finally {
+                verify.close();
+            }
+            const paths = new Set(['writingtool.json', ...indexes.records.map(r => r.relativePath), ...indexes.files.map(f => f.relativePath), ...indexes.assets.map(a => a.relativePath), ...indexes.versions.flatMap(v => [v.jsonPath, ...(v.manuscriptPath ? [v.manuscriptPath] : [])])]);
+            this.db.prepare('SELECT relativePath FROM records').all().forEach(r => paths.add(String(r.relativePath)));
+            const files = [...paths].sort().map(relativePath => { const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, relativePath); return { relativePath, base64: bytes.toString('base64'), sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) }; });
+            const catalog = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(temp, 'catalog.sqlite');
+            files.push({ relativePath: 'database/catalog.sqlite', base64: catalog.toString('base64'), sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(catalog) });
+            this.assertReady();
+            ensure(this.authority().generation === snapshot.generation);
+            return { snapshot, files };
         }
         finally {
-            node_fs__WEBPACK_IMPORTED_MODULE_0___default().closeSync(fd);
+            node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmSync(temp, { recursive: true, force: true });
         }
-        ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(destination));
-        const verify = new node_sqlite__WEBPACK_IMPORTED_MODULE_3__.DatabaseSync(destination, { readOnly: true });
-        try {
-            ensure(verify.prepare('PRAGMA quick_check').get()?.quick_check === 'ok');
-            const m = verify.prepare('SELECT * FROM unit_meta WHERE singleton=1').get();
-            ensure(m?.ownerId === snapshot.owner.id && m.rootId === snapshot.rootId && m.generation === snapshot.generation);
-        }
-        finally {
-            verify.close();
-        }
-        const paths = new Set(['writingtool.json', ...indexes.records.map(r => r.relativePath), ...indexes.files.map(f => f.relativePath), ...indexes.assets.map(a => a.relativePath), ...indexes.versions.flatMap(v => [v.jsonPath, ...(v.manuscriptPath ? [v.manuscriptPath] : [])])]);
-        this.db.prepare('SELECT relativePath FROM records').all().forEach(r => paths.add(String(r.relativePath)));
-        const files = [...paths].sort().map(relativePath => { const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, relativePath); return { relativePath, base64: bytes.toString('base64'), sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(bytes) }; });
-        const catalog = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, `${relative}/catalog.sqlite`);
-        files.push({ relativePath: 'database/catalog.sqlite', base64: catalog.toString('base64'), sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)(catalog) });
-        this.assertReady();
-        ensure(this.authority().generation === snapshot.generation);
-        return { snapshot, files };
     }
 }
 
@@ -5793,6 +6992,16 @@ module.exports = require("node:crypto");
 (module) {
 
 module.exports = require("node:fs");
+
+/***/ },
+
+/***/ "node:module"
+/*!******************************!*\
+  !*** external "node:module" ***!
+  \******************************/
+(module) {
+
+module.exports = require("node:module");
 
 /***/ },
 
@@ -8689,26 +9898,28 @@ let __webpack_exports__ = {};
   !*** ./src/desktop/utility-host.ts ***!
   \*************************************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _application_protection__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../application/protection */ "./src/application/protection.ts");
-/* harmony import */ var _infrastructure_protection_service__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../infrastructure/protection-service */ "./src/infrastructure/protection-service.ts");
-/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
-/* harmony import */ var _infrastructure_archives__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../infrastructure/archives */ "./src/infrastructure/archives.ts");
-/* harmony import */ var _application_workspace__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../application/workspace */ "./src/application/workspace.ts");
-/* harmony import */ var _infrastructure_workspace_coordinator__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../infrastructure/workspace-coordinator */ "./src/infrastructure/workspace-coordinator.ts");
-/* harmony import */ var _infrastructure_settings_storage__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../infrastructure/settings-storage */ "./src/infrastructure/settings-storage.ts");
-/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
-/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
-/* harmony import */ var _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../infrastructure/universe-files */ "./src/infrastructure/universe-files.ts");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! node:crypto */ "node:crypto");
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_10___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_10__);
-/* harmony import */ var _application_project__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../application/project */ "./src/application/project.ts");
-/* harmony import */ var _infrastructure_project_storage__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../infrastructure/project-storage */ "./src/infrastructure/project-storage.ts");
-/* harmony import */ var _application_contracts_project__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../application/contracts/project */ "./src/application/contracts/project.ts");
-/* harmony import */ var _application_universe__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../application/universe */ "./src/application/universe.ts");
-/* harmony import */ var _infrastructure_universe_storage__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../infrastructure/universe-storage */ "./src/infrastructure/universe-storage.ts");
-/* harmony import */ var _application_contracts_universe__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../application/contracts/universe */ "./src/application/contracts/universe.ts");
-/* harmony import */ var _application_readiness__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../application/readiness */ "./src/application/readiness.ts");
-/* harmony import */ var _application_contracts_readiness__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ../application/contracts/readiness */ "./src/application/contracts/readiness.ts");
+/* harmony import */ var _infrastructure_confined_fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../infrastructure/confined-fs */ "./src/infrastructure/confined-fs.ts");
+/* harmony import */ var _application_protection__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../application/protection */ "./src/application/protection.ts");
+/* harmony import */ var _infrastructure_protection_service__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../infrastructure/protection-service */ "./src/infrastructure/protection-service.ts");
+/* harmony import */ var _application_contracts_protection__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../application/contracts/protection */ "./src/application/contracts/protection.ts");
+/* harmony import */ var _infrastructure_archives__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../infrastructure/archives */ "./src/infrastructure/archives.ts");
+/* harmony import */ var _application_workspace__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../application/workspace */ "./src/application/workspace.ts");
+/* harmony import */ var _infrastructure_workspace_coordinator__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../infrastructure/workspace-coordinator */ "./src/infrastructure/workspace-coordinator.ts");
+/* harmony import */ var _infrastructure_settings_storage__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../infrastructure/settings-storage */ "./src/infrastructure/settings-storage.ts");
+/* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
+/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
+/* harmony import */ var _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../infrastructure/universe-files */ "./src/infrastructure/universe-files.ts");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_11___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_11__);
+/* harmony import */ var _application_project__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../application/project */ "./src/application/project.ts");
+/* harmony import */ var _infrastructure_project_storage__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../infrastructure/project-storage */ "./src/infrastructure/project-storage.ts");
+/* harmony import */ var _application_contracts_project__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../application/contracts/project */ "./src/application/contracts/project.ts");
+/* harmony import */ var _application_universe__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../application/universe */ "./src/application/universe.ts");
+/* harmony import */ var _infrastructure_universe_storage__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../infrastructure/universe-storage */ "./src/infrastructure/universe-storage.ts");
+/* harmony import */ var _application_contracts_universe__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../application/contracts/universe */ "./src/application/contracts/universe.ts");
+/* harmony import */ var _application_readiness__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ../application/readiness */ "./src/application/readiness.ts");
+/* harmony import */ var _application_contracts_readiness__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../application/contracts/readiness */ "./src/application/contracts/readiness.ts");
+
 
 
 
@@ -8731,16 +9942,20 @@ __webpack_require__.r(__webpack_exports__);
 const userData = process.argv.find(arg => arg.startsWith('--user-data='))?.slice('--user-data='.length);
 if (!userData)
     throw new Error('Application host requires its native user-data location');
-const coordinator = new _infrastructure_workspace_coordinator__WEBPACK_IMPORTED_MODULE_5__.WorkspaceCoordinator(userData);
-const settings = new _infrastructure_settings_storage__WEBPACK_IMPORTED_MODULE_6__.SettingsStorage(userData, fn => coordinator.settingsGate(fn));
-const universes = new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseApplication(new _infrastructure_universe_storage__WEBPACK_IMPORTED_MODULE_15__.FileUniverseStorage(undefined, coordinator));
-const projects = new _application_project__WEBPACK_IMPORTED_MODULE_11__.ProjectApplication(new _infrastructure_project_storage__WEBPACK_IMPORTED_MODULE_12__.FileProjectStorage(coordinator), universes);
-const workspace = new _application_workspace__WEBPACK_IMPORTED_MODULE_4__.WorkspaceApplication(projects, universes, coordinator, { uuid: node_crypto__WEBPACK_IMPORTED_MODULE_10__.randomUUID, digest: value => (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)(value)), textDigest: _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash, byteLength: text => Buffer.byteLength(text).toString() });
-const protectionService = new _infrastructure_protection_service__WEBPACK_IMPORTED_MODULE_1__.ProtectionService(workspace, settings, userData, coordinator, locations => { if (locations.project)
+const nativeModule = process.argv.find(arg => arg.startsWith('--writingtool-native-module='))?.slice('--writingtool-native-module='.length);
+if (!nativeModule)
+    throw new Error('Application host requires its trusted native module location');
+(0,_infrastructure_confined_fs__WEBPACK_IMPORTED_MODULE_0__.configureConfinedFs)(nativeModule);
+const coordinator = new _infrastructure_workspace_coordinator__WEBPACK_IMPORTED_MODULE_6__.WorkspaceCoordinator(userData);
+const settings = new _infrastructure_settings_storage__WEBPACK_IMPORTED_MODULE_7__.SettingsStorage(userData, fn => coordinator.settingsGate(fn));
+const universes = new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseApplication(new _infrastructure_universe_storage__WEBPACK_IMPORTED_MODULE_16__.FileUniverseStorage(undefined, coordinator));
+const projects = new _application_project__WEBPACK_IMPORTED_MODULE_12__.ProjectApplication(new _infrastructure_project_storage__WEBPACK_IMPORTED_MODULE_13__.FileProjectStorage(coordinator), universes);
+const workspace = new _application_workspace__WEBPACK_IMPORTED_MODULE_5__.WorkspaceApplication(projects, universes, coordinator, { uuid: node_crypto__WEBPACK_IMPORTED_MODULE_11__.randomUUID, digest: value => (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(value)), textDigest: _infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_10__.hash, byteLength: text => Buffer.byteLength(text).toString() });
+const protectionService = new _infrastructure_protection_service__WEBPACK_IMPORTED_MODULE_2__.ProtectionService(workspace, settings, userData, coordinator, locations => { if (locations.project)
     projects.open(locations.project, locations.universe);
 else
     universes.open(locations.universe); });
-const protection = new _application_protection__WEBPACK_IMPORTED_MODULE_0__.ProtectionApplication(protectionService);
+const protection = new _application_protection__WEBPACK_IMPORTED_MODULE_1__.ProtectionApplication(protectionService);
 const port = process.parentPort;
 if (!port)
     throw new Error('Application host requires a parent port');
@@ -8750,9 +9965,9 @@ const fault = process.argv.find(arg => arg.startsWith('--diagnostic-fault='))?.s
 if (fault === 'exit')
     process.exit(1);
 port.on('message', ({ data }) => {
-    if ((0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_2__.validProtectionRequest)(data, true)) {
+    if ((0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_3__.validProtectionRequest)(data, true)) {
         const base = { protocolVersion: 1, requestId: data.requestId, command: data.command };
-        void protection.execute(data).then(value => port.postMessage({ ...base, status: 'ok', value })).catch(error => port.postMessage(error instanceof _infrastructure_archives__WEBPACK_IMPORTED_MODULE_3__.OperationCanceled ? { ...base, status: 'canceled' } : { ...base, status: 'error', message: error instanceof Error ? error.message : 'Protection operation failed.', outcome: error instanceof _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure && error.outcome !== 'not-committed' ? 'unknown' : 'not-committed', operationId: error instanceof _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure && error.outcome === 'unknown' ? data.requestId : null }));
+        void protection.execute(data).then(value => port.postMessage({ ...base, status: 'ok', value })).catch(error => port.postMessage(error instanceof _infrastructure_archives__WEBPACK_IMPORTED_MODULE_4__.OperationCanceled ? { ...base, status: 'canceled' } : { ...base, status: 'error', message: error instanceof Error ? error.message : 'Protection operation failed.', outcome: (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_3__.protectionHasDurableEffects)(data) && error instanceof _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure && error.outcome !== 'not-committed' ? 'unknown' : 'not-committed', operationId: (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_3__.protectionHasDurableEffects)(data) && error instanceof _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure && error.outcome !== 'not-committed' ? (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_3__.protectionOperationId)(data) : null }));
         return;
     }
     if (protection.busy) {
@@ -8760,7 +9975,7 @@ port.on('message', ({ data }) => {
             port.postMessage({ protocolVersion: 1, requestId: data.requestId, command: data.command, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Wait for the protection operation to finish.', outcome: 'not-committed', retry: 'new-request', issues: [] });
         return;
     }
-    if ((0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.validWorkspaceRequest)(data, true)) {
+    if ((0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_8__.validWorkspaceRequest)(data, true)) {
         const base = { protocolVersion: 1, requestId: data.requestId, command: data.command };
         let result;
         let mutationApplied = false;
@@ -8779,7 +9994,7 @@ port.on('message', ({ data }) => {
                     break;
                 case 'workspace.asset.import':
                     if (!data.nativeAsset)
-                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('VALIDATION', 'Choose a readable supported image.');
+                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('VALIDATION', 'Choose a readable supported image.');
                     ({ receipt, asset } = workspace.importAsset(data.owner, data.operationId, data.expectedUnitGeneration, data.nativeAsset));
                     break;
                 case 'workspace.asset.read':
@@ -8800,7 +10015,7 @@ port.on('message', ({ data }) => {
                 }
                 case 'settings.select-backup': {
                     if (!data.nativeDestination)
-                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('VALIDATION', 'Choose a backup folder.');
+                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('VALIDATION', 'Choose a backup folder.');
                     const current = settings.get();
                     values = settings.save({ ...current, backupDestination: data.nativeDestination }, current.recordVersion);
                     destination = data.nativeDestination;
@@ -8811,15 +10026,15 @@ port.on('message', ({ data }) => {
             result = { ...base, status: 'ok', snapshot: data.command.startsWith('settings.') ? { project: null, universe: null } : workspace.snapshot(), receipt, settings: values, warnings, asset, destination };
         }
         catch (e) {
-            let f = e instanceof _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure ? e : e instanceof _domain_workspace__WEBPACK_IMPORTED_MODULE_8__.WorkspaceValidationError ? new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('VALIDATION', e.message) : new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('IO_FAILURE', e instanceof Error ? e.message : 'The workspace operation failed.', data.command === 'workspace.mutate' || data.command === 'workspace.asset.import' ? 'unknown' : 'not-committed');
+            let f = e instanceof _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure ? e : e instanceof _domain_workspace__WEBPACK_IMPORTED_MODULE_9__.WorkspaceValidationError ? new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('VALIDATION', e.message) : new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('IO_FAILURE', e instanceof Error ? e.message : 'The workspace operation failed.', data.command === 'workspace.mutate' || data.command === 'workspace.asset.import' ? 'unknown' : 'not-committed');
             if (mutationApplied)
-                f = new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure(f.code, f.message, 'unknown');
-            result = { ...base, status: 'error', code: f.code, message: f.message, outcome: f.outcome, retry: f.outcome === 'unknown' ? 'after-recovery' : 'new-request', issues: e instanceof _domain_workspace__WEBPACK_IMPORTED_MODULE_8__.WorkspaceValidationError ? [{ field: e.field, message: e.message }] : [] };
+                f = new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure(f.code, f.message, 'unknown');
+            result = { ...base, status: 'error', code: f.code, message: f.message, outcome: f.outcome, retry: f.outcome === 'unknown' ? 'after-recovery' : 'new-request', issues: e instanceof _domain_workspace__WEBPACK_IMPORTED_MODULE_9__.WorkspaceValidationError ? [{ field: e.field, message: e.message }] : [] };
         }
         port.postMessage(result);
         return;
     }
-    if ((0,_application_contracts_project__WEBPACK_IMPORTED_MODULE_13__.validProjectRequest)(data, true)) {
+    if ((0,_application_contracts_project__WEBPACK_IMPORTED_MODULE_14__.validProjectRequest)(data, true)) {
         const base = { protocolVersion: 1, requestId: data.requestId, command: data.command };
         let result;
         try {
@@ -8840,30 +10055,30 @@ port.on('message', ({ data }) => {
             }
         }
         catch (e) {
-            if (e instanceof _application_project__WEBPACK_IMPORTED_MODULE_11__.LocateProjectUniverse)
+            if (e instanceof _application_project__WEBPACK_IMPORTED_MODULE_12__.LocateProjectUniverse)
                 result = { ...base, status: 'locate', universeId: e.universeId };
             else {
-                const f = e instanceof _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure ? e : new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('IO_FAILURE', 'The project operation failed. Existing content was preserved.', data.command === 'project.create' ? 'unknown' : 'not-committed');
+                const f = e instanceof _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure ? e : new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('IO_FAILURE', 'The project operation failed. Existing content was preserved.', data.command === 'project.create' ? 'unknown' : 'not-committed');
                 result = { ...base, status: 'error', code: f.code, message: f.message, outcome: f.outcome, retry: f.outcome === 'unknown' ? 'after-recovery' : 'new-request' };
             }
         }
         port.postMessage(result);
         return;
     }
-    if ((0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_16__.validUniverseRequest)(data, true)) {
+    if ((0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_17__.validUniverseRequest)(data, true)) {
         const base = { protocolVersion: 1, requestId: data.requestId, command: data.command };
         let result;
         try {
             switch (data.command) {
                 case 'universe.create':
                     if (projects.associatedUniverseId())
-                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('VALIDATION', 'Close the active project before changing its universe.');
+                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('VALIDATION', 'Close the active project before changing its universe.');
                     result = { ...base, status: 'ok', ...universes.create(data.basePath, data.input) };
                     break;
                 case 'universe.open': {
                     const associatedId = projects.associatedUniverseId();
                     if (associatedId && !(data.reconcileExpected && 'ownerId' in data.reconcileExpected.identity && data.reconcileExpected.identity.ownerId === associatedId))
-                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('VALIDATION', 'Close the active project before changing its universe.');
+                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('VALIDATION', 'Close the active project before changing its universe.');
                     const snapshot = universes.open(data.basePath, data.reconcileExpected);
                     const receipt = data.reconcileOperationId ? universes.reconcile(data.reconcileOperationId, data.reconcileExpected) : undefined;
                     result = { ...base, status: 'ok', snapshot, ...(receipt ? { receipt } : {}), ...(data.reconcileOperationId ? { reconciliation: { operationId: data.reconcileOperationId, outcome: receipt ? 'committed' : 'not-committed' } } : {}) };
@@ -8877,28 +10092,28 @@ port.on('message', ({ data }) => {
                     break;
                 case 'universe.close':
                     if (projects.associatedUniverseId())
-                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('VALIDATION', 'Close the active project before closing its universe.');
+                        throw new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('VALIDATION', 'Close the active project before closing its universe.');
                     universes.close();
                     result = { ...base, status: 'ok', snapshot: null };
                     break;
             }
         }
         catch (error) {
-            const failure = error instanceof _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure ? error : new _application_universe__WEBPACK_IMPORTED_MODULE_14__.UniverseFailure('IO_FAILURE', 'The universe operation failed. Existing content was preserved.', data.command === 'universe.create' || data.command === 'universe.profile.save' ? 'unknown' : 'not-committed');
+            const failure = error instanceof _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure ? error : new _application_universe__WEBPACK_IMPORTED_MODULE_15__.UniverseFailure('IO_FAILURE', 'The universe operation failed. Existing content was preserved.', data.command === 'universe.create' || data.command === 'universe.profile.save' ? 'unknown' : 'not-committed');
             result = { ...base, status: 'error', code: failure.code, message: failure.message, outcome: failure.outcome, retry: failure.outcome === 'unknown' ? 'after-recovery' : 'new-request' };
         }
         port.postMessage(result);
         return;
     }
-    if (!(0,_application_contracts_readiness__WEBPACK_IMPORTED_MODULE_18__.validRequest)(data))
+    if (!(0,_application_contracts_readiness__WEBPACK_IMPORTED_MODULE_19__.validRequest)(data))
         return;
     if (fault === 'timeout')
         return;
     if (fault === 'invalid') {
-        port.postMessage({ ...(0,_application_readiness__WEBPACK_IMPORTED_MODULE_17__.readiness)(data), extra: true });
+        port.postMessage({ ...(0,_application_readiness__WEBPACK_IMPORTED_MODULE_18__.readiness)(data), extra: true });
         return;
     }
-    port.postMessage((0,_application_readiness__WEBPACK_IMPORTED_MODULE_17__.readiness)(data));
+    port.postMessage((0,_application_readiness__WEBPACK_IMPORTED_MODULE_18__.readiness)(data));
 });
 
 })();

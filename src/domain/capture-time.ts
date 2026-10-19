@@ -1,3 +1,4 @@
 export type CaptureTime={utc:string;local:string;offsetMinutes:string;zone:string};
 export function captureTime(date=new Date()):CaptureTime{const two=(n:number)=>String(n).padStart(2,'0');return{utc:date.toISOString(),local:`${date.getFullYear()}-${two(date.getMonth()+1)}-${two(date.getDate())}_${two(date.getHours())}-${two(date.getMinutes())}-${two(date.getSeconds())}`,offsetMinutes:String(-date.getTimezoneOffset()),zone:Intl.DateTimeFormat().resolvedOptions().timeZone};}
+// oxlint-disable-next-line no-control-regex -- Intentionally match control characters for validation or normalization.
 export function safeDisplayName(name:string){const value=name.replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/g,'').trim();return value&&!/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value)?value:'WritingTool';}

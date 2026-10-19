@@ -6,13 +6,18 @@ import { type CreateInput, type SaveInput, type UniverseResult, type UniverseSna
 import './shell.css';
 import {Workspace,type WorkspaceHandle} from './workspace/Workspace';
 import {FloatingPanel} from './workspace/FloatingPanel';
-type Departure = 'project-new' | 'project-open' | 'project-close' | 'new' | 'open' | 'close' | 'quit' | 'dismiss';
+type Departure = 'project-new' | 'project-open' | 'project-close' | 'new' | 'open' | 'close' | 'quit' | 'dismiss' | 'calendar-update' | 'workspace-action';
 function Shell() {
     const [result, setResult] = useState<ReadinessResult>();
     const [utilityShown,setUtilityShown]=useState(false);
+    const [closing, setClosing] = useState(false);
+    const closingRef = useRef(false);
+    const [workspaceBlocked, setWorkspaceBlocked] = useState(false);
+    const [calendarUpdate, setCalendarUpdate] = useState({required:false,busy:false});
     const [snapshot, setSnapshot] = useState<UniverseSnapshot | null>(null);
     const [projectSnapshot, setProjectSnapshot] = useState<ProjectSnapshot | null>(null);
     const [projectUncertain, setProjectUncertain] = useState(false);
+    const [pendingProtectionCount, setPendingProtectionCount] = useState(0);
     const [editor, setEditor] = useState<'create' | 'profile' | null>(null);
     const [draft, setDraft] = useState<ProfileData>({ name: '', description: '' });
     const [busy, setBusy] = useState(false);
@@ -22,6 +27,7 @@ function Shell() {
     const [pending, setPending] = useState<CreateInput | SaveInput>();
     const [status, setStatus] = useState('Open a project or choose a universe to begin.');
     const workspaceRef = useRef<WorkspaceHandle>(null);
+    const workspaceDeparture = useRef<((approved:boolean)=>void)|null>(null);
     const revision = useRef(0n);
     const quitToken = useRef<string | undefined>(undefined);
     function finishQuit(approved: boolean): void {
@@ -33,6 +39,7 @@ function Shell() {
     function cancelDeparture(): void {
         if (pendingDeparture === 'quit')
             finishQuit(false);
+        if (pendingDeparture === 'workspace-action') { workspaceDeparture.current?.(false); workspaceDeparture.current=null; }
         setPendingDeparture(undefined);
     }
     const editorRef = useRef(editor);
@@ -103,7 +110,18 @@ function Shell() {
         }
     }
     async function depart(action: Departure): Promise<void> {
-        if (!await workspaceRef.current?.guard() && workspaceRef.current) {
+        if (closingRef.current) {
+            if (action === 'quit') finishQuit(false);
+            return;
+        }
+        if (action === 'workspace-action') {
+            setPendingDeparture(undefined);
+            setEditor(null);
+            await workspaceRef.current?.refresh();
+            const resolve=workspaceDeparture.current; workspaceDeparture.current=null; resolve?.(true);
+            return;
+        }
+        if (!await workspaceRef.current?.guard(action === 'quit') && workspaceRef.current) {
             if (action === 'quit') finishQuit(false);
             return;
         }
@@ -133,8 +151,29 @@ function Shell() {
             return;
         }
         if (action === 'quit') {
-            if(workspaceRef.current&&!await workspaceRef.current.closeProtection()){finishQuit(false);return;}
-            finishQuit(true);
+            closingRef.current = true;
+            setClosing(true);
+            try {
+                if (workspaceRef.current && !await workspaceRef.current.closeProtection()) {
+                    closingRef.current = false;
+                    setClosing(false);
+                    finishQuit(false);
+                    return;
+                }
+                // Keep input locked until native draining closes the window or reports failure.
+                finishQuit(true);
+            } catch (error) {
+                closingRef.current = false;
+                setClosing(false);
+                setError(error instanceof Error ? error.message : 'Closing failed. Your work is retained.');
+                finishQuit(false);
+            }
+            return;
+        }
+        if (action === 'calendar-update') {
+            setEditor(null);
+            await workspaceRef.current?.refresh();
+            await workspaceRef.current?.updateCalendar();
             return;
         }
         if (action === 'dismiss') {
@@ -155,22 +194,47 @@ function Shell() {
         }
     }
     function requestDeparture(action: Departure): void {
+        if (closingRef.current) return;
         if (action === 'quit' && !quitToken.current) {
             document.dispatchEvent(new Event('writingtool-request-quit'));
             return;
         }
-        if (pending || busy || error || pendingDeparture || (projectUncertain && action !== 'project-open')) {
+        if (pending || busy || (error && action !== 'quit') || pendingDeparture || (projectUncertain && action !== 'project-open')) {
             if (action === 'quit')
                 finishQuit(false);
             return;
         }
+        if (action === 'quit') setError(undefined);
         if (dirty)
             setPendingDeparture(action);
         else
             void depart(action);
     }
+    async function beforeWorkspaceNavigation():Promise<boolean> {
+        if (closingRef.current||busy||pending||error||pendingDeparture||projectUncertain||workspaceDeparture.current) return false;
+        if (!editorRef.current) return true;
+        if (dirty) return new Promise(resolve=>{ workspaceDeparture.current=resolve; setPendingDeparture('workspace-action'); });
+        setEditor(null);
+        await workspaceRef.current?.refresh();
+        return true;
+    }
     const departureRef = useRef(requestDeparture);
     departureRef.current = requestDeparture;
+    useEffect(() => {
+        let active = true;
+        const check = async () => {
+            const response = await window.writingTool.protection({command:'protection.pending'});
+            if (active && response.status === 'ok') setPendingProtectionCount(response.value.pending?.length ?? 0);
+        };
+        void check();
+        document.addEventListener('writingtool-close-aborted', check);
+        document.addEventListener('writingtool-recovered-context', check);
+        return () => {
+            active = false;
+            document.removeEventListener('writingtool-close-aborted', check);
+            document.removeEventListener('writingtool-recovered-context', check);
+        };
+    }, []);
     useEffect(() => {
         const quit = (event: Event) => {
             const token = (event as CustomEvent<{
@@ -181,6 +245,13 @@ function Shell() {
             departureRef.current('quit');
         };
         const keys = (event: KeyboardEvent) => {
+            if (closingRef.current) {
+                if ((event.ctrlKey || event.metaKey) && ['n', 'o', 's', 'w'].includes(event.key.toLowerCase())) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                }
+                return;
+            }
             if (event.key === 'Escape' && editorRef.current && !document.querySelector('.blocking')) {
                 event.preventDefault();
                 departureRef.current('dismiss');
@@ -212,7 +283,38 @@ function Shell() {
             event.returnValue = false;
         };
         window.addEventListener('beforeunload', preventUnapprovedUnload);
-        const recovered=()=>{void window.writingTool.currentProject().then(result=>{if(result.status==='ok')setProjectSnapshot(result.snapshot);});void window.writingTool.currentUniverse().then(result=>{if(result.status==='ok')setSnapshot(result.snapshot);});};
+        const recovered=()=>{void (async()=>{
+            const pendingOperations=await window.writingTool.protection({command:'protection.pending'});
+            // Keep the recovery panel in place until every pending operation is resolved.
+            if(pendingOperations.status==='ok'&&pendingOperations.value.pending?.length)return;
+            // Authority requests are exclusive in main; await each before sending the next.
+            const project=await window.writingTool.currentProject();
+            const universe=await window.writingTool.currentUniverse();
+            if(project.status!=='ok'||universe.status!=='ok')throw new Error('The active roots could not be refreshed. Reopen the saved owning roots before editing.');
+            setProjectSnapshot(project.snapshot);setSnapshot(universe.snapshot);
+        })().catch(()=>{setProjectSnapshot(null);setSnapshot(null);setEditor(null);setError('The active roots could not be refreshed. Reopen the saved owning roots before editing.');});};
+        const closeAborted = async (event:Event) => {
+            try {
+                if ((event as CustomEvent<{refresh:boolean}>).detail?.refresh) {
+                    const project = await window.writingTool.currentProject();
+                    const universe = await window.writingTool.currentUniverse();
+                    if (project.status !== 'ok' || universe.status !== 'ok')
+                        throw new Error('Closing stopped after releasing an owning root. Reopen your saved project or universe before writing.');
+                    setProjectSnapshot(project.snapshot);
+                    setSnapshot(universe.snapshot);
+                }
+            } catch (error) {
+                // The closing cut was saved before native draining; do not expose a released editor.
+                setProjectSnapshot(null);
+                setSnapshot(null);
+                setEditor(null);
+                setError(error instanceof Error ? error.message : 'Reopen your saved work before writing.');
+            } finally {
+                closingRef.current = false;
+                setClosing(false);
+            }
+        };
+        document.addEventListener('writingtool-close-aborted', closeAborted);
         document.addEventListener('writingtool-recovered-context',recovered);
         document.addEventListener('writingtool-window-close', quit);
         window.addEventListener('keydown', keys);
@@ -220,6 +322,7 @@ function Shell() {
             window.removeEventListener('beforeunload', preventUnapprovedUnload);
             document.removeEventListener('writingtool-window-close', quit);
             document.removeEventListener('writingtool-recovered-context',recovered);
+            document.removeEventListener('writingtool-close-aborted', closeAborted);
             window.removeEventListener('keydown', keys);
         };
     }, []);
@@ -307,16 +410,17 @@ function Shell() {
         setFieldError(undefined);
     }
     return <main>
-    <header inert={!!pendingDeparture || !!error}><span className="wordmark">WritingTool</span><nav aria-label="Application commands" onClick={event => {
+    <header inert={!!pendingDeparture || !!error || closing || workspaceBlocked}><span className="wordmark">WritingTool</span><nav aria-label="Application commands" onClick={event => {
         const target = event.target as HTMLElement;
         if (target.closest('button'))
             target.closest('details')?.removeAttribute('open');
     }}>
       <details><summary>Project</summary><div className="menu"><div id="project-workspace-menu"/><button disabled={busy || !!pending || projectUncertain} onClick={() => requestDeparture('project-new')}>New project… <kbd>Ctrl+N</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('project-open')}>Open project… <kbd>Ctrl+O</kbd></button><button disabled={busy || !!pending || projectUncertain || !projectSnapshot} onClick={() => requestDeparture('project-close')}>Close project</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot} onClick={() => requestDeparture('new')}>New universe</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot} onClick={() => requestDeparture('open')}>Open universe…</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot || !snapshot} onClick={() => requestDeparture('close')}>Close universe <kbd>Ctrl+Shift+W</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('quit')}>Exit</button></div></details>
-      <details><summary>Universe</summary><div className="menu"><div id="universe-workspace-menu"/><button data-top-profile-edit disabled={!snapshot || !!editor || busy || !!pending} onClick={editProfile}>Edit profile</button><button data-top-profile-save disabled={!editor || busy || !!pending} onClick={() => void save()}>Save profile <kbd>Ctrl+S</kbd></button><button data-top-reconcile disabled={!pending || busy} onClick={() => void reconcile()}>Reopen and reconcile…</button><button data-top-profile-close disabled={!editor || busy || !!pending} onClick={() => requestDeparture('dismiss')}>Close profile <kbd>Ctrl+W</kbd></button></div></details>
+      <details><summary>Universe</summary><div className="menu"><div id="universe-workspace-menu"/><button data-top-profile-edit disabled={!snapshot || !!editor || busy || !!pending} onClick={editProfile}>Edit profile</button><button data-top-profile-save disabled={!editor || busy || !!pending} onClick={() => void save()}>Save profile <kbd>Ctrl+S</kbd></button><button data-top-reconcile disabled={busy} onClick={() => pending ? void reconcile() : void workspaceRef.current?.recover()}>Reopen and reconcile…</button><button data-top-profile-close disabled={!editor || busy || !!pending} onClick={() => requestDeparture('dismiss')}>Close profile <kbd>Ctrl+W</kbd></button></div></details>
       <span id="workspace-menus"/>
     </nav></header>
-    <section hidden={!!editor || !!snapshot || utilityShown} inert={!!pendingDeparture || !!error} aria-labelledby="heading">
+    {pendingProtectionCount>0&&<div className="status unavailable" role="alert" inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><strong>Unfinished backup or recovery needs attention</strong><p>Reconcile the original operation before closing or starting new work.</p><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Reconcile pending operations…</button></div>}
+    <section hidden={!!editor || !!snapshot || utilityShown} inert={!!pendingDeparture || !!error || closing} aria-labelledby="heading">
       <p className="eyebrow">{projectSnapshot ? 'PROJECT' : snapshot ? 'UNIVERSE' : 'YOUR WRITING SPACE'}</p><h1 id="heading">{projectSnapshot ? 'Your project' : snapshot?.profile.name ?? 'Open your writing project.'}</h1>
       {projectSnapshot && <div className="project-context"><p>Project <span className="location">{projectSnapshot.ownerId}</span></p><p className="location">{projectSnapshot.location}</p><p>Linked universe: <strong>{snapshot?.profile.name}</strong></p></div>}
       {snapshot ? <><p>{snapshot.profile.description || (projectSnapshot ? 'Your project and its shared universe are ready.' : 'Your universe is ready. No calendar or project is needed.')}</p><p className="location">{snapshot.location}</p><button disabled={busy || !!pending} onClick={editProfile}>Edit universe profile</button></> : <><p>Open a project with its shared universe, or create a project in its own folder.</p><div className="actions"><button disabled={busy || !!pending || state !== 'ready'} onClick={() => requestDeparture('project-open')}>Open project…</button><button disabled={busy || !!pending || projectUncertain || state !== 'ready'} onClick={() => requestDeparture('project-new')}>Create project…</button></div><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Recover from backup / recent projects…</button><p>You can also work with a universe on its own.</p><div className="actions"><button disabled={busy || !!pending || projectUncertain || state !== 'ready'} onClick={() => requestDeparture('open')}>Open universe…</button><button disabled={busy || !!pending || projectUncertain || state !== 'ready'} onClick={() => requestDeparture('new')}>Create universe</button></div></>}
@@ -324,8 +428,8 @@ function Shell() {
       {projectUncertain && <div className="status unavailable" role="alert"><strong>Project creation needs reconciliation</strong><p>Reopen the selected project folder to confirm its saved identity and matching universe.</p><button disabled={busy} onClick={() => requestDeparture('project-open')}>Reopen project…</button></div>}
       {pending && <div className="status unavailable" role="alert"><strong>Save outcome needs recovery</strong><p>Your submitted edits are retained. Reopen the same folder to determine whether it saved.</p><button disabled={busy} onClick={() => void reconcile()}>Reopen and reconcile…</button></div>}
     </section>
-    {<div hidden={!!editor} inert={!!pendingDeparture || !!error}><Workspace key={`${projectSnapshot?.ownerId??''}/${snapshot?.ownerId??'none'}`} ref={workspaceRef} identity={`${projectSnapshot?.ownerId??''}/${snapshot?.ownerId??'none'}`} universeName={snapshot?.profile.name??'No universe open'} onStatus={setStatus} onCenterChange={setUtilityShown}/></div>}
-    {editor && <section className="profile workspace-editor" inert={!!pendingDeparture || !!error} aria-labelledby="profile-heading"><h2 id="profile-heading">{editor === 'create' ? 'Create universe' : 'Universe profile'}</h2><form onSubmit={event => {
+    {<div hidden={!!editor} inert={!!pendingDeparture || !!error || closing}><Workspace key={`${projectSnapshot?.ownerId??''}/${snapshot?.ownerId??'none'}`} ref={workspaceRef} identity={`${projectSnapshot?.ownerId??''}/${snapshot?.ownerId??'none'}`} universeName={snapshot?.profile.name??'No universe open'} onStatus={setStatus} onCenterChange={setUtilityShown} closing={closing} navigating={busy} onBlockedChange={setWorkspaceBlocked} onCalendarUpdateChange={setCalendarUpdate} covered={!!editor} beforeNavigate={beforeWorkspaceNavigation}/></div>}
+    {editor && <section className="profile workspace-editor" inert={!!pendingDeparture || !!error || closing} aria-labelledby="profile-heading"><h2 id="profile-heading">{editor === 'create' ? 'Create universe' : 'Universe profile'}</h2><form onSubmit={event => {
                 event.preventDefault();
                 void save();
             }}>
@@ -349,10 +453,11 @@ function Shell() {
                         void depart(action);
                     else if (action === 'quit')
                         finishQuit(false);
+                    else if (action === 'workspace-action') { workspaceDeparture.current?.(false); workspaceDeparture.current=null; }
                 });
             }}>Save</button><button onClick={() => void depart(pendingDeparture)}>Discard</button><button autoFocus onClick={cancelDeparture}>Cancel</button></div></section></div>}
     {error && <div className="scrim blocking"><section className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="error-heading"><h2 id="error-heading">Unable to complete operation</h2><p>{error}</p><div className="actions">{pending && <button onClick={() => void reconcile()} disabled={busy}>Reopen same folder…</button>}{projectUncertain && <button onClick={() => {setError(undefined); void depart('project-open');}} disabled={busy}>Reopen project…</button>}<button autoFocus onClick={() => setError(undefined)}>Return to editor</button></div></section></div>}
-    <footer inert={!!pendingDeparture || !!error} role="status">{busy ? 'Working…' : status}</footer>
+    <footer inert={!!pendingDeparture || !!error || closing} role="status">{closing ? 'Finishing the required closing revision and complete backup…' : busy ? 'Working…' : status}{calendarUpdate.required&&<span className="calendar-update-status">Calendar update required. Writing remains available. <button disabled={busy||!!pending||projectUncertain||calendarUpdate.busy||workspaceBlocked||closing} onClick={()=>requestDeparture('calendar-update')}>Update to current calendar</button></span>}</footer>
   </main>;
 }
 const root = document.getElementById('root');

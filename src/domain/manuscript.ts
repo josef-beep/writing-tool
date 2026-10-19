@@ -11,7 +11,8 @@ export function validParagraph(v: unknown): v is Paragraph {
     let previous: InlineMark | null = null;
     for (const m of v.marks) {
         if (!closed(m, ['start','end','styles']) || !unsignedInteger(m.start) || !unsignedInteger(m.end) || BigInt(m.start) < BigInt(v.start) || BigInt(m.end) > BigInt(v.end) || BigInt(m.start) >= BigInt(m.end) || !Array.isArray(m.styles) || m.styles.length < 1 || m.styles.length > 2 || new Set(m.styles).size !== m.styles.length || !m.styles.every(s => s === 'bold' || s === 'italic')) return false;
-        if (previous && (BigInt(previous.end) > BigInt(m.start) || (previous.end === m.start && previous.styles.length === m.styles.length && previous.styles.every(s => m.styles.includes(s))))) return false;
+        const styles = m.styles;
+        if (previous && (BigInt(previous.end) > BigInt(m.start) || (previous.end === m.start && previous.styles.length === m.styles.length && previous.styles.every(s => styles.includes(s))))) return false;
         previous = m as InlineMark;
     }
     return kind !== 'scene-break' || v.marks.length === 0;

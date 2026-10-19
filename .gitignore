@@ -148,3 +148,5 @@ out/
 # Pinned local runtime setup; do not commit LibreOffice binaries.
 resources/libreoffice/
 resources/runtime-receipt.json
+native/confined-fs/build/
+resources/native/confined-fs/

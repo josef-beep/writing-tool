@@ -1,6 +1,6 @@
 import type {ProtectionHostRequest,ProtectionResult} from '../application/contracts/protection';
-import {validProtectionResult} from '../application/contracts/protection';
-export const protectionUnavailable=(r:ProtectionHostRequest):ProtectionResult=>({protocolVersion:1,requestId:r.requestId,command:r.command,status:'error',message:'The protection outcome is unconfirmed. Retain this operation and reconcile before closing.',outcome:'unknown',operationId:r.requestId});
+import {validProtectionResult,protectionOperationId,protectionHasDurableEffects} from '../application/contracts/protection';
+export const protectionUnavailable=(r:ProtectionHostRequest):ProtectionResult=>({protocolVersion:1,requestId:r.requestId,command:r.command,status:'error',message:protectionHasDurableEffects(r)?'The protection outcome is unconfirmed. Retain this operation and reconcile before closing.':'The protection service did not answer. Retry the read or reopen the saved owning roots.',outcome:protectionHasDurableEffects(r)?'unknown':'not-committed',operationId:protectionHasDurableEffects(r)?protectionOperationId(r):null});
 export class ProtectionHostClient{
  private pending=new Map<string,{request:ProtectionHostRequest;resolve:(r:ProtectionResult)=>void}>();
  constructor(private host:{postMessage(v:unknown):void}|undefined){}
