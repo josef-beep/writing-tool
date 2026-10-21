@@ -409,12 +409,18 @@ function Shell() {
         setDraft(response.snapshot.profile);
         setFieldError(undefined);
     }
-    return <main>
-    <header inert={!!pendingDeparture || !!error || closing || workspaceBlocked}><span className="wordmark">WritingTool</span><nav aria-label="Application commands" onClick={event => {
-        const target = event.target as HTMLElement;
-        if (target.closest('button'))
-            target.closest('details')?.removeAttribute('open');
+    return <main onClick={event => {
+        // Portal clicks follow React ancestors, so handle toolbar commands here.
+        const button = (event.target as Element).closest('button');
+        if (button && !button.disabled && button.closest('nav[aria-label="Application commands"]')) {
+            const menu = button.closest('details[name="writingtool-menu"]');
+            const restoreFocus = menu?.contains(document.activeElement);
+            menu?.removeAttribute('open');
+            if (restoreFocus)
+                menu?.querySelector('summary')?.focus();
+        }
     }}>
+    <header inert={!!pendingDeparture || !!error || closing || workspaceBlocked}><span className="wordmark">WritingTool</span><nav aria-label="Application commands">
       <details name="writingtool-menu"><summary>Project</summary><div className="menu"><div id="project-workspace-menu"/><button disabled={busy || !!pending || projectUncertain} onClick={() => requestDeparture('project-new')}>New project… <kbd>Ctrl+N</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('project-open')}>Open project… <kbd>Ctrl+O</kbd></button><button disabled={busy || !!pending || projectUncertain || !projectSnapshot} onClick={() => requestDeparture('project-close')}>Close project</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot} onClick={() => requestDeparture('new')}>New universe</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot} onClick={() => requestDeparture('open')}>Open universe…</button><button disabled={busy || !!pending || projectUncertain || !!projectSnapshot || !snapshot} onClick={() => requestDeparture('close')}>Close universe <kbd>Ctrl+Shift+W</kbd></button><button disabled={busy || !!pending} onClick={() => requestDeparture('quit')}>Exit</button></div></details>
       <details name="writingtool-menu"><summary>Universe</summary><div className="menu"><div id="universe-workspace-menu"/><button data-top-profile-edit disabled={!snapshot || !!editor || busy || !!pending} onClick={editProfile}>Edit profile</button><button data-top-profile-save disabled={!editor || busy || !!pending} onClick={() => void save()}>Save profile <kbd>Ctrl+S</kbd></button><button data-top-reconcile disabled={busy} onClick={() => pending ? void reconcile() : void workspaceRef.current?.recover()}>Reopen and reconcile…</button><button data-top-profile-close disabled={!editor || busy || !!pending} onClick={() => requestDeparture('dismiss')}>Close profile <kbd>Ctrl+W</kbd></button></div></details>
       <span id="workspace-menus"/>
