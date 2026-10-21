@@ -141,6 +141,8 @@ test('timeline includes every event at both interval boundaries and on shared da
  const render=(unresolved=false)=>renderToStaticMarkup(<Timeline snapshot={{...snapshot}} universeName="Fixture" value={{...INITIAL_TIMELINE_VIEW,anchor:first.toString(),period:'31',unresolved}} open={()=>{}} onChange={()=>{}} goTo={()=>{}}/>);
  const labels=(html:string)=>[...html.matchAll(/aria-label="event ([^"]+):/g)].map(match=>match[1]);
  assert.deepEqual(labels(render()),[...sameDay.map(record=>record.data.code),'MIDDLE','END']);
+ const options=(html:string)=>[...html.matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]);
+ assert.deepEqual(options(render()),['BEFORE',...sameDay.map(record=>record.data.code),'MIDDLE','DECISION','RESOLVED','END','AFTER'],'timeline picker is oldest first across event and decision records');
  const view=newRecord(snapshot,'view',{makers:[],categories:[{kind:'decision-type',id:randomUUID()}]});snapshot.universe!.records.push(view);
  assert.deepEqual(labels(render()),[],'category filters still apply');
  view.data.categories=[];
@@ -155,6 +157,30 @@ test('timeline includes every event at both interval boundaries and on shared da
  assert.match(unresolved,/aria-label="decision DECISION:/,'unresolved decisions remain visible');
  assert.doesNotMatch(unresolved,/aria-label="decision RESOLVED:/,'resolved decisions remain excluded');
  assert.match(render(),/aria-label="decision RESOLVED:/,'the normal timeline still shows resolved decisions');
+});
+test('timeline chronology uses exact calendar positions for its graphic, picker and unresolved list',()=>{
+ const {calendar}=timelineFixture(),historical=randomUUID();
+ calendar.versions.push({...calendar.versions[0],id:historical,daysOnly:'100',actualDays:'100',targetDays:'100'});
+ const universeId=randomUUID(),owner={kind:'universe' as const,id:universeId};
+ const snapshot:WorkspaceSnapshot={project:null,universe:{owner,rootId:randomUUID(),universeId,generation:'0',records:[],manuscripts:{},assets:[],counters:{story:'0',chapter:'0',event:'0',decision:'0'}}};
+ const date=(year:string,day:string,calendarVersion=calendar.currentVersion)=>({calendarVersion,year,day});
+ const event=(code:string,when:ReturnType<typeof date>,order:string)=>newRecord(snapshot,'event',{heading:code,description:null,date:when,code,order,maker:null,kind:'ordinary',characterId:null});
+ const newest=event('NEWEST',date('0','200'),'0'),older=event('OLDER',date('1','1',historical),'9'),negative=event('NEGATIVE',date('-1','365'),'99');
+ const tieLate=event('TIE-LATE',date('0','1'),'10'),tieEarly=event('TIE-EARLY',date('0','1',historical),'2');
+ const idFirst=event('ID-FIRST',date('0','1'),'3'),idLast=event('ID-LAST',date('0','1'),'3');
+ idFirst.id='00000000-0000-4000-8000-000000000001';idLast.id='ffffffff-ffff-4fff-bfff-ffffffffffff';
+ const type=newRecord(snapshot,'decision-type',{name:'Fixture type',makerRequired:false,builtin:null});
+ const newerDecision=newRecord(snapshot,'decision',{code:'NEWER-DECISION',text:'Newer',date:newest.data.date,order:'1',typeId:type.id,maker:null,characterIds:[],eventIds:[],followingDecisionIds:[]});
+ const olderDecision=newRecord(snapshot,'decision',{...newerDecision.data,code:'OLDER-DECISION',text:'Older',date:older.data.date,order:'10'});
+ const firstDecision=newRecord(snapshot,'decision',{...newerDecision.data,code:'FIRST-DECISION',text:'First on its day',date:older.data.date,order:'0'});
+ snapshot.universe!.records.push(newRecord(snapshot,'calendar',calendar),type,newerDecision,newest,idLast,tieLate,olderDecision,older,tieEarly,idFirst,negative,firstDecision);
+ const render=(unresolved=false)=>renderToStaticMarkup(<Timeline snapshot={snapshot} universeName="Fixture" value={{...INITIAL_TIMELINE_VIEW,anchor:'-1',period:'500',unresolved}} open={()=>{}} onChange={()=>{}} goTo={()=>{}}/>);
+ const ordered=['NEGATIVE','TIE-EARLY','ID-FIRST','ID-LAST','TIE-LATE','FIRST-DECISION','OLDER','OLDER-DECISION','NEWEST','NEWER-DECISION'];
+ assert.deepEqual([...render().matchAll(/aria-label="(?:event|decision) ([^:]+):/g)].map(match=>match[1]),ordered);
+ assert.deepEqual([...render().matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]),ordered);
+ assert.deepEqual([...render(true).matchAll(/class="context-record decision-code"[^>]*>([^:]+):/g)].map(match=>match[1]),['FIRST-DECISION','OLDER-DECISION','NEWER-DECISION']);
+ negative.data.date=date('1','10');
+ assert.deepEqual([...render().matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]),[...ordered.slice(1),'NEGATIVE'],'date changes reorder the picker');
 });
 test('floating view and layout commands retain focus; only main-content intents request owner focus',()=>{
  const id=randomUUID();

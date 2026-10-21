@@ -153,6 +153,7 @@ async function verifyExclusiveMenus(){
 }
 async function verifyTimeline(){
  const data=JSON.parse(fs.readFileSync(path.join(fixture,'timeline.json'),'utf8'));
+ let visibleRecords=data.records.slice(2,-1),pickerRecords=data.records.slice(1);
  const queried=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
  if(queried.status!=='ok')throw new Error('Cannot query timeline fixture');
  const unit=queried.snapshot.universe;
@@ -162,12 +163,14 @@ async function verifyTimeline(){
  await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===18`,'loaded timeline records');
  await evaluate(`(()=>{const select=document.querySelector('.timeline-scroll').parentElement.querySelector('label select');select.value=${JSON.stringify(data.expected[0])};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
  await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===16`,'focused timeline range');
- const check=async(webContents,expected=data.records.slice(2,-1),width=180)=>{
+ const check=async(webContents,expected=visibleRecords,width=180)=>{
   const result=await webContents.executeJavaScript(`(async()=>{
    document.documentElement.style.fontSize='32px';
    const viewport=document.querySelector('.timeline-scroll');viewport.style.width='${width}px';viewport.style.height='300px';
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    const buttons=[...viewport.querySelectorAll('.timeline-codes .event-code')];
+   const picker=[...viewport.parentElement.querySelector('label select').options].map(option=>option.value).filter(Boolean);
+   if(JSON.stringify(picker)!==${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))})return 'Timeline picker is not ordered oldest first';
    const ids=buttons.map(button=>button.getAttribute('aria-label').split(': ')[0]);
    if(buttons.length!==${expected.length})return 'Missing in-range events: '+buttons.length;
    const expectedCodes=${JSON.stringify(expected.map(record=>'event '+record.data.code))};
@@ -195,6 +198,17 @@ async function verifyTimeline(){
   if(result)throw new Error(result);
  };
  await check(main.webContents);
+ const latest=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ if(latest.status!=='ok')throw new Error('Cannot query event before date edit');
+ const changed=structuredClone(latest.snapshot.universe.records.find(record=>record.id===data.expected.at(-1)));
+ changed.data.date.day='1';
+ const updated=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:{operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',units:[{owner:latest.snapshot.universe.owner,expectedUnitGeneration:latest.snapshot.universe.generation,changes:[{action:'put',record:changed,expectedRecordVersion:changed.recordVersion,manuscript:null}]}]}})})`);
+ if(updated.status!=='ok')throw new Error('Cannot edit fixture event date: '+JSON.stringify(updated));
+ visibleRecords=data.records.slice(2,-2);visibleRecords.splice(12,0,changed);
+ pickerRecords=[data.records[1],...visibleRecords,data.records.at(-1)];
+ await evaluate(`window.dispatchEvent(new Event('focus'))`);
+ await waitFor(`JSON.stringify([...document.querySelector('.timeline-scroll').parentElement.querySelector('label select').options].map(option=>option.value).filter(Boolean))===${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))}`,'oldest-first order after date edit');
+ await check(main.webContents);
  await evaluate(`document.documentElement.style.fontSize='14px'`);
  await evaluate(`(()=>{const panel=document.querySelector('aside[aria-label="Universe timeline"]');[...panel.querySelectorAll('button')].find(button=>button.textContent==='floating').click();})()`);
  const end=Date.now()+15000;while(BrowserWindow.getAllWindows().length<2&&Date.now()<end)await delay(100);
@@ -203,14 +217,44 @@ async function verifyTimeline(){
  const ready=Date.now()+15000;while(!await floating.webContents.executeJavaScript(`document.querySelectorAll('.timeline-codes .event-code').length===16`)&&Date.now()<ready)await delay(100);
  await check(floating.webContents);
  if(!await floating.webContents.executeJavaScript(`document.querySelector('.timeline-scroll').scrollTop>0`))throw new Error('Timeline resize fixture must start scrolled');
- await check(floating.webContents,data.records.slice(2,-1),220);
+ await check(floating.webContents,visibleRecords,220);
  const wide=await floating.webContents.executeJavaScript(`(async()=>{const result=await window.writingToolPresentation.presentation({command:'panel.read'});if(result.status!=='ok'||!result.mirror)throw new Error('Cannot read shared timeline');return window.writingToolPresentation.presentation({command:'panel.action',action:{kind:'timeline',value:{...result.mirror.timeline,period:'1000000000000000000000000000000'}}});})()`);
  if(wide.status!=='ok')throw new Error('Cannot expand shared timeline range');
  const expanded=Date.now()+15000;while(!await floating.webContents.executeJavaScript(`document.querySelectorAll('.timeline-codes .event-code').length===17`)&&Date.now()<expanded)await delay(100);
- await check(floating.webContents,data.records.slice(2));
+ await check(floating.webContents,[...visibleRecords,data.records.at(-1)]);
+ async function publish(records){
+  const current=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+  if(current.status!=='ok')throw new Error('Cannot query live timeline');
+  const unit=current.snapshot.universe;
+  const result=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:{operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',units:[{owner:unit.owner,expectedUnitGeneration:unit.generation,changes:records.map(record=>({action:'put',record,expectedRecordVersion:unit.records.find(saved=>saved.id===record.id)?.recordVersion??null,manuscript:null}))}]}})})`);
+  if(result.status!=='ok')throw new Error('Cannot publish live timeline dates: '+JSON.stringify(result));
+  await evaluate(`window.dispatchEvent(new Event('focus'))`);
+ }
+ async function waitInFloating(code,description){
+  const deadline=Date.now()+15000;
+  while(Date.now()<deadline){if(await floating.webContents.executeJavaScript(code))return;await delay(100);}
+  throw new Error('Timed out: '+description);
+ }
+ const later=structuredClone(changed);later.data.date.day='3';
+ await publish([later]);
+ visibleRecords=[...data.records.slice(2,-2),later];pickerRecords=[data.records[1],...visibleRecords,data.records.at(-1)];
+ await waitInFloating(`JSON.stringify([...document.querySelector('.timeline-scroll').parentElement.querySelector('label select').options].map(option=>option.value).filter(Boolean))===${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))}`,'open floating panel reorders after event date edit');
+ await check(floating.webContents,[...visibleRecords,data.records.at(-1)]);
  await floating.webContents.executeJavaScript(`document.querySelector('.timeline-codes .event-code').click()`);
  await waitFor(`document.querySelector('.center-heading h2')?.textContent.includes('Timeline fixture event 1')`,'select canonical event from timeline');
- console.log('TIMELINE_VISIBLE_RANGE all 16 in-range events, boundaries, nonoverlap, scroll reachability, compressed wide range and canonical selection passed in docked/floating panels');
+ const uuid=()=>require('node:crypto').randomUUID(),base={schemaVersion:1,owner:changed.owner,universeId:changed.universeId};
+ const type={...base,id:uuid(),recordVersion:uuid(),recordType:'decision-type',data:{name:'Timeline ordering fixture',makerRequired:false,builtin:null}};
+ const older={...base,id:uuid(),recordVersion:uuid(),recordType:'decision',data:{code:'D-OLD',text:'Older choice',date:{...changed.data.date,day:'2'},order:'0',typeId:type.id,maker:null,characterIds:[],eventIds:[],followingDecisionIds:[]}};
+ const newer={...older,id:uuid(),recordVersion:uuid(),data:{...older.data,code:'D-NEW',text:'Newer choice',date:{...older.data.date,day:'3'}}};
+ await publish([type,older,newer]);
+ await waitInFloating(`document.querySelectorAll('.timeline-codes .decision-code').length===2`,'live decision fixtures');
+ await floating.webContents.executeJavaScript(`[...document.querySelectorAll('label.check')].find(label=>label.textContent.includes('Unresolved decisions only')).querySelector('input').click()`);
+ await waitInFloating(`(()=>{const rows=[...document.querySelectorAll('.unresolved-lookup button')];return rows.length===2&&rows[0].textContent.startsWith('D-OLD:')&&rows[1].textContent.startsWith('D-NEW:');})()`,'oldest-first unresolved list');
+ await publish([{...newer,data:{...newer.data,date:{...newer.data.date,day:'1'}}}]);
+ await waitInFloating(`(()=>{const rows=[...document.querySelectorAll('.unresolved-lookup button')];return rows.length===2&&rows[0].textContent.startsWith('D-NEW:')&&rows[1].textContent.startsWith('D-OLD:');})()`,'mounted unresolved list reorders after decision date edit');
+ const finalOrder=await floating.webContents.executeJavaScript(`(()=>{const graphic=[...document.querySelectorAll('.timeline-codes .decision-code')].map(button=>button.textContent.split(' ')[0]),picker=[...document.querySelector('.timeline-scroll').parentElement.querySelector('label select').options].map(option=>option.value);return JSON.stringify(graphic)==='["D-NEW","D-OLD"]'&&picker.indexOf(${JSON.stringify(newer.id)})<picker.indexOf(${JSON.stringify(older.id)});})()`);
+ if(!finalOrder)throw new Error('Decision date edit did not reorder the graphic and picker');
+ console.log('TIMELINE_VISIBLE_RANGE all in-range events, oldest-first graphic/picker/unresolved order, live docked/floating date edits, boundaries, nonoverlap, scroll reachability, compressed wide range and canonical selection passed');
 }
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
