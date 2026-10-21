@@ -365,13 +365,17 @@ async function verifyTimelineIntervals(){
  await choose(main.webContents,'year');
  await evaluate(`(()=>{const select=document.querySelector('select[aria-label="Go to event or decision"]');select.value=${JSON.stringify(data.records[14].id)};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
  await waitCount(main.webContents,4);
+ // Retain this scenario with the commented timeline creation control.
+ /*
  await evaluate(`[...document.querySelectorAll('.timeline-codes button')].find(button=>button.textContent==='New event here').click()`);
  await waitFor(`[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Day of year'))?.querySelector('input')?.value==='2'`,'clipped year creation date stays inside visible range');
  await evaluate(`document.querySelector('.center-heading button').click()`);
  await waitFor(`!document.querySelector('.center-form')||!!document.querySelector('.blocking')`,'leave unsaved interval fixture');
  if(await evaluate(`!!document.querySelector('.blocking')`))await clickText('Discard');
  await waitFor(`!document.querySelector('.center-form')&&!document.querySelector('.blocking')`,'discard temporary event draft');
- console.log('TIMELINE_INTERVALS '+JSON.stringify(summaries)+'; exact dates, standalone day, reachability, late-record 64x navigation, full-period focus, clipped creation, floating/docking synchronization and month-removal fallback passed');
+ */
+ if(await evaluate(`[...document.querySelectorAll('.timeline-codes button')].some(button=>button.textContent==='New event here')`))throw new Error('Timeline creation button should be hidden');
+ console.log('TIMELINE_INTERVALS '+JSON.stringify(summaries)+'; exact dates, standalone day, reachability, late-record 64x navigation, full-period focus, hidden creation button, floating/docking synchronization and month-removal fallback passed');
 }
 async function verifyFactionReopen(){
  const factionName='Reopen fixture faction';

@@ -13,6 +13,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   INITIAL_TIMELINE_VIEW: () => (/* binding */ INITIAL_TIMELINE_VIEW),
 /* harmony export */   PANEL_IDS: () => (/* binding */ PANEL_IDS),
 /* harmony export */   PRESENTATION_CHANNEL: () => (/* binding */ PRESENTATION_CHANNEL),
+/* harmony export */   TIMELINE_INTERVALS: () => (/* binding */ TIMELINE_INTERVALS),
 /* harmony export */   panelActionOpensMain: () => (/* binding */ panelActionOpensMain),
 /* harmony export */   resolveTimelineView: () => (/* binding */ resolveTimelineView),
 /* harmony export */   validPanelAction: () => (/* binding */ validPanelAction),
@@ -27,9 +28,12 @@ __webpack_require__.r(__webpack_exports__);
 
 const PRESENTATION_CHANNEL = 'writingtool:presentation:v1';
 const PANEL_IDS = ['navigation', 'timeline', 'context'];
-const INITIAL_TIMELINE_VIEW = { zoom: 1, focus: null, anchor: null, period: null, unresolved: false };
-const validTimelineView = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['zoom', 'focus', 'anchor', 'period', 'unresolved']) && typeof v.zoom === 'number' && Number.isFinite(v.zoom) && v.zoom >= .125 && v.zoom <= 64 && (v.anchor === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.signedInteger)(v.anchor)) && (v.period === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.positiveInteger)(v.period)) && typeof v.unresolved === 'boolean' && (v.focus === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v.focus, ['requestId', 'start', 'end']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.focus.requestId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.start) && (v.focus.end === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.end)));
+const TIMELINE_INTERVALS = ['day', 'month', 'year', 'decade', 'century'];
+const INITIAL_TIMELINE_VIEW = { interval: 'day', zoom: 1, focus: null, anchor: null, period: null, unresolved: false };
+const validTimelineView = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['interval', 'zoom', 'focus', 'anchor', 'period', 'unresolved']) && TIMELINE_INTERVALS.includes(v.interval) && typeof v.zoom === 'number' && Number.isFinite(v.zoom) && v.zoom >= .125 && v.zoom <= 64 && (v.anchor === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.signedInteger)(v.anchor)) && (v.period === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.positiveInteger)(v.period)) && typeof v.unresolved === 'boolean' && (v.focus === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v.focus, ['requestId', 'start', 'end']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.focus.requestId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.start) && (v.focus.end === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.end)));
 function validTimelineCalendar(view, calendar) {
+    if (view.interval === 'month' && !(0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.hasCalendarMonths)(calendar))
+        return false;
     if (!view.focus)
         return true;
     if (!calendar)
@@ -51,7 +55,7 @@ function resolveTimelineView(current, next, calendar) {
     if (!next.focus || next.focus.requestId === current.focus?.requestId)
         return next;
     const start = (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(next.focus.start, calendar), end = next.focus.end ? (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(next.focus.end, calendar) : start, low = start < end ? start : end, high = start > end ? start : end;
-    return { ...next, anchor: low.toString(), period: high > low ? (high - low + 1n).toString() : '31' };
+    return { ...next, anchor: low.toString(), period: high > low ? (high - low).toString() : '31' };
 }
 const panelActionOpensMain = (action) => ['select', 'edit', 'create', 'create-event', 'tree'].includes(action.kind);
 function validPanelAction(v) {
@@ -881,6 +885,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   displayDate: () => (/* binding */ displayDate),
 /* harmony export */   elapsedPosition: () => (/* binding */ elapsedPosition),
 /* harmony export */   floorDivide: () => (/* binding */ floorDivide),
+/* harmony export */   hasCalendarMonths: () => (/* binding */ hasCalendarMonths),
 /* harmony export */   normalizeCalendarData: () => (/* binding */ normalizeCalendarData),
 /* harmony export */   positiveInteger: () => (/* binding */ positiveInteger),
 /* harmony export */   scalarText: () => (/* binding */ scalarText),
@@ -917,6 +922,7 @@ function validCalendarData(v) {
 function validDatePosition(v) { return (0,_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(v, ['calendarVersion', 'year', 'day']) && (0,_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(v.calendarVersion) && signedInteger(v.year) && positiveInteger(v.day); }
 function configuration(calendar, id) { const c = calendar.versions.find(c => c.id === id); if (!c)
     throw new Error('Unknown calendar configuration.'); return c; }
+function hasCalendarMonths(calendar) { return !!calendar && configuration(calendar, calendar.currentVersion).elements.some(element => element.kind === 'month'); }
 function elapsedPosition(date, calendar) {
     if (!validDatePosition(date))
         throw new Error('Invalid calendar date.');

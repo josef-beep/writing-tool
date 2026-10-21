@@ -1209,6 +1209,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   displayDate: () => (/* binding */ displayDate),
 /* harmony export */   elapsedPosition: () => (/* binding */ elapsedPosition),
 /* harmony export */   floorDivide: () => (/* binding */ floorDivide),
+/* harmony export */   hasCalendarMonths: () => (/* binding */ hasCalendarMonths),
 /* harmony export */   normalizeCalendarData: () => (/* binding */ normalizeCalendarData),
 /* harmony export */   positiveInteger: () => (/* binding */ positiveInteger),
 /* harmony export */   scalarText: () => (/* binding */ scalarText),
@@ -1245,6 +1246,7 @@ function validCalendarData(v) {
 function validDatePosition(v) { return (0,_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(v, ['calendarVersion', 'year', 'day']) && (0,_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(v.calendarVersion) && signedInteger(v.year) && positiveInteger(v.day); }
 function configuration(calendar, id) { const c = calendar.versions.find(c => c.id === id); if (!c)
     throw new Error('Unknown calendar configuration.'); return c; }
+function hasCalendarMonths(calendar) { return !!calendar && configuration(calendar, calendar.currentVersion).elements.some(element => element.kind === 'month'); }
 function elapsedPosition(date, calendar) {
     if (!validDatePosition(date))
         throw new Error('Invalid calendar date.');
