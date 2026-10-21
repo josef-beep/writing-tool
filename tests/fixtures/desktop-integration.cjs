@@ -161,7 +161,8 @@ async function verifyTimeline(){
  if(saved.status!=='ok')throw new Error('Cannot save timeline fixtures: '+JSON.stringify(saved));
  await evaluate(`window.dispatchEvent(new Event('focus'))`);
  await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===18`,'loaded timeline records');
- await evaluate(`(()=>{const select=document.querySelector('.timeline-scroll').parentElement.querySelector('label select');select.value=${JSON.stringify(data.expected[0])};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+ if(!await evaluate(`document.querySelector('select[aria-label="Timeline interval"] option[value="month"]').disabled`))throw new Error('Days-only calendar should explain unavailable month intervals');
+ await evaluate(`(()=>{const select=document.querySelector('.timeline-scroll').parentElement.querySelector('select[aria-label="Go to event or decision"]');select.value=${JSON.stringify(data.expected[0])};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
  await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===16`,'focused timeline range');
  const check=async(webContents,expected=visibleRecords,width=180)=>{
   const result=await webContents.executeJavaScript(`(async()=>{
@@ -169,7 +170,7 @@ async function verifyTimeline(){
    const viewport=document.querySelector('.timeline-scroll');viewport.style.width='${width}px';viewport.style.height='300px';
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    const buttons=[...viewport.querySelectorAll('.timeline-codes .event-code')];
-   const picker=[...viewport.parentElement.querySelector('label select').options].map(option=>option.value).filter(Boolean);
+   const picker=[...viewport.parentElement.querySelector('select[aria-label="Go to event or decision"]').options].map(option=>option.value).filter(Boolean);
    if(JSON.stringify(picker)!==${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))})return 'Timeline picker is not ordered oldest first';
    const ids=buttons.map(button=>button.getAttribute('aria-label').split(': ')[0]);
    if(buttons.length!==${expected.length})return 'Missing in-range events: '+buttons.length;
@@ -207,7 +208,7 @@ async function verifyTimeline(){
  visibleRecords=data.records.slice(2,-2);visibleRecords.splice(12,0,changed);
  pickerRecords=[data.records[1],...visibleRecords,data.records.at(-1)];
  await evaluate(`window.dispatchEvent(new Event('focus'))`);
- await waitFor(`JSON.stringify([...document.querySelector('.timeline-scroll').parentElement.querySelector('label select').options].map(option=>option.value).filter(Boolean))===${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))}`,'oldest-first order after date edit');
+ await waitFor(`JSON.stringify([...document.querySelector('.timeline-scroll').parentElement.querySelector('select[aria-label="Go to event or decision"]').options].map(option=>option.value).filter(Boolean))===${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))}`,'oldest-first order after date edit');
  await check(main.webContents);
  await evaluate(`document.documentElement.style.fontSize='14px'`);
  await evaluate(`(()=>{const panel=document.querySelector('aside[aria-label="Universe timeline"]');[...panel.querySelectorAll('button')].find(button=>button.textContent==='floating').click();})()`);
@@ -238,7 +239,7 @@ async function verifyTimeline(){
  const later=structuredClone(changed);later.data.date.day='3';
  await publish([later]);
  visibleRecords=[...data.records.slice(2,-2),later];pickerRecords=[data.records[1],...visibleRecords,data.records.at(-1)];
- await waitInFloating(`JSON.stringify([...document.querySelector('.timeline-scroll').parentElement.querySelector('label select').options].map(option=>option.value).filter(Boolean))===${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))}`,'open floating panel reorders after event date edit');
+ await waitInFloating(`JSON.stringify([...document.querySelector('.timeline-scroll').parentElement.querySelector('select[aria-label="Go to event or decision"]').options].map(option=>option.value).filter(Boolean))===${JSON.stringify(JSON.stringify(pickerRecords.map(record=>record.id)))}`,'open floating panel reorders after event date edit');
  await check(floating.webContents,[...visibleRecords,data.records.at(-1)]);
  await floating.webContents.executeJavaScript(`document.querySelector('.timeline-codes .event-code').click()`);
  await waitFor(`document.querySelector('.center-heading h2')?.textContent.includes('Timeline fixture event 1')`,'select canonical event from timeline');
@@ -252,9 +253,125 @@ async function verifyTimeline(){
  await waitInFloating(`(()=>{const rows=[...document.querySelectorAll('.unresolved-lookup button')];return rows.length===2&&rows[0].textContent.startsWith('D-OLD:')&&rows[1].textContent.startsWith('D-NEW:');})()`,'oldest-first unresolved list');
  await publish([{...newer,data:{...newer.data,date:{...newer.data.date,day:'1'}}}]);
  await waitInFloating(`(()=>{const rows=[...document.querySelectorAll('.unresolved-lookup button')];return rows.length===2&&rows[0].textContent.startsWith('D-NEW:')&&rows[1].textContent.startsWith('D-OLD:');})()`,'mounted unresolved list reorders after decision date edit');
- const finalOrder=await floating.webContents.executeJavaScript(`(()=>{const graphic=[...document.querySelectorAll('.timeline-codes .decision-code')].map(button=>button.textContent.split(' ')[0]),picker=[...document.querySelector('.timeline-scroll').parentElement.querySelector('label select').options].map(option=>option.value);return JSON.stringify(graphic)==='["D-NEW","D-OLD"]'&&picker.indexOf(${JSON.stringify(newer.id)})<picker.indexOf(${JSON.stringify(older.id)});})()`);
+ const finalOrder=await floating.webContents.executeJavaScript(`(()=>{const graphic=[...document.querySelectorAll('.timeline-codes .decision-code')].map(button=>button.textContent.split(' ')[0]),picker=[...document.querySelector('.timeline-scroll').parentElement.querySelector('select[aria-label="Go to event or decision"]').options].map(option=>option.value);return JSON.stringify(graphic)==='["D-NEW","D-OLD"]'&&picker.indexOf(${JSON.stringify(newer.id)})<picker.indexOf(${JSON.stringify(older.id)});})()`);
  if(!finalOrder)throw new Error('Decision date edit did not reorder the graphic and picker');
  console.log('TIMELINE_VISIBLE_RANGE all in-range events, oldest-first graphic/picker/unresolved order, live docked/floating date edits, boundaries, nonoverlap, scroll reachability, compressed wide range and canonical selection passed');
+}
+async function verifyTimelineIntervals(){
+ const data=JSON.parse(fs.readFileSync(path.join(fixture,'timeline.json'),'utf8'));
+ const queried=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ if(queried.status!=='ok')throw new Error('Cannot query interval fixture');
+ const unit=queried.snapshot.universe;
+ const saved=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:{operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',units:[{owner:unit.owner,expectedUnitGeneration:unit.generation,changes:data.records.map(record=>({action:'put',record,expectedRecordVersion:null,manuscript:null}))}]}})})`);
+ if(saved.status!=='ok')throw new Error('Cannot save interval fixture: '+JSON.stringify(saved));
+ await evaluate(`window.dispatchEvent(new Event('focus'))`);
+ await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===18`,'interval fixture loading');
+ await evaluate(`(()=>{const select=document.querySelector('select[aria-label="Go to event or decision"]');select.value=${JSON.stringify(data.expected[0])};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+ await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===16`,'interval starting focus');
+ const intervalSelector='select[aria-label="Timeline interval"]';
+ async function choose(webContents,interval){
+  await webContents.executeJavaScript(`(()=>{const select=document.querySelector(${JSON.stringify(intervalSelector)});select.value=${JSON.stringify(interval)};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  const deadline=Date.now()+15000;
+  while(Date.now()<deadline){
+   const selected=await webContents.executeJavaScript(`document.querySelector(${JSON.stringify(intervalSelector)})?.value===${JSON.stringify(interval)}`);
+   if(selected){
+    if(webContents===main.webContents)return;
+    const mirrored=await webContents.executeJavaScript(`window.writingToolPresentation.presentation({command:'panel.read'})`);
+    if(mirrored.status==='ok'&&mirrored.mirror?.timeline.interval===interval)return;
+   }
+   await delay(100);
+  }
+  throw new Error('Interval did not update: '+interval);
+ }
+ async function waitCount(webContents,count){
+  const deadline=Date.now()+15000;
+  while(Date.now()<deadline){if(await webContents.executeJavaScript(`document.querySelectorAll('.timeline-codes .event-code').length===${count}`))return;await delay(100);}
+  throw new Error('Interval omitted an event, expected '+count);
+ }
+ const summaries=[];
+ for(const interval of ['day','month','year','decade','century']){
+  await choose(main.webContents,interval);await waitCount(main.webContents,interval==='decade'||interval==='century'?18:17);
+  const labels=await evaluate(`[...document.querySelectorAll('.timeline-date')].map(button=>button.textContent)`);
+  if(interval==='month'&&(!labels.some(label=>label.startsWith('First /'))||!labels.some(label=>label.startsWith('Last /'))||!labels.some(label=>label.startsWith('Festival /'))))throw new Error('Month intervals ignored configured names or standalone day');
+  if(interval==='year'&&labels.some(label=>label.includes('/')))throw new Error('Year intervals still use day labels');
+  if((interval==='decade'||interval==='century')&&labels.some(label=>!label.includes('–')))throw new Error('Long intervals need year-range labels');
+  if(interval!=='day'&&!await evaluate(`document.querySelector('.timeline-record-date')`))throw new Error('Coarse intervals lost exact event dates');
+  if(interval!=='day'){
+   const problem=await evaluate(`(async()=>{
+    const viewport=document.querySelector('.timeline-scroll'),groups=[...viewport.querySelectorAll('.timeline-group')],dates=${JSON.stringify(data.dates)};
+    for(let index=1;index<groups.length;index++)if(groups[index].getBoundingClientRect().top<groups[index-1].getBoundingClientRect().bottom-1)return 'Coarse groups overlap';
+    for(const button of viewport.querySelectorAll('.event-code')){
+     const code=button.getAttribute('aria-label').split(': ')[0].slice(6);
+     if(button.querySelector('.timeline-record-date')?.textContent!==dates[code])return 'Coarse interval changed an event date: '+code;
+     button.scrollIntoView({block:'center',inline:'nearest'});await new Promise(resolve=>requestAnimationFrame(resolve));
+     const rect=button.getBoundingClientRect();let top=Math.max(rect.top,0),bottom=Math.min(rect.bottom,innerHeight),left=Math.max(rect.left,0),right=Math.min(rect.right,innerWidth);
+     for(let ancestor=button.parentElement;ancestor;ancestor=ancestor.parentElement){const style=getComputedStyle(ancestor),box=ancestor.getBoundingClientRect();if(/auto|scroll|hidden|clip/.test(style.overflowY)){top=Math.max(top,box.top);bottom=Math.min(bottom,box.bottom);}if(/auto|scroll|hidden|clip/.test(style.overflowX)){left=Math.max(left,box.left);right=Math.min(right,box.right);}}
+     if(bottom<=top||right<=left||!button.contains(document.elementFromPoint((left+right)/2,(top+bottom)/2)))return 'Coarse event is unreachable: '+code;
+    }
+    return null;
+   })()`);
+   if(problem)throw new Error(problem);
+  }
+  summaries.push({interval,groups:labels.length});
+ }
+ await evaluate(`[...document.querySelector('aside[aria-label="Universe timeline"]').querySelectorAll('button')].find(button=>button.textContent==='Zoom in').click()`);
+ await waitFor(`document.querySelector('aside[aria-label="Universe timeline"]').innerText.includes('Zoom: 2×')`,'interval zoom');
+ await evaluate(`[...document.querySelector('aside[aria-label="Universe timeline"]').querySelectorAll('button')].find(button=>button.textContent==='Zoom out').click()`);
+ await waitFor(`document.querySelector('aside[aria-label="Universe timeline"]').innerText.includes('Zoom: 1×')`,'interval zoom reset');
+ await evaluate(`[...document.querySelectorAll('button')].find(button=>button.textContent==='Later period').click()`);
+ await waitCount(main.webContents,0);
+ await evaluate(`[...document.querySelectorAll('button')].find(button=>button.textContent==='Earlier period').click()`);
+ await waitCount(main.webContents,18);
+ const queriedLate=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ if(queriedLate.status!=='ok')throw new Error('Cannot query late-century fixture');
+ const late=structuredClone(queriedLate.snapshot.universe.records.find(record=>record.id===data.records.at(-1).id));
+ late.data.date.year=(BigInt(late.data.date.year)+98n).toString();
+ const savedLate=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:{operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',units:[{owner:queriedLate.snapshot.universe.owner,expectedUnitGeneration:queriedLate.snapshot.universe.generation,changes:[{action:'put',record:late,expectedRecordVersion:late.recordVersion,manuscript:null}]}]}})})`);
+ if(savedLate.status!=='ok')throw new Error('Cannot save late-century fixture');
+ await evaluate(`window.dispatchEvent(new Event('focus'))`);
+ for(const zoom of [2,4,8,16,32,64]){
+  await evaluate(`[...document.querySelector('aside[aria-label="Universe timeline"]').querySelectorAll('button')].find(button=>button.textContent==='Zoom in').click()`);
+  await waitFor(`document.querySelector('aside[aria-label="Universe timeline"]').innerText.includes('Zoom: ${zoom}×')`,'high-zoom century');
+ }
+ await evaluate(`[...document.querySelectorAll('button')].find(button=>button.textContent==='Last record').click()`);
+ await waitFor(`[...document.querySelectorAll('.timeline-codes .event-code')].some(button=>button.getAttribute('aria-label').startsWith(${JSON.stringify('event '+late.data.code+':')}))`,'Last record visible at 64x');
+ await evaluate(`document.querySelector('.timeline-date').click()`);
+ await waitCount(main.webContents,18);
+ await evaluate(`[...document.querySelectorAll('.timeline-codes .event-code')].find(button=>button.getAttribute('aria-label').startsWith(${JSON.stringify('event '+late.data.code+':')})).click()`);
+ await waitFor(`document.querySelector('.center-heading h2')?.textContent.includes('Timeline fixture event 17')`,'coarse late-record canonical editor');
+ await choose(main.webContents,'year');
+ await evaluate(`[...document.querySelector('aside[aria-label="Universe timeline"]').querySelectorAll('button')].find(button=>button.textContent==='floating').click()`);
+ const deadline=Date.now()+15000;while(BrowserWindow.getAllWindows().length<2&&Date.now()<deadline)await delay(100);
+ const floating=BrowserWindow.getAllWindows().find(window=>window!==main);
+ if(!floating)throw new Error('Interval panel did not float');
+ await waitCount(floating.webContents,17);
+ if(!await floating.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(intervalSelector)}).value==='year'`))throw new Error('Selected interval did not transfer to floating panel');
+ await choose(floating.webContents,'month');
+ const mirrored=await floating.webContents.executeJavaScript(`window.writingToolPresentation.presentation({command:'panel.read'})`);
+ if(mirrored.status!=='ok'||mirrored.mirror.timeline.interval!=='month')throw new Error('Floating interval was not synchronized through owner');
+ await floating.webContents.executeJavaScript(`[...document.querySelectorAll('.panel-heading button')].find(button=>button.textContent==='left').click()`);
+ await waitFor(`document.querySelector('aside[aria-label="Universe timeline"] select[aria-label="Timeline interval"]')?.value==='month'`,'interval survives docking');
+ const visible=await evaluate(`[...document.querySelectorAll('.timeline-codes .event-code')].map(button=>button.getAttribute('aria-label').split(': ')[0])`);
+ if(visible.length===0||new Set(visible).size!==visible.length)throw new Error('Interval roundtrip lost or duplicated records');
+ const current=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ if(current.status!=='ok')throw new Error('Cannot query calendar before interval fallback');
+ const calendar=structuredClone(current.snapshot.universe.records.find(record=>record.recordType==='calendar'));
+ const version={...calendar.data.versions.at(-1),id:require('node:crypto').randomUUID(),elements:[],daysOnly:'365'};
+ calendar.data.versions.push(version);calendar.data.currentVersion=version.id;
+ const removed=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:{operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',units:[{owner:current.snapshot.universe.owner,expectedUnitGeneration:current.snapshot.universe.generation,changes:[{action:'put',record:calendar,expectedRecordVersion:calendar.recordVersion,manuscript:null}]}]}})})`);
+ if(removed.status!=='ok')throw new Error('Cannot test month removal: '+JSON.stringify(removed));
+ await evaluate(`window.dispatchEvent(new Event('focus'))`);
+ await waitFor(`document.querySelector(${JSON.stringify(intervalSelector)})?.value==='day'&&document.querySelector(${JSON.stringify(intervalSelector)}).querySelector('option[value="month"]').disabled`,'calendar change falls back to Days');
+ await choose(main.webContents,'year');
+ await evaluate(`(()=>{const select=document.querySelector('select[aria-label="Go to event or decision"]');select.value=${JSON.stringify(data.records[14].id)};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+ await waitCount(main.webContents,4);
+ await evaluate(`[...document.querySelectorAll('.timeline-codes button')].find(button=>button.textContent==='New event here').click()`);
+ await waitFor(`[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Day of year'))?.querySelector('input')?.value==='2'`,'clipped year creation date stays inside visible range');
+ await evaluate(`document.querySelector('.center-heading button').click()`);
+ await waitFor(`!document.querySelector('.center-form')||!!document.querySelector('.blocking')`,'leave unsaved interval fixture');
+ if(await evaluate(`!!document.querySelector('.blocking')`))await clickText('Discard');
+ await waitFor(`!document.querySelector('.center-form')&&!document.querySelector('.blocking')`,'discard temporary event draft');
+ console.log('TIMELINE_INTERVALS '+JSON.stringify(summaries)+'; exact dates, standalone day, reachability, late-record 64x navigation, full-period focus, clipped creation, floating/docking synchronization and month-removal fallback passed');
 }
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
@@ -263,7 +380,10 @@ async function drive(){
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
- if(mode==='timeline'){
+ if(mode==='intervals'){
+  await verifyTimelineIntervals();
+  main.close();
+ }else if(mode==='timeline'){
   await verifyTimeline();
   main.close();
  }else if(mode==='menus'){

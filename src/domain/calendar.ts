@@ -23,6 +23,7 @@ export function validCalendarData(v: unknown): v is CalendarData {
 }
 export function validDatePosition(v: unknown): v is DatePosition { return closed(v, ['calendarVersion','year','day']) && isUuid(v.calendarVersion) && signedInteger(v.year) && positiveInteger(v.day); }
 export function configuration(calendar: CalendarData, id: string): CalendarConfiguration { const c = calendar.versions.find(c => c.id === id); if (!c) throw new Error('Unknown calendar configuration.'); return c; }
+export function hasCalendarMonths(calendar: CalendarData | null): boolean { return !!calendar && configuration(calendar, calendar.currentVersion).elements.some(element => element.kind === 'month'); }
 export function elapsedPosition(date: DatePosition, calendar: CalendarData): bigint {
     if (!validDatePosition(date)) throw new Error('Invalid calendar date.');
     const c = configuration(calendar, date.calendarVersion);

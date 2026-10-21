@@ -6,7 +6,7 @@ import {forwardRef,useEffect,useImperativeHandle,useRef,useState,type ReactNode}
 import {createPortal} from 'react-dom';
 import type {WorkspaceSnapshot,WorkspaceMutation,WorkspaceChange,WorkspaceResult,AppSettings,PanelLayout,WorkspaceCommand} from '../../application/contracts/workspace';
 import {type WorkspaceRecord,type WorkspaceRecordType,type WorkspaceRecordOf,type ManagedImage,type ViewData,updateRecordCalendar,orderedPlots,compareOptionalDates} from '../../domain/workspace';
-import {type DatePosition,compareDates,convertDate} from '../../domain/calendar';
+import {type DatePosition,compareDates,convertDate,hasCalendarMonths} from '../../domain/calendar';
 import {ManuscriptEditor} from '../manuscript/ManuscriptEditor';
 import {allRecords,recordsOf,currentCalendar,createRecord,newRecord,recordLabel,dateLabel,putChange,unitFor,uuid} from './model';
 import {RecordForm} from './RecordForm';
@@ -56,7 +56,7 @@ export const Workspace=forwardRef<WorkspaceHandle,{identity:string;universeName:
  const setError=(value:string|undefined)=>{errorRef.current=value;readOnlyError.current=false;setErrorState(value);};
  const setReadError=(value:string)=>{if(errorRef.current&&!readOnlyError.current)return;errorRef.current=value;readOnlyError.current=true;setErrorState(value);};
  const status=(v:string)=>{setSaveState(v);onStatus(v);};
- function accept(s:WorkspaceSnapshot){snapshotLoaded.current=true;snap.current=s;setSnapshot(s);}
+ function accept(s:WorkspaceSnapshot){snapshotLoaded.current=true;snap.current=s;setSnapshot(s);if(timelineRef.current.interval==='month'&&!hasCalendarMonths(currentCalendar(s))){const next={...timelineRef.current,interval:'day' as const};timelineRef.current=next;setTimeline(next);}}
  function setWorking(v:boolean){busyRef.current=v;setBusy(v);}
  function markDraft(next:Draft){revision.current++;draftRef.current=next;setDraft(next);setDirty(true);}
  function editRecord(r:WorkspaceRecord){const current=draftRef.current;if(current)markDraft({...current,record:calendarDraft(r)});}

@@ -10,12 +10,12 @@ import {FileUniverseStorage} from '../src/infrastructure/universe-storage.ts';
 import {FileProjectStorage} from '../src/infrastructure/project-storage.ts';
 import {WorkspaceCoordinator} from '../src/infrastructure/workspace-coordinator.ts';
 import {SettingsStorage} from '../src/infrastructure/settings-storage.ts';
-import {createRecord} from '../src/presentation/workspace/model.ts';
+import {createRecord,dateLabel} from '../src/presentation/workspace/model.ts';
 import {DEFAULT_PANELS} from '../src/presentation/workspace/SettingsForm.tsx';
 import {runSmokeProcess} from './smoke.mjs';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
-const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus','timeline'];
+const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals'];
 const selectedModes=process.argv.slice(2);
 if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
 const modes=selectedModes.length?selectedModes:availableModes;
@@ -48,18 +48,23 @@ for(const mode of modes){
   const snapshot={project:project.workspace.snapshot(),universe:universe.workspace.snapshot()};
   const characters=['major','minor'].map(type=>{const record=createRecord(snapshot,'character');record.data.name=`Fixture ${type}`;record.data.type=type;return record;});
   fs.writeFileSync(path.join(fixture,'characters.json'),JSON.stringify(characters));
-  if(mode==='timeline'){
+  if(mode==='timeline'||mode==='intervals'){
    const calendar=createRecord(snapshot,'calendar'),configuration=calendar.data.versions[0];
    Object.assign(configuration,{daysOnly:'365',actualDays:'365',targetDays:'365'});
+   if(mode==='intervals'){
+    configuration.elements=[{id:randomUUID(),kind:'month',name:'First',days:'10'},{id:randomUUID(),kind:'standalone',name:'Festival',days:'1'},{id:randomUUID(),kind:'month',name:'Last',days:'354'}];
+    configuration.daysOnly=null;
+   }
    snapshot.universe.records.push(calendar);
    const year=-999999999999999999999999n;
    const events=Array.from({length:18},(_,index)=>{
     const record=createRecord(snapshot,'event');
     record.data.heading=`Timeline fixture event ${index}`;record.data.code=`E${index.toString().padStart(3,'0')}-a-long-readable-timeline-code`;
     record.data.date={calendarVersion:calendar.data.currentVersion,year:(index===0?year-1n:year).toString(),day:index===0?'365':index>=16?(index+16).toString():index>=13?'2':'1'};
+    if(mode==='intervals'&&index===15)record.data.date.day='11';
     record.data.order=index.toString();return record;
    });
-   fs.writeFileSync(path.join(fixture,'timeline.json'),JSON.stringify({records:[calendar,...events],expected:events.slice(1,-1).map(record=>record.id)}));
+   fs.writeFileSync(path.join(fixture,'timeline.json'),JSON.stringify({records:[calendar,...events],expected:events.slice(1,-1).map(record=>record.id),dates:Object.fromEntries(events.map(record=>[record.data.code,dateLabel(record.data.date,calendar.data)]))}));
   }
   if(mode==='partial-layout'){
    const settings=new SettingsStorage(path.join(fixture,'profile'),fn=>coordinator.settingsGate(fn)),saved=settings.get();

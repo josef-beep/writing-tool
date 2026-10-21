@@ -5,18 +5,20 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {validPanelAction,validTimelineView,validTimelineCalendar,resolveTimelineView,INITIAL_TIMELINE_VIEW,panelActionOpensMain,type PanelAction,type PanelMirror,type TimelineView} from '../src/application/contracts/presentation';
+import {validPanelAction,validTimelineView,validTimelineCalendar,resolveTimelineView,INITIAL_TIMELINE_VIEW,TIMELINE_INTERVALS,panelActionOpensMain,type PanelAction,type PanelMirror,type TimelineInterval,type TimelineView} from '../src/application/contracts/presentation';
 import {PanelLayoutQueue,reorderPanels,mergeSavedPanelLayout,normalizePanelLayouts,persistPanelLayouts,panelResizePatch} from '../src/presentation/workspace/panel-layout';
 import {PanelContent,PanelControls} from '../src/presentation/workspace/PanelContent';
 import {Timeline} from '../src/presentation/workspace/Chronology';
+import {timelineDateAt,timelinePeriod,timelineDefaultSpan,timelineUnitDays} from '../src/presentation/workspace/timeline-interval';
 import {createRecord,newRecord} from '../src/presentation/workspace/model';
 import {DEFAULT_PANELS} from '../src/presentation/workspace/SettingsForm';
 import {SettingsStorage} from '../src/infrastructure/settings-storage';
 import type {PanelLayout,AppSettings,WorkspaceSnapshot} from '../src/application/contracts/workspace';
-import type {CalendarData} from '../src/domain/calendar';
+import {elapsedPosition,type CalendarData} from '../src/domain/calendar';
 import type {WorkspaceRecord} from '../src/domain/workspace';
 
 const panels=()=>structuredClone(DEFAULT_PANELS);
+const pickerLabels=(html:string)=>[...(html.match(/<select[^>]*aria-label="Go to event or decision"[^>]*>(.*?)<\/select>/s)?.[1]??'').matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]);
 function persistenceFixture(t:TestContext,initial:PanelLayout[]=panels()){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'writingtool-panel-persistence-'));
  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
@@ -94,6 +96,49 @@ function timelineFixture(){
  const focus={requestId:randomUUID(),start:{calendarVersion:version,year:'0',day:'5'},end:null};
  return {calendar,focus};
 }
+test('timeline intervals use actual month boundaries, standalone days and exact negative year buckets',()=>{
+ const {calendar}=timelineFixture(),config=calendar.versions[0];
+ config.elements=[{id:randomUUID(),kind:'month',name:'First',days:'10'},{id:randomUUID(),kind:'standalone',name:'Festival',days:'1'},{id:randomUUID(),kind:'month',name:'Last',days:'50'}];
+ config.daysOnly=null;config.actualDays='61';config.targetDays='61';
+ assert.equal(timelinePeriod(9n,'month',calendar).label,'First / 0');
+ assert.equal(timelinePeriod(10n,'month',calendar).label,'Festival / 0');
+ assert.equal(timelinePeriod(11n,'month',calendar).label,'Last / 0');
+ assert.equal(timelinePeriod(60n,'month',calendar).position,11n);
+ assert.equal(timelinePeriod(60n,'month',calendar).end,60n);
+ assert.equal(timelinePeriod(61n,'month',calendar).label,'First / 1');
+ assert.deepEqual(timelineDateAt(-1n,calendar),{calendarVersion:calendar.currentVersion,year:'-1',day:'61'});
+ assert.equal(timelinePeriod(-1n,'year',calendar).position,-61n);
+ assert.equal(timelinePeriod(-1n,'decade',calendar).label,'-10–-1');
+ assert.equal(timelinePeriod(-1n,'century',calendar).label,'-100–-1');
+ assert.equal(timelinePeriod(0n,'century',calendar).label,'0–99');
+ const hugeYear=100000000000000000000009n,huge=hugeYear*61n;
+ assert.equal(timelinePeriod(huge,'decade',calendar).position,(hugeYear-9n)*61n);
+ assert.equal(timelineDateAt(huge,calendar).year,hugeYear.toString());
+ assert.deepEqual(TIMELINE_INTERVALS.map(interval=>timelineDefaultSpan(interval,calendar)),[365n,61n,610n,6100n,61000n]);
+ assert.deepEqual(TIMELINE_INTERVALS.map(interval=>timelineUnitDays(interval,calendar)),[1n,30n,61n,610n,6100n]);
+ for(const interval of TIMELINE_INTERVALS){const next={...INITIAL_TIMELINE_VIEW,interval};assert.equal(validTimelineView(next),true);assert.equal(validTimelineCalendar(next,calendar),true);}
+ assert.equal(validTimelineView({...INITIAL_TIMELINE_VIEW,interval:'week'}),false);
+ const noMonths=timelineFixture().calendar;
+ assert.equal(validTimelineCalendar({...INITIAL_TIMELINE_VIEW,interval:'month'},noMonths),false);
+ assert.equal(resolveTimelineView(INITIAL_TIMELINE_VIEW,{...INITIAL_TIMELINE_VIEW,interval:'month'},noMonths),null);
+ calendar.anchor.year='42';
+ const historical={...config,id:randomUUID(),elements:[],daysOnly:'100',actualDays:'100',targetDays:'100'};calendar.versions.push(historical);
+ const original={calendarVersion:historical.id,year:'43',day:'5'},retained=structuredClone(original),position=elapsedPosition(original,calendar);
+ assert.equal(position,104n);assert.equal(timelinePeriod(position,'month',calendar).position,72n);
+ assert.equal(timelinePeriod(position,'month',calendar).end,121n);assert.equal(timelinePeriod(position,'month',calendar).label,'Last / 43');
+ assert.equal(timelinePeriod(position,'year',calendar).position,61n);assert.equal(timelinePeriod(position,'decade',calendar).position,-122n);
+ assert.deepEqual(original,retained,'bucketing preserves historical record dates');
+});
+test('selected timeline interval survives zoom, chapter focus and floating serialization',()=>{
+ const {calendar,focus}=timelineFixture();
+ const century={...INITIAL_TIMELINE_VIEW,interval:'century' as const,unresolved:true,anchor:'-365',period:null};
+ const zoomed=resolveTimelineView(century,JSON.parse(JSON.stringify({...century,zoom:2})),calendar)!;
+ assert.equal(zoomed.interval,'century');assert.equal(zoomed.anchor,'-365');assert.equal(zoomed.unresolved,true);
+ const focused=resolveTimelineView(zoomed,{...zoomed,focus},calendar)!;
+ assert.equal(focused.interval,'century');assert.equal(focused.anchor,'4');assert.equal(focused.period,'31');
+ const ranged=resolveTimelineView(focused,{...focused,focus:{...focus,requestId:randomUUID(),end:{...focus.start,day:'10'}}},calendar)!;
+ assert.equal(ranged.period,'5','inclusive focused range ends on the requested date');
+});
 test('shared timeline interval and unresolved filter survive reparenting while repeated focus requests still reset',()=>{
  const {calendar,focus}=timelineFixture(),focused=resolveTimelineView(INITIAL_TIMELINE_VIEW,{...INITIAL_TIMELINE_VIEW,focus},calendar)!;
  assert.equal(focused.anchor,'4');assert.equal(focused.period,'31');
@@ -141,7 +186,7 @@ test('timeline includes every event at both interval boundaries and on shared da
  const render=(unresolved=false)=>renderToStaticMarkup(<Timeline snapshot={{...snapshot}} universeName="Fixture" value={{...INITIAL_TIMELINE_VIEW,anchor:first.toString(),period:'31',unresolved}} open={()=>{}} onChange={()=>{}} goTo={()=>{}}/>);
  const labels=(html:string)=>[...html.matchAll(/aria-label="event ([^"]+):/g)].map(match=>match[1]);
  assert.deepEqual(labels(render()),[...sameDay.map(record=>record.data.code),'MIDDLE','END']);
- const options=(html:string)=>[...html.matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]);
+ const options=pickerLabels;
  assert.deepEqual(options(render()),['BEFORE',...sameDay.map(record=>record.data.code),'MIDDLE','DECISION','RESOLVED','END','AFTER'],'timeline picker is oldest first across event and decision records');
  const view=newRecord(snapshot,'view',{makers:[],categories:[{kind:'decision-type',id:randomUUID()}]});snapshot.universe!.records.push(view);
  assert.deepEqual(labels(render()),[],'category filters still apply');
@@ -161,6 +206,7 @@ test('timeline includes every event at both interval boundaries and on shared da
 test('timeline chronology uses exact calendar positions for its graphic, picker and unresolved list',()=>{
  const {calendar}=timelineFixture(),historical=randomUUID();
  calendar.versions.push({...calendar.versions[0],id:historical,daysOnly:'100',actualDays:'100',targetDays:'100'});
+ calendar.versions[0].elements=[{id:randomUUID(),kind:'month',name:'First',days:'31'},{id:randomUUID(),kind:'month',name:'Last',days:'334'}];calendar.versions[0].daysOnly=null;
  const universeId=randomUUID(),owner={kind:'universe' as const,id:universeId};
  const snapshot:WorkspaceSnapshot={project:null,universe:{owner,rootId:randomUUID(),universeId,generation:'0',records:[],manuscripts:{},assets:[],counters:{story:'0',chapter:'0',event:'0',decision:'0'}}};
  const date=(year:string,day:string,calendarVersion=calendar.currentVersion)=>({calendarVersion,year,day});
@@ -174,13 +220,18 @@ test('timeline chronology uses exact calendar positions for its graphic, picker 
  const olderDecision=newRecord(snapshot,'decision',{...newerDecision.data,code:'OLDER-DECISION',text:'Older',date:older.data.date,order:'10'});
  const firstDecision=newRecord(snapshot,'decision',{...newerDecision.data,code:'FIRST-DECISION',text:'First on its day',date:older.data.date,order:'0'});
  snapshot.universe!.records.push(newRecord(snapshot,'calendar',calendar),type,newerDecision,newest,idLast,tieLate,olderDecision,older,tieEarly,idFirst,negative,firstDecision);
- const render=(unresolved=false)=>renderToStaticMarkup(<Timeline snapshot={snapshot} universeName="Fixture" value={{...INITIAL_TIMELINE_VIEW,anchor:'-1',period:'500',unresolved}} open={()=>{}} onChange={()=>{}} goTo={()=>{}}/>);
+ const render=(unresolved=false,interval:TimelineInterval='day')=>renderToStaticMarkup(<Timeline snapshot={snapshot} universeName="Fixture" value={{...INITIAL_TIMELINE_VIEW,interval,anchor:'-1',period:'500',unresolved}} open={()=>{}} onChange={()=>{}} goTo={()=>{}}/>);
  const ordered=['NEGATIVE','TIE-EARLY','ID-FIRST','ID-LAST','TIE-LATE','FIRST-DECISION','OLDER','OLDER-DECISION','NEWEST','NEWER-DECISION'];
  assert.deepEqual([...render().matchAll(/aria-label="(?:event|decision) ([^:]+):/g)].map(match=>match[1]),ordered);
- assert.deepEqual([...render().matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]),ordered);
+ for(const interval of TIMELINE_INTERVALS){
+  const html=render(false,interval);
+  assert.deepEqual([...html.matchAll(/aria-label="(?:event|decision) ([^:]+):/g)].map(match=>match[1]),ordered,`${interval} keeps every record in date order`);
+  if(interval!=='day')assert.match(html,/class="timeline-record-date"/,'coarse intervals retain exact event dates');
+ }
+ assert.deepEqual(pickerLabels(render()),ordered);
  assert.deepEqual([...render(true).matchAll(/class="context-record decision-code"[^>]*>([^:]+):/g)].map(match=>match[1]),['FIRST-DECISION','OLDER-DECISION','NEWER-DECISION']);
  negative.data.date=date('1','10');
- assert.deepEqual([...render().matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]),[...ordered.slice(1),'NEGATIVE'],'date changes reorder the picker');
+ assert.deepEqual(pickerLabels(render()),[...ordered.slice(1),'NEGATIVE'],'date changes reorder the picker');
 });
 test('floating view and layout commands retain focus; only main-content intents request owner focus',()=>{
  const id=randomUUID();

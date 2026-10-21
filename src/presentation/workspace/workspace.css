@@ -18,3 +18,4 @@ fieldset{border:1px solid var(--border);border-radius:4px;margin-top:1rem;paddin
 .revision-comparison{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem}.revision-comparison article{border:1px solid var(--line);padding:1rem;overflow:auto}.revision-comparison pre{white-space:pre-wrap;overflow-wrap:anywhere}.revision-comparison dl{margin:0}.revision-comparison dt{font-weight:600}.revision-comparison dd{margin:0 0 .5rem}.protection-center label{display:block;margin:.75rem 0}.protection-center select{max-width:100%}.protection-center progress{width:100%}
 
 .workspace-panel.collapsed{resize:horizontal;align-self:flex-start}.floating-panel{padding:.5rem}.floating-panel .panel-content{overflow:auto}.workspace-panel .timeline-scroll{height:100%;min-height:240px}.workspace-panel .panel-content{max-height:calc(100% - 3rem)}
+.timeline-record-date{display:block;font-size:.85em;color:var(--secondary)}
