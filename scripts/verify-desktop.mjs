@@ -15,7 +15,7 @@ import {DEFAULT_PANELS} from '../src/presentation/workspace/SettingsForm.tsx';
 import {runSmokeProcess} from './smoke.mjs';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
-const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals'];
+const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions'];
 const selectedModes=process.argv.slice(2);
 if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
 const modes=selectedModes.length?selectedModes:availableModes;

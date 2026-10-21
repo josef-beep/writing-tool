@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-21",
+  "baseline": "Context-tab create/save/reopen passed; no persistence failure reproduced.",
+  "typecheck": "passed",
+  "lint": "passed",
+  "presentationTests": {"passed": 17, "failed": 0},
+  "fixtureSyntax": "passed",
+  "diffCheck": "passed",
+  "desktop": "factions: passed",
+  "review": {"findings": 5, "resolved": 5, "deferred": 0}
+}

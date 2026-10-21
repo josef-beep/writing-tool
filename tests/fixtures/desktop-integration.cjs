@@ -373,6 +373,96 @@ async function verifyTimelineIntervals(){
  await waitFor(`!document.querySelector('.center-form')&&!document.querySelector('.blocking')`,'discard temporary event draft');
  console.log('TIMELINE_INTERVALS '+JSON.stringify(summaries)+'; exact dates, standalone day, reachability, late-record 64x navigation, full-period focus, clipped creation, floating/docking synchronization and month-removal fallback passed');
 }
+async function verifyFactionReopen(){
+ const factionName='Reopen fixture faction';
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='Universe');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='New faction…').click();})()`);
+ await waitFor(`document.querySelector('.center-form label')?.textContent==='Faction name'`,'new faction editor');
+ await evaluate(`document.querySelector('.center-form label input').focus()`);
+ await main.webContents.insertText(factionName);
+ await waitFor(`document.querySelector('.center-form form [role="status"]')?.textContent==='Unsaved changes'`,'faction edit pending');
+ await evaluate(`document.querySelector('.center-form form').requestSubmit()`);
+ await waitFor(`document.querySelector('.center-form form [role="status"]')?.textContent==='Saved.'&&!document.querySelector('.center-form button[type="submit"]').disabled&&!document.querySelector('.blocking')`,'saved incomplete faction');
+ const snapshot=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ if(snapshot.status!=='ok'||!snapshot.snapshot.universe.records.some(record=>record.recordType==='faction'&&record.data.name===factionName))throw new Error('Saved faction is unavailable');
+ await evaluate(`document.querySelector('.center-heading button').click()`);
+ await waitFor(`!document.querySelector('.center-form')`,'leave faction editor');
+ if(!await evaluate(`[...document.querySelectorAll('.context-tabs button')].find(button=>button.textContent==='factions')?.getAttribute('aria-pressed')==='true'`))throw new Error('Faction creation did not select the Factions context tab');
+ await waitFor(`[...document.querySelectorAll('aside[aria-label="Writing context"] .context-record')].some(button=>button.textContent===${JSON.stringify(factionName)})`,'saved faction list');
+ await evaluate(`[...document.querySelectorAll('aside[aria-label="Writing context"] .context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`document.querySelector('.center-form label input')?.value===${JSON.stringify(factionName)}`,'reopened faction editor');
+ const description='Saved faction description';
+ await evaluate(`[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Description')).querySelector('textarea').focus()`);
+ await main.webContents.insertText(description);
+ await waitFor(`document.querySelector('.center-form form [role="status"]')?.textContent==='Unsaved changes'`,'reopened faction edit pending');
+ await evaluate(`document.querySelector('.center-form form').requestSubmit()`);
+ await waitFor(`document.querySelector('.center-form form [role="status"]')?.textContent==='Saved.'&&!document.querySelector('.center-form button[type="submit"]').disabled&&!document.querySelector('.blocking')`,'saved reopened faction edit');
+ async function browse(){
+  await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='Universe');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='Factions…').click();})()`);
+ }
+ await browse();
+ await waitFor(`document.querySelector('.faction-browser [aria-label="Saved factions"]')`,'Universe faction browser');
+ await evaluate(`[...document.querySelectorAll('.context-tabs button')].find(button=>button.textContent==='characters').click()`);
+ await waitFor(`[...document.querySelectorAll('.context-tabs button')].find(button=>button.textContent==='characters')?.getAttribute('aria-pressed')==='true'`,'Characters selected before faction open');
+ await evaluate(`[...document.querySelectorAll('.faction-browser .context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`document.querySelector('.center-heading button')?.textContent==='Back to factions'`,'faction browser return link');
+ if(!await evaluate(`[...document.querySelectorAll('.context-tabs button')].find(button=>button.textContent==='factions')?.getAttribute('aria-pressed')==='true'`))throw new Error('Opening a faction did not restore its context tab');
+ await evaluate(`document.querySelector('.center-heading button').click()`);
+ await waitFor(`!!document.querySelector('.faction-browser')`,'return from faction to browser');
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='View');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='Hide context').click();})()`);
+ await waitFor(`!document.querySelector('aside[aria-label="Writing context"]')`,'hidden context panel');
+ await evaluate(`[...document.querySelectorAll('.faction-browser .context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`document.querySelector('.center-form label input')?.value===${JSON.stringify(factionName)}`,'faction reopened with context hidden');
+ if(!await evaluate(`[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Description')).querySelector('textarea').value===${JSON.stringify(description)}`))throw new Error('Reopened faction lost its saved edit');
+ await evaluate(`document.querySelector('.center-form label input').focus()`);
+ await main.webContents.insertText('unsaved ');
+ await browse();
+ await waitFor(`document.querySelector('.blocking')?.textContent.includes('Save your changes')`,'faction navigation guard');
+ await clickText('Cancel');
+ await waitFor(`!document.querySelector('.blocking')&&!!document.querySelector('.center-form label input')`,'cancel keeps faction editor');
+ await browse();
+ await waitFor(`!!document.querySelector('.blocking')`,'faction discard guard');
+ await clickText('Discard');
+ await waitFor(`!!document.querySelector('.faction-browser')`,'discard returns to faction browser');
+ if(!await evaluate(`[...document.querySelectorAll('.faction-browser .context-record')].some(button=>button.textContent===${JSON.stringify(factionName)})`))throw new Error('Discard changed the saved faction');
+ await evaluate(`document.querySelector('.faction-browser > button').click()`);
+ await waitFor(`document.querySelector('.center-heading button')?.textContent==='Back to factions'&&document.querySelector('.center-form label input')?.value===''`,'new faction from browser');
+ await evaluate(`document.querySelector('.center-heading button').click()`);
+ await waitFor(`!!document.querySelector('.blocking')`,'discard unnamed faction guard');
+ await clickText('Discard');
+ await waitFor(`!!document.querySelector('.faction-browser')&&!document.querySelector('.blocking')`,'discarded new faction returns to browser');
+ await evaluate(`[...document.querySelectorAll('.faction-browser .context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`!!document.querySelector('.center-form label input')`,'faction before save-on-navigation');
+ await evaluate(`(()=>{const input=[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Description')).querySelector('textarea');input.focus();input.select();})()`);
+ await main.webContents.insertText('Saved when navigating');
+ await waitFor(`document.querySelector('.center-form form [role="status"]')?.textContent==='Unsaved changes'`,'save-on-navigation pending');
+ await browse();await waitFor(`!!document.querySelector('.blocking')`,'save-on-navigation guard');
+ await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Save').click()`);
+ await waitFor(`!!document.querySelector('.faction-browser')&&!document.querySelector('.blocking')`,'saved navigation reaches browser');
+ await evaluate(`[...document.querySelectorAll('.faction-browser .context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Description'))?.querySelector('textarea').value==='Saved when navigating'`,'navigation saved faction edit');
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='Project');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='Close project').click();})()`);
+ await waitFor(`!document.querySelector('.center-form')&&document.querySelector('footer')?.textContent.includes('Project closed.')&&[...document.querySelectorAll('header nav button')].some(button=>button.textContent==='Factions…'&&!button.disabled)`,'project closed for faction reload');
+ await browse();await waitFor(`!!document.querySelector('.faction-browser')`,'standalone universe faction browser');
+ await evaluate(`[...document.querySelectorAll('.faction-browser .context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Description'))?.querySelector('textarea').value==='Saved when navigating'`,'standalone universe faction edit');
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='Project');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent.startsWith('Close universe')).click();})()`);
+ await waitFor(`document.body.innerText.includes('Open your writing project')`,'universe closed before persisted reload');
+ await clickText('Open project…');
+ await waitFor(`document.querySelector('footer')?.textContent.includes('Project opened with its authoritative universe.')&&[...document.querySelectorAll('header nav button')].some(button=>button.textContent==='Factions…'&&!button.disabled)`,'project reopened for faction');
+ await browse();await waitFor(`!!document.querySelector('.faction-browser')`,'saved faction browser after reload');
+ await evaluate(`[...document.querySelectorAll('.faction-browser .context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`[...document.querySelectorAll('.center-form label')].find(label=>label.textContent.startsWith('Description'))?.querySelector('textarea').value==='Saved when navigating'`,'persisted faction reload');
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='View');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='Show context').click();})()`);
+ await waitFor(`!!document.querySelector('aside[aria-label="Writing context"]')`,'show faction context');
+ await evaluate(`[...document.querySelector('aside[aria-label="Writing context"]').querySelectorAll('button')].find(button=>button.textContent==='floating').click()`);
+ const end=Date.now()+15000;while(BrowserWindow.getAllWindows().length<2&&Date.now()<end)await delay(100);
+ const floating=BrowserWindow.getAllWindows().find(window=>window!==main);
+ if(!floating)throw new Error('Faction context did not float');
+ const loaded=Date.now()+15000;while(!await floating.webContents.executeJavaScript(`[...document.querySelectorAll('.context-record')].some(button=>button.textContent===${JSON.stringify(factionName)})`)&&Date.now()<loaded)await delay(100);
+ await floating.webContents.executeJavaScript(`[...document.querySelectorAll('.context-record')].find(button=>button.textContent===${JSON.stringify(factionName)}).click()`);
+ await waitFor(`document.querySelector('.center-form label input')?.value===${JSON.stringify(factionName)}`,'floating faction opens canonical editor');
+ console.log('FACTION_REOPEN create/save, browser return, unnamed-draft discard, saved edits, hidden/floating context, Save/Cancel/Discard guards and standalone/project universe reload passed');
+}
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
  await waitFor(`!document.querySelector('.blocking')`,'initial workspace loading');
@@ -380,7 +470,10 @@ async function drive(){
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
- if(mode==='intervals'){
+ if(mode==='factions'){
+  await verifyFactionReopen();
+  main.close();
+ }else if(mode==='intervals'){
   await verifyTimelineIntervals();
   main.close();
  }else if(mode==='timeline'){

@@ -19,3 +19,4 @@ fieldset{border:1px solid var(--border);border-radius:4px;margin-top:1rem;paddin
 
 .workspace-panel.collapsed{resize:horizontal;align-self:flex-start}.floating-panel{padding:.5rem}.floating-panel .panel-content{overflow:auto}.workspace-panel .timeline-scroll{height:100%;min-height:240px}.workspace-panel .panel-content{max-height:calc(100% - 3rem)}
 .timeline-record-date{display:block;font-size:.85em;color:var(--secondary)}
+.faction-list{list-style:none;padding:0;margin:.75rem 0}
