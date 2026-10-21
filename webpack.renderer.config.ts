@@ -1,9 +1,9 @@
-import type { Configuration } from 'webpack';
+import type { Configuration, ModuleOptions } from 'webpack';
 
 import { rules } from './webpack.rules';
 import { plugins } from './webpack.plugins';
 
-const rendererRules = [
+const rendererRules: Required<ModuleOptions>['rules'] = [
   ...rules,
   {
     test: /\.ttf$/,
@@ -22,6 +22,6 @@ export const rendererConfig: Configuration = {
   },
   plugins,
   resolve: {
-    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '...'],
   },
 };
