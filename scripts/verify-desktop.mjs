@@ -15,7 +15,7 @@ import {DEFAULT_PANELS} from '../src/presentation/workspace/SettingsForm.tsx';
 import {runSmokeProcess} from './smoke.mjs';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
-const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus'];
+const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus','timeline'];
 const selectedModes=process.argv.slice(2);
 if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
 const modes=selectedModes.length?selectedModes:availableModes;
@@ -48,6 +48,19 @@ for(const mode of modes){
   const snapshot={project:project.workspace.snapshot(),universe:universe.workspace.snapshot()};
   const characters=['major','minor'].map(type=>{const record=createRecord(snapshot,'character');record.data.name=`Fixture ${type}`;record.data.type=type;return record;});
   fs.writeFileSync(path.join(fixture,'characters.json'),JSON.stringify(characters));
+  if(mode==='timeline'){
+   const calendar=createRecord(snapshot,'calendar'),configuration=calendar.data.versions[0];
+   Object.assign(configuration,{daysOnly:'365',actualDays:'365',targetDays:'365'});
+   snapshot.universe.records.push(calendar);
+   const year=-999999999999999999999999n;
+   const events=Array.from({length:18},(_,index)=>{
+    const record=createRecord(snapshot,'event');
+    record.data.heading=`Timeline fixture event ${index}`;record.data.code=`E${index.toString().padStart(3,'0')}-a-long-readable-timeline-code`;
+    record.data.date={calendarVersion:calendar.data.currentVersion,year:(index===0?year-1n:year).toString(),day:index===0?'365':index>=16?(index+16).toString():index>=13?'2':'1'};
+    record.data.order=index.toString();return record;
+   });
+   fs.writeFileSync(path.join(fixture,'timeline.json'),JSON.stringify({records:[calendar,...events],expected:events.slice(1,-1).map(record=>record.id)}));
+  }
   if(mode==='partial-layout'){
    const settings=new SettingsStorage(path.join(fixture,'profile'),fn=>coordinator.settingsGate(fn)),saved=settings.get();
    settings.save({...saved,panels:[structuredClone(DEFAULT_PANELS[0])]},saved.recordVersion);

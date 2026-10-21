@@ -8,9 +8,11 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {validPanelAction,validTimelineView,validTimelineCalendar,resolveTimelineView,INITIAL_TIMELINE_VIEW,panelActionOpensMain,type PanelAction,type PanelMirror,type TimelineView} from '../src/application/contracts/presentation';
 import {PanelLayoutQueue,reorderPanels,mergeSavedPanelLayout,normalizePanelLayouts,persistPanelLayouts,panelResizePatch} from '../src/presentation/workspace/panel-layout';
 import {PanelContent,PanelControls} from '../src/presentation/workspace/PanelContent';
+import {Timeline} from '../src/presentation/workspace/Chronology';
+import {createRecord,newRecord} from '../src/presentation/workspace/model';
 import {DEFAULT_PANELS} from '../src/presentation/workspace/SettingsForm';
 import {SettingsStorage} from '../src/infrastructure/settings-storage';
-import type {PanelLayout,AppSettings} from '../src/application/contracts/workspace';
+import type {PanelLayout,AppSettings,WorkspaceSnapshot} from '../src/application/contracts/workspace';
 import type {CalendarData} from '../src/domain/calendar';
 import type {WorkspaceRecord} from '../src/domain/workspace';
 
@@ -116,6 +118,43 @@ test('timeline forwarding and application reject foreign versions and invalid da
  }
  assert.equal(current.anchor,'87');assert.equal(current.unresolved,true);
  assert.equal(validTimelineCalendar({...current,focus},null),false);
+});
+test('timeline includes every event at both interval boundaries and on shared dates, preserving order and visibility filters',()=>{
+ const {calendar}=timelineFixture(),universeId=randomUUID(),owner={kind:'universe' as const,id:universeId};
+ const snapshot:WorkspaceSnapshot={project:null,universe:{owner,rootId:randomUUID(),universeId,generation:'0',records:[],manuscripts:{},assets:[],counters:{story:'0',chapter:'0',event:'0',decision:'0'}}};
+ snapshot.universe!.records.push(newRecord(snapshot,'calendar',calendar));
+ const year=-999999999999999999999999n,first=year*365n;
+ const event=(code:string,day:string,order:string,yearValue=year)=>newRecord(snapshot,'event',{heading:code,description:null,date:{calendarVersion:calendar.currentVersion,year:yearValue.toString(),day},code,order,maker:null,kind:'ordinary',characterId:null});
+ const before=event('BEFORE','365','0',year-1n),after=event('AFTER','33','0'),end=event('END','32','0');
+ const sameDay=Array.from({length:60},(_,index)=>event(`SAME-${index}`,'1',index.toString()));
+ const middle=event('MIDDLE','2','0');
+ const character=createRecord(snapshot,'character');
+ if(character.recordType!=='character')throw new Error('Expected character fixture');
+ character.data.name='Fixture character';character.data.birth={year:year.toString(),elementId:null,day:null};character.data.birthEventId=sameDay[1].id;
+ sameDay[0].data.kind='background';sameDay[0].data.characterId=character.id;
+ sameDay[1].data.kind='birth';sameDay[1].data.characterId=character.id;
+ middle.data.maker={kind:'character',id:character.id};
+ const decisionType=newRecord(snapshot,'decision-type',{name:'Fixture type',makerRequired:false,builtin:null});
+ const decision=newRecord(snapshot,'decision',{code:'DECISION',text:'An unresolved choice',date:middle.data.date,order:'1',typeId:decisionType.id,maker:null,characterIds:[],eventIds:[],followingDecisionIds:[]});
+ const resolved=newRecord(snapshot,'decision',{...decision.data,code:'RESOLVED',text:'A resolved choice',order:'2',eventIds:[end.id]});
+ snapshot.universe!.records.push(character,decisionType,decision,resolved,after,end,middle,...[...sameDay].reverse(),before);
+ const render=(unresolved=false)=>renderToStaticMarkup(<Timeline snapshot={{...snapshot}} universeName="Fixture" value={{...INITIAL_TIMELINE_VIEW,anchor:first.toString(),period:'31',unresolved}} open={()=>{}} onChange={()=>{}} goTo={()=>{}}/>);
+ const labels=(html:string)=>[...html.matchAll(/aria-label="event ([^"]+):/g)].map(match=>match[1]);
+ assert.deepEqual(labels(render()),[...sameDay.map(record=>record.data.code),'MIDDLE','END']);
+ const view=newRecord(snapshot,'view',{makers:[],categories:[{kind:'decision-type',id:randomUUID()}]});snapshot.universe!.records.push(view);
+ assert.deepEqual(labels(render()),[],'category filters still apply');
+ view.data.categories=[];
+ assert.deepEqual(labels(render()),[...sameDay.map(record=>record.data.code),'MIDDLE','END'],'Show all restores the entire interval');
+ view.data.makers=[{kind:'none'}];
+ assert.deepEqual(labels(render()),[...sameDay.map(record=>record.data.code),'END'],'makerless filter preserves all matching events');
+ view.data.makers=[{kind:'character',id:character.id}];
+ assert.deepEqual(labels(render()),['MIDDLE'],'named maker filter retains matching events only');
+ view.data.makers=[];
+ const unresolved=render(true);
+ assert.deepEqual(labels(unresolved),[],'unresolved-only mode retains its explicit meaning');
+ assert.match(unresolved,/aria-label="decision DECISION:/,'unresolved decisions remain visible');
+ assert.doesNotMatch(unresolved,/aria-label="decision RESOLVED:/,'resolved decisions remain excluded');
+ assert.match(render(),/aria-label="decision RESOLVED:/,'the normal timeline still shows resolved decisions');
 });
 test('floating view and layout commands retain focus; only main-content intents request owner focus',()=>{
  const id=randomUUID();

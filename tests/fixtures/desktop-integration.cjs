@@ -151,6 +151,67 @@ async function verifyExclusiveMenus(){
  await pointerClick(`(${projectMenu}).querySelector('summary')`);await expectMenu(projectMenu);
  console.log('MENU_EXCLUSIVITY pointer, Enter/Space, portaled/Shell command dismissal, disabled commands, panel Move and independent disclosure passed');
 }
+async function verifyTimeline(){
+ const data=JSON.parse(fs.readFileSync(path.join(fixture,'timeline.json'),'utf8'));
+ const queried=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ if(queried.status!=='ok')throw new Error('Cannot query timeline fixture');
+ const unit=queried.snapshot.universe;
+ const saved=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:{operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',units:[{owner:unit.owner,expectedUnitGeneration:unit.generation,changes:data.records.map(record=>({action:'put',record,expectedRecordVersion:null,manuscript:null}))}]}})})`);
+ if(saved.status!=='ok')throw new Error('Cannot save timeline fixtures: '+JSON.stringify(saved));
+ await evaluate(`window.dispatchEvent(new Event('focus'))`);
+ await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===18`,'loaded timeline records');
+ await evaluate(`(()=>{const select=document.querySelector('.timeline-scroll').parentElement.querySelector('label select');select.value=${JSON.stringify(data.expected[0])};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+ await waitFor(`document.querySelectorAll('.timeline-codes .event-code').length===16`,'focused timeline range');
+ const check=async(webContents,expected=data.records.slice(2,-1),width=180)=>{
+  const result=await webContents.executeJavaScript(`(async()=>{
+   document.documentElement.style.fontSize='32px';
+   const viewport=document.querySelector('.timeline-scroll');viewport.style.width='${width}px';viewport.style.height='300px';
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const buttons=[...viewport.querySelectorAll('.timeline-codes .event-code')];
+   const ids=buttons.map(button=>button.getAttribute('aria-label').split(': ')[0]);
+   if(buttons.length!==${expected.length})return 'Missing in-range events: '+buttons.length;
+   const expectedCodes=${JSON.stringify(expected.map(record=>'event '+record.data.code))};
+   if(JSON.stringify(ids)!==JSON.stringify(expectedCodes))return 'Timeline omitted, duplicated or reordered an event';
+   const groups=[...viewport.querySelectorAll('.timeline-group')];
+   for(let index=1;index<groups.length;index++){
+    const previous=groups[index-1].getBoundingClientRect(),current=groups[index].getBoundingClientRect();
+    if(current.top<previous.bottom-1)return 'Date groups overlap by '+(previous.bottom-current.top)+' pixels';
+   }
+   for(const button of buttons){
+    button.scrollIntoView({block:'center',inline:'nearest'});
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+    const rect=button.getBoundingClientRect(),bounds=viewport.getBoundingClientRect();
+    let top=Math.max(rect.top,bounds.top,0),bottom=Math.min(rect.bottom,bounds.bottom,innerHeight),left=Math.max(rect.left,bounds.left,0),right=Math.min(rect.right,bounds.right,innerWidth);
+    for(let ancestor=viewport.parentElement;ancestor;ancestor=ancestor.parentElement){
+     const style=getComputedStyle(ancestor),box=ancestor.getBoundingClientRect();
+     if(/auto|scroll|hidden|clip/.test(style.overflowY)){top=Math.max(top,box.top);bottom=Math.min(bottom,box.bottom);}
+     if(/auto|scroll|hidden|clip/.test(style.overflowX)){left=Math.max(left,box.left);right=Math.min(right,box.right);}
+    }
+    const hit=bottom>top&&right>left?document.elementFromPoint((left+right)/2,(top+bottom)/2):null;
+    if(!button.contains(hit))return 'An in-range event cannot be reached: '+JSON.stringify({text:button.textContent,rect:rect.toJSON(),viewport:bounds.toJSON(),hit:hit?.outerHTML.slice(0,300)});
+   }
+   return null;
+  })()`);
+  if(result)throw new Error(result);
+ };
+ await check(main.webContents);
+ await evaluate(`document.documentElement.style.fontSize='14px'`);
+ await evaluate(`(()=>{const panel=document.querySelector('aside[aria-label="Universe timeline"]');[...panel.querySelectorAll('button')].find(button=>button.textContent==='floating').click();})()`);
+ const end=Date.now()+15000;while(BrowserWindow.getAllWindows().length<2&&Date.now()<end)await delay(100);
+ const floating=BrowserWindow.getAllWindows().find(window=>window!==main);
+ if(!floating)throw new Error('Timeline did not float');
+ const ready=Date.now()+15000;while(!await floating.webContents.executeJavaScript(`document.querySelectorAll('.timeline-codes .event-code').length===16`)&&Date.now()<ready)await delay(100);
+ await check(floating.webContents);
+ if(!await floating.webContents.executeJavaScript(`document.querySelector('.timeline-scroll').scrollTop>0`))throw new Error('Timeline resize fixture must start scrolled');
+ await check(floating.webContents,data.records.slice(2,-1),220);
+ const wide=await floating.webContents.executeJavaScript(`(async()=>{const result=await window.writingToolPresentation.presentation({command:'panel.read'});if(result.status!=='ok'||!result.mirror)throw new Error('Cannot read shared timeline');return window.writingToolPresentation.presentation({command:'panel.action',action:{kind:'timeline',value:{...result.mirror.timeline,period:'1000000000000000000000000000000'}}});})()`);
+ if(wide.status!=='ok')throw new Error('Cannot expand shared timeline range');
+ const expanded=Date.now()+15000;while(!await floating.webContents.executeJavaScript(`document.querySelectorAll('.timeline-codes .event-code').length===17`)&&Date.now()<expanded)await delay(100);
+ await check(floating.webContents,data.records.slice(2));
+ await floating.webContents.executeJavaScript(`document.querySelector('.timeline-codes .event-code').click()`);
+ await waitFor(`document.querySelector('.center-heading h2')?.textContent.includes('Timeline fixture event 1')`,'select canonical event from timeline');
+ console.log('TIMELINE_VISIBLE_RANGE all 16 in-range events, boundaries, nonoverlap, scroll reachability, compressed wide range and canonical selection passed in docked/floating panels');
+}
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
  await waitFor(`!document.querySelector('.blocking')`,'initial workspace loading');
@@ -158,7 +219,10 @@ async function drive(){
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
- if(mode==='menus'){
+ if(mode==='timeline'){
+  await verifyTimeline();
+  main.close();
+ }else if(mode==='menus'){
   await verifyExclusiveMenus();
   main.close();
  }else if(mode==='read-failure'){

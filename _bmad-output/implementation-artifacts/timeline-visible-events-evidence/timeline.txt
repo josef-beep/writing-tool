@@ -1,0 +1,7 @@
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+PICKER Open project folder
+TIMELINE_VISIBLE_RANGE all 16 in-range events, boundaries, nonoverlap, scroll reachability, compressed wide range and canonical selection passed in docked/floating panels
+PICKER Choose the required closing backup folder
+WINDOW_CLOSED
+WRITINGTOOL_SMOKE {"mode":"timeline","passed":true,"failedQueries":0,"captureCount":1,"backupCount":1,"lostAck":false,"conflicted":false,"panelId":"timeline"}
