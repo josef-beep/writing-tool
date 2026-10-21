@@ -4096,6 +4096,8 @@ class ProtectionService {
         if (new Set(locations.map(p => p.rootId)).size !== locations.length)
             throw new Error('Duplicate activation location capabilities.');
         for (const selected of locations) {
+            if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.validActivationPath)(selected.location) || selected.destination !== undefined && !(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.validActivationPath)(selected.destination))
+                throw new Error('Invalid activation path bytes.');
             const participant = decision.participants.find(p => p.rootId === selected.rootId && (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(p.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(selected.owner));
             if (!participant) {
                 const universe = this.recovery.manifest(this.recovery.get(request.proposalId)).units.find(u => u.snapshot.owner.kind === 'universe').snapshot;
@@ -4107,32 +4109,12 @@ class ProtectionService {
                 decision.locations.universe = selected.location;
                 continue;
             }
-            const staged = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(participant.stage, participant), published = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(participant.destination, participant), location = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationRootAt)(selected.location, participant);
-            if (!location)
-                throw new Error('The selected activation location has a different permanent identity.');
-            if (published && published !== location || staged && staged !== location)
-                throw new Error('An original activation authority remains accessible. Reconcile it before rebinding.');
-            if (selected.destination) {
-                if (published)
-                    throw new Error('A published activation retains its located publication root.');
-                if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.activationDestinationAvailable)(selected.destination, location))
-                    throw new Error('Choose an empty publication destination on the same filesystem as the staged recovery root.');
-                participant.stage = location;
-                participant.destination = selected.destination;
-                if (participant.owner.kind === 'project')
-                    decision.locations.project = selected.destination;
-                else
-                    decision.locations.universe = selected.destination;
-            }
-            else if (decision.state === 'await-coordinator')
-                throw new Error('Choose the empty publication destination for the relocated staged project.');
-            else {
-                participant.destination = location;
-                if (participant.owner.kind === 'project')
-                    decision.locations.project = location;
-                else
-                    decision.locations.universe = location;
-            }
+            const relocated = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.relocateActivationParticipant)(participant, decision.state, selected);
+            Object.assign(participant, relocated);
+            if (participant.owner.kind === 'project')
+                decision.locations.project = participant.destination;
+            else
+                decision.locations.universe = participant.destination;
         }
         if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_15__.validActivationDecision)(decision))
             throw new Error('The selected activation locations overlap.');
@@ -4253,7 +4235,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   activationDestinationAvailable: () => (/* binding */ activationDestinationAvailable),
 /* harmony export */   activationPath: () => (/* binding */ activationPath),
 /* harmony export */   activationRootAt: () => (/* binding */ activationRootAt),
-/* harmony export */   validActivationDecision: () => (/* binding */ validActivationDecision)
+/* harmony export */   relocateActivationParticipant: () => (/* binding */ relocateActivationParticipant),
+/* harmony export */   validActivationDecision: () => (/* binding */ validActivationDecision),
+/* harmony export */   validActivationPath: () => (/* binding */ validActivationPath)
 /* harmony export */ });
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:path */ "node:path");
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_0__);
@@ -4268,10 +4252,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const activationPath = (requestId) => `protection/activation-${requestId}.json`;
-const absolute = (value) => typeof value === 'string' && node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(value) && !value.includes('\0');
+const validActivationPath = (value) => typeof value === 'string' && node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(value) && !value.includes('\0') && !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(value);
+const absolute = validActivationPath;
 const inside = (file, root) => { const relative = node_path__WEBPACK_IMPORTED_MODULE_0___default().relative(root, file); return !relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_0___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(relative); };
 /** An empty/foreign replacement at an old path is not the missing participant. */
 function activationRootAt(root, participant) {
+    if (!absolute(root))
+        throw new Error('Invalid activation path bytes.');
     let location;
     try {
         location = node_fs__WEBPACK_IMPORTED_MODULE_1___default().realpathSync(root);
@@ -4290,7 +4277,7 @@ function activationRootAt(root, participant) {
             return null;
         throw new Error('An original recovery path has unreadable authority evidence. Preserve it before locating the participant.');
     }
-    if (!discovery || typeof discovery !== 'object' || !('kind' in discovery) || !('id' in discovery) || !('rootId' in discovery))
+    if (!discovery || typeof discovery !== 'object' || !('schemaVersion' in discovery) || discovery.schemaVersion !== 1 || !('kind' in discovery) || !['project', 'universe'].includes(String(discovery.kind)) || !('id' in discovery) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(discovery.id) || !('rootId' in discovery) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(discovery.rootId))
         throw new Error('An original recovery path has invalid authority evidence.');
     if (discovery.kind === participant.owner.kind && discovery.id === participant.owner.id && discovery.rootId === participant.rootId)
         return location;
@@ -4299,6 +4286,8 @@ function activationRootAt(root, participant) {
     return null;
 }
 function activationDestinationAvailable(destination, stage) {
+    if (!absolute(destination) || !absolute(stage))
+        throw new Error('Invalid activation path bytes.');
     try {
         const stat = node_fs__WEBPACK_IMPORTED_MODULE_1___default().lstatSync(destination);
         if (!stat.isDirectory() || stat.isSymbolicLink() || node_fs__WEBPACK_IMPORTED_MODULE_1___default().readdirSync(destination).length)
@@ -4316,6 +4305,28 @@ function activationDestinationAvailable(destination, stage) {
             return false;
         throw error;
     }
+}
+/** Only a destination capability identifies a relocated, unpublished stage. */
+function relocateActivationParticipant(participant, state, selected) {
+    if (!absolute(selected.location) || selected.destination !== undefined && !absolute(selected.destination))
+        throw new Error('Invalid activation path bytes.');
+    const staged = activationRootAt(participant.stage, participant), published = activationRootAt(participant.destination, participant), location = activationRootAt(selected.location, participant);
+    if (staged && published)
+        throw new Error('Both recovery locations contain the original identity. Preserve both roots before reconciliation.');
+    if (!location)
+        throw new Error('The selected activation location has a different permanent identity.');
+    if (published && published !== location || staged && staged !== location)
+        throw new Error('An original activation authority remains accessible. Reconcile it before rebinding.');
+    if (selected.destination !== undefined) {
+        if (published || state === 'complete')
+            throw new Error('A published activation retains its located publication root.');
+        if (!activationDestinationAvailable(selected.destination, location))
+            throw new Error('Choose an empty publication destination on the same filesystem as the staged recovery root.');
+        return { ...participant, stage: location, destination: selected.destination };
+    }
+    if (staged || !published && state !== 'complete')
+        throw new Error('Choose an empty publication destination for the relocated staged root.');
+    return { ...participant, destination: location };
 }
 function validActivationDecision(value) {
     if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value, ['schemaVersion', 'requestId', 'proposalId', 'manifestId', 'operationId', 'state', 'locations', 'participants']) || value.schemaVersion !== 2 || ![value.requestId, value.proposalId, value.manifestId, value.operationId].every(_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid) || !['await-coordinator', 'commit', 'complete'].includes(String(value.state)) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value.locations, ['project', 'universe']) || value.locations.project !== null && !absolute(value.locations.project) || !absolute(value.locations.universe) || !Array.isArray(value.participants) || !value.participants.length || value.participants.length > 2)
@@ -6104,9 +6115,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var node_sqlite__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(node_sqlite__WEBPACK_IMPORTED_MODULE_5__);
 /* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
 /* harmony import */ var _application_universe__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../application/universe */ "./src/application/universe.ts");
-/* harmony import */ var _workspace_storage__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./workspace-storage */ "./src/infrastructure/workspace-storage.ts");
-/* harmony import */ var _universe_storage__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./universe-storage */ "./src/infrastructure/universe-storage.ts");
-/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+/* harmony import */ var _recovery_activation__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./recovery-activation */ "./src/infrastructure/recovery-activation.ts");
+/* harmony import */ var _workspace_storage__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./workspace-storage */ "./src/infrastructure/workspace-storage.ts");
+/* harmony import */ var _universe_storage__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./universe-storage */ "./src/infrastructure/universe-storage.ts");
+/* harmony import */ var _universe_files__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./universe-files */ "./src/infrastructure/universe-files.ts");
+
 
 
 
@@ -6127,15 +6140,15 @@ class WorkspaceCoordinator {
     recovering = new Set();
     constructor(userData) {
         this.userData = userData;
-        (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.ensureManagedDirectory)(userData, 'database');
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(userData, 'database');
         const filename = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(userData, 'database/workspace-coordinator.sqlite'), exists = node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(filename);
         if (!exists)
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.writeExclusive)(filename, '');
-        this.db = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_9__.connect)(filename, !exists, APP_ID);
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.writeExclusive)(filename, '');
+        this.db = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_10__.connect)(filename, !exists, APP_ID);
         if (!exists) {
             this.db.exec(`PRAGMA application_id=${APP_ID};PRAGMA user_version=1;CREATE TABLE coordinator_identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),id TEXT NOT NULL);CREATE TABLE coordinator_operations(operationId TEXT PRIMARY KEY,requestDigest TEXT NOT NULL,state TEXT NOT NULL,record TEXT NOT NULL);CREATE TABLE coordinator_bindings(rootId TEXT PRIMARY KEY,ownerKind TEXT NOT NULL,ownerId TEXT NOT NULL,universeId TEXT NOT NULL,basePath TEXT NOT NULL);`);
             this.db.prepare('INSERT INTO coordinator_identity VALUES(1,?)').run((0,node_crypto__WEBPACK_IMPORTED_MODULE_4__.randomUUID)());
-            (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_3___default().dirname(filename));
+            (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_3___default().dirname(filename));
         }
         const identity = this.db.prepare('SELECT id FROM coordinator_identity WHERE singleton=1').get();
         if (!identity || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(identity.id))
@@ -6145,15 +6158,20 @@ class WorkspaceCoordinator {
     register(store) { const m = store.identity(); this.db.prepare('INSERT INTO coordinator_bindings VALUES(?,?,?,?,?) ON CONFLICT(rootId) DO UPDATE SET basePath=excluded.basePath').run(m.rootId, m.owner.kind, m.owner.id, m.universeId, store.location); this.stores.set(m.rootId, store); }
     /** Purpose-bound recovery location, before opening either side of an interrupted coordinated activation. */
     locateActivationParticipant(owner, rootId, universeId, location) {
-        const root = node_fs__WEBPACK_IMPORTED_MODULE_2___default().realpathSync(location), discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(root, 'writingtool.json'));
+        if (!(0,_recovery_activation__WEBPACK_IMPORTED_MODULE_8__.validActivationPath)(location))
+            throw new Error('Invalid activation path bytes.');
+        const root = node_fs__WEBPACK_IMPORTED_MODULE_2___default().realpathSync(location), discovery = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(root, 'writingtool.json'));
         if (discovery.kind !== owner.kind || discovery.id !== owner.id || discovery.rootId !== rootId)
             throw new Error('The activation location has a different permanent identity.');
         const prior = this.db.prepare('SELECT * FROM coordinator_bindings WHERE rootId=?').get(rootId);
         if (prior) {
             if (prior.ownerKind !== owner.kind || prior.ownerId !== owner.id || prior.universeId !== universeId)
                 throw new Error('The original coordinator binding has a different owner.');
-            if (String(prior.basePath) !== root && node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(String(prior.basePath)) && node_fs__WEBPACK_IMPORTED_MODULE_2___default().realpathSync(String(prior.basePath)) !== root && ['writingtool.json', 'database', '.writingtool-creation.json'].some(name => node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_3___default().join(String(prior.basePath), name))))
-                throw new Error('The original activation authority is still accessible.');
+            if (String(prior.basePath) !== root) {
+                const original = (0,_recovery_activation__WEBPACK_IMPORTED_MODULE_8__.activationRootAt)(String(prior.basePath), { owner, rootId });
+                if (original && original !== root)
+                    throw new Error('The original activation authority is still accessible.');
+            }
         }
         this.db.prepare('INSERT INTO coordinator_bindings VALUES(?,?,?,?,?) ON CONFLICT(rootId) DO UPDATE SET basePath=excluded.basePath').run(rootId, owner.kind, owner.id, universeId, root);
     }
@@ -6161,11 +6179,11 @@ class WorkspaceCoordinator {
         if (current === store)
             this.stores.delete(id); }
     record(id, digest) { const row = this.db.prepare('SELECT * FROM coordinator_operations WHERE operationId=?').get(id); if (!row || typeof row.record !== 'string')
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The original coordinated decision is unavailable.', 'unknown'); const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(Buffer.from(row.record)); if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(value, ['schemaVersion', 'operationId', 'requestDigest', 'participants', 'receipt', 'state']))
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The original coordinated decision is unavailable.', 'unknown'); const value = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)(Buffer.from(row.record)); if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(value, ['schemaVersion', 'operationId', 'requestDigest', 'participants', 'receipt', 'state']))
         throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The coordinator record schema is invalid.', 'unknown'); const r = value; if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_6__.validWorkspaceReceipt)(r.receipt) || r.receipt.operationId !== id || !Array.isArray(r.participants) || r.participants.length !== 2 || !r.participants.every(p => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.closed)(p, ['owner', 'rootId', 'expectedGeneration', 'targetGeneration', 'fencingToken', 'planDigest']) && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_6__.validOwner)(p.owner) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(p.rootId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(p.expectedGeneration) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_1__.unsignedInteger)(p.targetGeneration) && BigInt(p.targetGeneration) === BigInt(p.expectedGeneration) + 1n && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(p.fencingToken) && (p.planDigest === '' && (r.state === 'preparing' || r.state === 'aborted') || /^[a-f0-9]{64}$/.test(p.planDigest))) || new Set(r.participants.map(p => p.rootId)).size !== r.participants.length || !['preparing', 'prepared', 'commit', 'complete', 'aborted'].includes(r.state))
         throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'The coordinator plan is invalid.', 'unknown'); if (r.schemaVersion !== 1 || r.operationId !== id || r.requestDigest !== row.requestDigest || r.state !== row.state || digest && digest !== r.requestDigest)
         throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('OPERATION_CONFLICT', 'The coordinated operation does not match its original request.', 'unknown'); return r; }
-    save(record) { const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(record); (0,_universe_storage__WEBPACK_IMPORTED_MODULE_9__.transaction)(this.db, () => { this.db.prepare('INSERT INTO coordinator_operations VALUES(?,?,?,?) ON CONFLICT(operationId) DO UPDATE SET state=excluded.state,record=excluded.record').run(record.operationId, record.requestDigest, record.state, bytes); }); }
+    save(record) { const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(record); (0,_universe_storage__WEBPACK_IMPORTED_MODULE_10__.transaction)(this.db, () => { this.db.prepare('INSERT INTO coordinator_operations VALUES(?,?,?,?) ON CONFLICT(operationId) DO UPDATE SET state=excluded.state,record=excluded.record').run(record.operationId, record.requestDigest, record.state, bytes); }); }
     decision(id, digest) { const r = this.record(id, digest); return r.state === 'commit' || r.state === 'complete' ? 'commit' : 'abort'; }
     receipt(id, digest) { if (!this.db.prepare('SELECT operationId FROM coordinator_operations WHERE operationId=?').get(id))
         return; const r = this.record(id, digest); if (r.state === 'commit' || r.state === 'complete') {
@@ -6173,20 +6191,20 @@ class WorkspaceCoordinator {
             this.recover(id);
         return r.receipt;
     } if (r.state !== 'aborted')
-        this.recover(id); const reconciled = this.record(id, digest); if (digest && reconciled.state === 'aborted' && reconciled.participants.some(p => !p.planDigest))
-        throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('OPERATION_CONFLICT', 'This operation was confirmed not committed before every participant was prepared. Retry the retained edits with a new operation ID.', 'not-committed'); return; }
+        this.recover(id); const reconciled = this.record(id, digest); if (digest && reconciled.state === 'aborted')
+        throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('OPERATION_CONFLICT', 'This operation was confirmed not committed by its original coordinator. Retry the retained edits with a new operation ID.', 'not-committed'); return; }
     commit(operationId, digest, plans, receipt, request) {
         const prior = this.receipt(operationId, digest);
         if (prior)
             return prior;
-        const resolved = plans.map(p => { const store = [...this.stores.values()].find(s => (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(s.identity().owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(p.owner)); if (!store)
+        const resolved = plans.map(p => { const store = [...this.stores.values()].find(s => (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(s.identity().owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(p.owner)); if (!store)
             throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'A required authority is unavailable.', 'unknown'); return { store, plan: p.plan }; });
         const ordered = resolved.sort((a, b) => { const x = a.store.identity().owner, y = b.store.identity().owner; return (x.kind + '/' + x.id).localeCompare(y.kind + '/' + y.id); });
         let record = { schemaVersion: 1, operationId, requestDigest: digest, participants: ordered.map(p => { const m = p.store.identity(); return { owner: m.owner, rootId: m.rootId, expectedGeneration: m.generation, targetGeneration: (BigInt(m.generation) + 1n).toString(), fencingToken: m.sessionToken, planDigest: '' }; }), receipt, state: 'preparing' };
         this.save(record);
         try {
             const journals = ordered.map(p => ({ store: p.store, journal: p.store.prepare(operationId, digest, p.plan, receipt, request, true) }));
-            if (!journals.every(p => (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(p.journal.receipt) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(journals[0].journal.receipt)))
+            if (!journals.every(p => (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(p.journal.receipt) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(journals[0].journal.receipt)))
                 throw new Error('Participant receipt mismatch');
             record = { ...record, state: 'prepared', participants: journals.map(p => ({ ...record.participants.find(x => x.rootId === p.journal.rootId), planDigest: p.journal.planDigest, expectedGeneration: p.journal.expectedGeneration, targetGeneration: p.journal.targetGeneration, fencingToken: p.journal.fencingToken })), receipt: journals[0].journal.receipt };
             this.save(record);
@@ -6220,18 +6238,18 @@ class WorkspaceCoordinator {
                 store.identity();
                 return { store, p };
             } const binding = this.db.prepare('SELECT * FROM coordinator_bindings WHERE rootId=?').get(p.rootId); if (!binding || binding.ownerId !== p.owner.id || binding.ownerKind !== p.owner.kind)
-                throw new Error('Missing participant binding'); const root = String(binding.basePath), d = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(root, 'writingtool.json')); if (d.id !== p.owner.id || d.rootId !== p.rootId || d.kind !== p.owner.kind)
-                throw new Error('Participant identity mismatch'); const appId = p.owner.kind === 'project' ? 1465140301 : 1465140300; const lease = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_9__.connect)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.checked)(root, 'database/lease.sqlite'), false, appId); let db; try {
+                throw new Error('Missing participant binding'); const root = String(binding.basePath), d = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(root, 'writingtool.json')); if (d.id !== p.owner.id || d.rootId !== p.rootId || d.kind !== p.owner.kind)
+                throw new Error('Participant identity mismatch'); const appId = p.owner.kind === 'project' ? 1465140301 : 1465140300; const lease = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_10__.connect)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(root, 'database/lease.sqlite'), false, appId); let db; try {
                 lease.exec('BEGIN EXCLUSIVE');
                 const identity = lease.prepare('SELECT * FROM lease_identity').get();
                 if (identity?.ownerId !== p.owner.id || identity?.rootId !== p.rootId)
                     throw new Error('Participant lease mismatch');
-                db = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_9__.connect)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.checked)(root, 'database/catalog.sqlite'), false, appId);
+                db = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_10__.connect)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(root, 'database/catalog.sqlite'), false, appId);
                 const catalog = db;
                 const health = () => { if (!lease.isTransaction)
-                    throw new Error('Lost participant lease'); const current = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(root, 'writingtool.json')); if (current.id !== p.owner.id || current.rootId !== p.rootId)
+                    throw new Error('Lost participant lease'); const current = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(root, 'writingtool.json')); if (current.id !== p.owner.id || current.rootId !== p.rootId)
                     throw new Error('Participant root changed'); };
-                store = new _workspace_storage__WEBPACK_IMPORTED_MODULE_8__.WorkspaceStore(root, catalog, () => { health(); const m = catalog.prepare('SELECT * FROM unit_meta WHERE singleton=1').get(); return { owner: p.owner, rootId: p.rootId, universeId: p.owner.kind === 'universe' ? p.owner.id : String(m.universeId), generation: String(m.generation), sessionToken: String(m.sessionToken) }; }, health, this);
+                store = new _workspace_storage__WEBPACK_IMPORTED_MODULE_9__.WorkspaceStore(root, catalog, () => { health(); const m = catalog.prepare('SELECT * FROM unit_meta WHERE singleton=1').get(); return { owner: p.owner, rootId: p.rootId, universeId: p.owner.kind === 'universe' ? p.owner.id : String(m.universeId), generation: String(m.generation), sessionToken: String(m.sessionToken) }; }, health, this);
                 this.register(store);
                 temporary.push({ store, db: catalog, lease });
                 return { store, p };
@@ -6247,7 +6265,7 @@ class WorkspaceCoordinator {
                 if (r.state === 'preparing' && !p.planDigest && store.abortUnprepared(id, p.expectedGeneration))
                     return [];
                 const journal = store.readJournal(id);
-                if (journal.scope !== 'coordinated' || journal.coordinatorId !== this.id || journal.requestDigest !== r.requestDigest || (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(journal.receipt) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.canonical)(r.receipt) || (p.planDigest && p.planDigest !== journal.planDigest))
+                if (journal.scope !== 'coordinated' || journal.coordinatorId !== this.id || journal.requestDigest !== r.requestDigest || (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(journal.receipt) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(r.receipt) || (p.planDigest && p.planDigest !== journal.planDigest))
                     throw new Error('Coordinated plan mismatch');
                 return [{ store, journal }];
             });
@@ -6262,6 +6280,10 @@ class WorkspaceCoordinator {
                 r = { ...r, state: 'aborted', participants: r.participants.map(p => ({ ...p, planDigest: plans.find(plan => plan.journal.rootId === p.rootId)?.journal.planDigest ?? p.planDigest })) };
             }
             this.save(r);
+            if (r.state === 'aborted')
+                for (const { store, p } of stores)
+                    if (!r.participants.find(participant => participant.rootId === p.rootId).planDigest)
+                        store.removeAbortedEmptyDirectory(id);
         }
         catch {
             try {
@@ -6303,15 +6325,15 @@ class WorkspaceCoordinator {
                 continue;
             let lease, catalog;
             try {
-                const root = String(binding.basePath), d = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(root, 'writingtool.json'));
+                const root = String(binding.basePath), d = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(root, 'writingtool.json'));
                 if (d.kind !== 'project' || d.id !== projectId || d.rootId !== binding.rootId)
                     throw new Error('Project binding changed');
-                lease = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_9__.connect)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.checked)(root, 'database/lease.sqlite'), false, 1465140301);
+                lease = (0,_universe_storage__WEBPACK_IMPORTED_MODULE_10__.connect)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(root, 'database/lease.sqlite'), false, 1465140301);
                 lease.exec('BEGIN EXCLUSIVE');
                 const identity = lease.prepare('SELECT * FROM lease_identity').get();
                 if (identity?.ownerId !== projectId || identity.rootId !== binding.rootId)
                     throw new Error('Project ownership mismatch');
-                catalog = new node_sqlite__WEBPACK_IMPORTED_MODULE_5__.DatabaseSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.checked)(root, 'database/catalog.sqlite'), { readOnly: true });
+                catalog = new node_sqlite__WEBPACK_IMPORTED_MODULE_5__.DatabaseSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(root, 'database/catalog.sqlite'), { readOnly: true });
                 if (catalog.prepare('PRAGMA quick_check').get()?.quick_check !== 'ok' || catalog.prepare('PRAGMA user_version').get()?.user_version !== 1 || catalog.prepare('PRAGMA application_id').get()?.application_id !== 1465140301)
                     throw new Error('Unrecognized dependency catalog');
                 const meta = catalog.prepare('SELECT * FROM unit_meta WHERE singleton=1').get();
@@ -6321,10 +6343,10 @@ class WorkspaceCoordinator {
                     continue;
                 const operations = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(root, 'database/operations');
                 if (node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(operations))
-                    for (const id of node_fs__WEBPACK_IMPORTED_MODULE_2___default().readdirSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.checked)(root, 'database/operations', true))) {
+                    for (const id of node_fs__WEBPACK_IMPORTED_MODULE_2___default().readdirSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(root, 'database/operations', true))) {
                         if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_0__.isUuid)(id))
                             throw new Error('Unknown project operation');
-                        const journal = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(root, `database/operations/${id}/journal.json`));
+                        const journal = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(root, `database/operations/${id}/journal.json`));
                         if (journal.command !== 'workspace.publish' || journal.operationId !== id)
                             throw new Error('Unknown dependency operation');
                         const finalized = node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_3___default().join(root, `database/operations/${id}/finalized.json`)), aborted = node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_3___default().join(root, `database/operations/${id}/aborted.json`));
@@ -6342,7 +6364,7 @@ class WorkspaceCoordinator {
                 const dependencyCatalog = catalog;
                 const health = () => { if (!lease?.isTransaction)
                     throw new Error('Dependency lease lost'); };
-                const dependency = new _workspace_storage__WEBPACK_IMPORTED_MODULE_8__.WorkspaceStore(root, dependencyCatalog, () => ({ owner: { kind: 'project', id: projectId }, rootId: String(binding.rootId), universeId, generation: String(meta.generation), sessionToken: String(meta.sessionToken) }), health);
+                const dependency = new _workspace_storage__WEBPACK_IMPORTED_MODULE_9__.WorkspaceStore(root, dependencyCatalog, () => ({ owner: { kind: 'project', id: projectId }, rootId: String(binding.rootId), universeId, generation: String(meta.generation), sessionToken: String(meta.sessionToken) }), health);
                 const snapshot = dependency.snapshot();
                 const references = snapshot.records.flatMap(r => r.recordType === 'chapter' ? [...r.data.characterIds, ...r.data.events.map(e => e.eventId)] : r.recordType === 'decision-context' ? [r.data.decisionId] : []);
                 if (references.some(id => removedIds.includes(id)))
@@ -6737,8 +6759,22 @@ class WorkspaceStore {
                 throw error;
         }
         ensure(this.authority().generation === expectedGeneration && !this.db.prepare('SELECT operationId FROM committed_operations WHERE operationId=?').get(operationId), 'The unprepared participant changed or has committed publication evidence.');
+        const directory = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, `database/operations/${operationId}`);
+        if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(directory))
+            ensure(node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(this.location, `database/operations/${operationId}`, true)).length === 0, 'Unknown unprepared operation evidence was retained.');
         this.blocked = false;
         return true;
+    }
+    removeAbortedEmptyDirectory(operationId) {
+        this.health();
+        ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(operationId) && this.ledger?.recoverUnprepared?.(operationId, this.authority().rootId), 'The original completed coordinator abort is required.');
+        if (!node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, `database/operations/${operationId}`)))
+            return;
+        const directory = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(this.location, `database/operations/${operationId}`, true);
+        ensure(node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(directory).length === 0, 'Unprepared operation evidence changed.');
+        // rmdir never removes nonempty evidence. Flush the containing entry before the legacy sweep.
+        node_fs__WEBPACK_IMPORTED_MODULE_0___default().rmdirSync(directory);
+        (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.syncDir)(node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(directory));
     }
     validOperationRequest(value, operationId) {
         if (typeof value !== 'object' || !value)
@@ -6855,8 +6891,10 @@ class WorkspaceStore {
         for (const id of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(this.location, 'database/operations', true)).sort()) {
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(id));
             const directory = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.checked)(this.location, `database/operations/${id}`, true);
-            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(directory).length === 0 && this.ledger?.recoverUnprepared?.(id, this.authority().rootId))
+            if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(directory).length === 0 && this.ledger?.recoverUnprepared?.(id, this.authority().rootId)) {
+                this.removeAbortedEmptyDirectory(id);
                 continue;
+            }
             const raw = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.decode)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, `database/operations/${id}/journal.json`));
             if (!raw || typeof raw !== 'object' || !('command' in raw))
                 throw new Error('Unknown operation journal');

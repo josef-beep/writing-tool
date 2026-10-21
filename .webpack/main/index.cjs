@@ -903,11 +903,71 @@ function plural(ms, n, name) {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   INITIAL_TIMELINE_VIEW: () => (/* binding */ INITIAL_TIMELINE_VIEW),
 /* harmony export */   PANEL_IDS: () => (/* binding */ PANEL_IDS),
-/* harmony export */   PRESENTATION_CHANNEL: () => (/* binding */ PRESENTATION_CHANNEL)
+/* harmony export */   PRESENTATION_CHANNEL: () => (/* binding */ PRESENTATION_CHANNEL),
+/* harmony export */   panelActionOpensMain: () => (/* binding */ panelActionOpensMain),
+/* harmony export */   resolveTimelineView: () => (/* binding */ resolveTimelineView),
+/* harmony export */   validPanelAction: () => (/* binding */ validPanelAction),
+/* harmony export */   validTimelineCalendar: () => (/* binding */ validTimelineCalendar),
+/* harmony export */   validTimelineView: () => (/* binding */ validTimelineView)
 /* harmony export */ });
+/* harmony import */ var _domain_calendar__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../domain/calendar */ "./src/domain/calendar.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../domain/workspace */ "./src/domain/workspace.ts");
+
+
+
 const PRESENTATION_CHANNEL = 'writingtool:presentation:v1';
 const PANEL_IDS = ['navigation', 'timeline', 'context'];
+const INITIAL_TIMELINE_VIEW = { zoom: 1, focus: null, anchor: null, period: null, unresolved: false };
+const validTimelineView = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['zoom', 'focus', 'anchor', 'period', 'unresolved']) && typeof v.zoom === 'number' && Number.isFinite(v.zoom) && v.zoom >= .125 && v.zoom <= 64 && (v.anchor === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.signedInteger)(v.anchor)) && (v.period === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.positiveInteger)(v.period)) && typeof v.unresolved === 'boolean' && (v.focus === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v.focus, ['requestId', 'start', 'end']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.focus.requestId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.start) && (v.focus.end === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.end)));
+function validTimelineCalendar(view, calendar) {
+    if (!view.focus)
+        return true;
+    if (!calendar)
+        return false;
+    try {
+        (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(view.focus.start, calendar);
+        if (view.focus.end)
+            (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(view.focus.end, calendar);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+/** Focus requests reset the interval once; ordinary mirrors/panning retain its shared state. */
+function resolveTimelineView(current, next, calendar) {
+    if (!validTimelineView(next) || !validTimelineCalendar(next, calendar))
+        return null;
+    if (!next.focus || next.focus.requestId === current.focus?.requestId)
+        return next;
+    const start = (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(next.focus.start, calendar), end = next.focus.end ? (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(next.focus.end, calendar) : start, low = start < end ? start : end, high = start > end ? start : end;
+    return { ...next, anchor: low.toString(), period: high > low ? (high - low + 1n).toString() : '31' };
+}
+const panelActionOpensMain = (action) => ['select', 'edit', 'create', 'create-event', 'tree'].includes(action.kind);
+function validPanelAction(v) {
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'id']) && ['select', 'edit'].includes(String(v.kind)))
+        return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'id', 'direction']) && v.kind === 'move')
+        return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && [-1, 1].includes(Number(v.direction)) && typeof v.direction === 'number';
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'recordType']) && v.kind === 'create')
+        return ['story', 'volume', 'chapter', 'event', 'character', 'faction', 'decision', 'plot'].includes(String(v.recordType));
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'date']) && v.kind === 'create-event')
+        return (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.date);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'value']) && v.kind === 'filters')
+        return (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.validWorkspaceData)('view', v.value);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'value']) && v.kind === 'timeline')
+        return validTimelineView(v.value);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'tab', 'filter']) && v.kind === 'context')
+        return ['characters', 'factions', 'plots', 'decisions'].includes(String(v.tab)) && ['all', 'main', 'major', 'minor', 'extra'].includes(String(v.filter));
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'patch']) && v.kind === 'panel' && typeof v.patch === 'object' && v.patch !== null) {
+        const p = v.patch;
+        return Object.keys(p).length > 0 && Object.entries(p).every(([key, value]) => key === 'placement' ? ['left', 'right', 'bottom', 'center', 'floating'].includes(String(value)) : ['visible', 'collapsed'].includes(key) && typeof value === 'boolean');
+    }
+    return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind']) && v.kind === 'tree' || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'direction']) && v.kind === 'panel-order' && typeof v.direction === 'number' && [-1, 1].includes(v.direction);
+}
 
 
 /***/ },
@@ -1572,10 +1632,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../application/contracts/presentation */ "./src/application/contracts/presentation.ts");
 /* harmony import */ var _application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../application/contracts/workspace */ "./src/application/contracts/workspace.ts");
 /* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../domain/validation */ "./src/domain/validation.ts");
-/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../domain/workspace */ "./src/domain/workspace.ts");
-/* harmony import */ var _domain_calendar__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../domain/calendar */ "./src/domain/calendar.ts");
-/* harmony import */ var _security__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./security */ "./src/desktop/security.ts");
-
+/* harmony import */ var _domain_calendar__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../domain/calendar */ "./src/domain/calendar.ts");
+/* harmony import */ var _security__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./security */ "./src/desktop/security.ts");
 
 
 
@@ -1589,14 +1647,13 @@ function registerPresentation(owner, entry, preload) {
     const windows = new Map(), appliedBounds = new Map();
     let mirror = null, fonts = null, syncing = false, disposed = false, syncTail = Promise.resolve();
     const childId = (event) => { for (const [id, w] of windows)
-        if (!w.isDestroyed() && event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_7__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, `${entry}#floating-${id}`))
+        if (!w.isDestroyed() && event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_6__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, `${entry}#floating-${id}`))
             return id; return null; };
-    const primary = (event) => { const w = owner(); return !!w && !w.isDestroyed() && !!event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_7__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, entry); };
+    const primary = (event) => { const w = owner(); return !!w && !w.isDestroyed() && !!event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_6__.trustedSender)(event.sender.id, w.webContents.id, event.senderFrame === w.webContents.mainFrame, event.senderFrame.url, entry); };
     const send = (event) => { const w = owner(); if (w && !w.isDestroyed())
         w.webContents.send(EVENT, event); };
-    function validAction(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'id']) && v.kind === 'select' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.id) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'recordType']) && v.kind === 'create' && ['story', 'volume', 'chapter', 'event', 'character', 'faction', 'decision', 'plot'].includes(String(v.recordType)) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'date']) && v.kind === 'create-event' && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_6__.validDatePosition)(v.date) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind', 'value']) && v.kind === 'filters' && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_5__.validWorkspaceData)('view', v.value) || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['kind']) && v.kind === 'tree'; }
     const monitors = () => electron__WEBPACK_IMPORTED_MODULE_0__.screen.getAllDisplays().map(d => ({ id: String(d.id), ...d.workArea }));
-    function validMirror(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['snapshot', 'settings', 'universeName', 'storyId', 'chapterId', 'blocked']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v.snapshot, ['project', 'universe']) && (v.snapshot.project === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(v.snapshot.project)) && (v.snapshot.universe === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(v.snapshot.universe)) && (v.settings === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validAppSettings)(v.settings)) && typeof v.universeName === 'string' && (v.storyId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.storyId)) && (v.chapterId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.chapterId)) && typeof v.blocked === 'boolean'; }
+    function validMirror(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v, ['snapshot', 'settings', 'universeName', 'storyId', 'chapterId', 'selectedId', 'timeline', 'contextTab', 'characterFilter', 'blocked']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(v.snapshot, ['project', 'universe']) && (v.snapshot.project === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(v.snapshot.project)) && (v.snapshot.universe === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)(v.snapshot.universe)) && (v.settings === null || (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validAppSettings)(v.settings)) && typeof v.universeName === 'string' && (v.storyId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.storyId)) && (v.chapterId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.chapterId)) && (v.selectedId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.isUuid)(v.selectedId)) && (0,_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.validTimelineView)(v.timeline) && ['characters', 'factions', 'plots', 'decisions'].includes(String(v.contextTab)) && ['all', 'main', 'major', 'minor', 'extra'].includes(String(v.characterFilter)) && typeof v.blocked === 'boolean'; }
     electron__WEBPACK_IMPORTED_MODULE_0__.ipcMain.handle(_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.PRESENTATION_CHANNEL, async (event, value) => {
         if (disposed)
             return { status: 'error', message: 'The writing workspace is closing.' };
@@ -1610,24 +1667,42 @@ function registerPresentation(owner, entry, preload) {
         }
         if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(value, ['command']) && value.command === 'panel.read' && id)
             return result();
-        if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(value, ['command', 'action']) && value.command === 'panel.action' && id && validAction(value.action)) {
+        if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(value, ['command']) && value.command === 'panel.flush' && main) {
+            await syncTail;
+            const layoutPatches = [];
+            for (const [panelId, child] of windows) {
+                if (child.isDestroyed() || !child.isVisible())
+                    continue;
+                const b = child.getBounds(), patch = { x: String(b.x), y: String(b.y), width: String(b.width), height: String(b.height), monitor: String(electron__WEBPACK_IMPORTED_MODULE_0__.screen.getDisplayMatching(b).id) }, saved = mirror?.settings?.panels.find(p => p.id === panelId);
+                if (saved && Object.entries(patch).some(([key, value]) => saved[key] !== value))
+                    layoutPatches.push({ id: panelId, patch });
+            }
+            return { ...result(), status: 'ok', layoutPatches };
+        }
+        if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(value, ['command', 'action']) && value.command === 'panel.action' && id && (0,_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.validPanelAction)(value.action)) {
             if (!mirror || mirror.blocked)
                 return { status: 'error', message: 'Finish the active operation in the main window.' };
-            if (value.action.kind === 'select' && ![...(mirror.snapshot.project?.records ?? []), ...(mirror.snapshot.universe?.records ?? [])].some(r => r.id === value.action.id))
+            if (['select', 'edit', 'move'].includes(value.action.kind) && ![...(mirror.snapshot.project?.records ?? []), ...(mirror.snapshot.universe?.records ?? [])].some(r => r.id === value.action.id))
                 return { status: 'error', message: 'This record is no longer active.' };
             if (value.action.kind === 'create-event') {
                 const calendar = mirror.snapshot.universe?.records.find(r => r.recordType === 'calendar');
                 try {
                     if (!calendar || calendar.recordType !== 'calendar')
                         throw new Error('Calendar unavailable.');
-                    (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_6__.elapsedPosition)(value.action.date, calendar.data);
+                    (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_5__.elapsedPosition)(value.action.date, calendar.data);
                 }
                 catch {
                     return { status: 'error', message: 'This date is no longer available in the active universe calendar.' };
                 }
             }
-            send({ kind: 'action', action: value.action });
-            owner()?.focus();
+            if (value.action.kind === 'timeline') {
+                const calendar = mirror.snapshot.universe?.records.find(r => r.recordType === 'calendar');
+                if (!(0,_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.validTimelineCalendar)(value.action.value, calendar?.recordType === 'calendar' ? calendar.data : null))
+                    return { status: 'error', message: 'This timeline date is no longer available in the active universe calendar.' };
+            }
+            send({ kind: 'action', action: value.action, panelId: id });
+            if ((0,_application_contracts_presentation__WEBPACK_IMPORTED_MODULE_2__.panelActionOpensMain)(value.action))
+                owner()?.focus();
             return result();
         }
         if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_4__.closed)(value, ['command', 'layouts', 'mirror']) && value.command === 'panel.sync' && main && validMirror(value.mirror) && Array.isArray(value.layouts) && value.mirror.settings && (0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_3__.validAppSettings)({ ...value.mirror.settings, panels: value.layouts })) {
@@ -1924,7 +1999,8 @@ function nativeProtection(deps) {
         }
         return { path: resolved, expectedHash };
     } }
-    async function backupFolder(closing, choose) { let folder = (await deps.settings()).backupDestination; if (folder && !choose)
+    async function backupFolder(closing, choose) { let folder = null; if (!choose)
+        folder = (await deps.settings()).backupDestination; if (folder && !choose)
         try {
             node_fs__WEBPACK_IMPORTED_MODULE_0___default().accessSync(folder, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).W_OK);
             return node_fs__WEBPACK_IMPORTED_MODULE_0___default().realpathSync(folder);
@@ -2019,7 +2095,7 @@ function nativeProtection(deps) {
                                 throw new Error('Locate the matching permanent recovery root identity.');
                         }
                         let destination;
-                        if (staged || decision.state === 'await-coordinator') {
+                        if (staged || decision.state !== 'complete') {
                             const selectedDestination = await electron__WEBPACK_IMPORTED_MODULE_2__.dialog.showOpenDialog(deps.window(), { title: `Choose an empty folder for publishing the recovered ${participant.owner.kind}`, defaultPath: node_path__WEBPACK_IMPORTED_MODULE_1___default().dirname(location), properties: ['openDirectory', 'createDirectory'] });
                             if (selectedDestination.canceled || !selectedDestination.filePaths[0])
                                 return { ...base, status: 'canceled' };
@@ -3480,7 +3556,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   activationDestinationAvailable: () => (/* binding */ activationDestinationAvailable),
 /* harmony export */   activationPath: () => (/* binding */ activationPath),
 /* harmony export */   activationRootAt: () => (/* binding */ activationRootAt),
-/* harmony export */   validActivationDecision: () => (/* binding */ validActivationDecision)
+/* harmony export */   relocateActivationParticipant: () => (/* binding */ relocateActivationParticipant),
+/* harmony export */   validActivationDecision: () => (/* binding */ validActivationDecision),
+/* harmony export */   validActivationPath: () => (/* binding */ validActivationPath)
 /* harmony export */ });
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:path */ "node:path");
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_0__);
@@ -3495,10 +3573,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const activationPath = (requestId) => `protection/activation-${requestId}.json`;
-const absolute = (value) => typeof value === 'string' && node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(value) && !value.includes('\0');
+const validActivationPath = (value) => typeof value === 'string' && node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(value) && !value.includes('\0') && !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(value);
+const absolute = validActivationPath;
 const inside = (file, root) => { const relative = node_path__WEBPACK_IMPORTED_MODULE_0___default().relative(root, file); return !relative || relative !== '..' && !relative.startsWith('..' + (node_path__WEBPACK_IMPORTED_MODULE_0___default().sep)) && !node_path__WEBPACK_IMPORTED_MODULE_0___default().isAbsolute(relative); };
 /** An empty/foreign replacement at an old path is not the missing participant. */
 function activationRootAt(root, participant) {
+    if (!absolute(root))
+        throw new Error('Invalid activation path bytes.');
     let location;
     try {
         location = node_fs__WEBPACK_IMPORTED_MODULE_1___default().realpathSync(root);
@@ -3517,7 +3598,7 @@ function activationRootAt(root, participant) {
             return null;
         throw new Error('An original recovery path has unreadable authority evidence. Preserve it before locating the participant.');
     }
-    if (!discovery || typeof discovery !== 'object' || !('kind' in discovery) || !('id' in discovery) || !('rootId' in discovery))
+    if (!discovery || typeof discovery !== 'object' || !('schemaVersion' in discovery) || discovery.schemaVersion !== 1 || !('kind' in discovery) || !['project', 'universe'].includes(String(discovery.kind)) || !('id' in discovery) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(discovery.id) || !('rootId' in discovery) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid)(discovery.rootId))
         throw new Error('An original recovery path has invalid authority evidence.');
     if (discovery.kind === participant.owner.kind && discovery.id === participant.owner.id && discovery.rootId === participant.rootId)
         return location;
@@ -3526,6 +3607,8 @@ function activationRootAt(root, participant) {
     return null;
 }
 function activationDestinationAvailable(destination, stage) {
+    if (!absolute(destination) || !absolute(stage))
+        throw new Error('Invalid activation path bytes.');
     try {
         const stat = node_fs__WEBPACK_IMPORTED_MODULE_1___default().lstatSync(destination);
         if (!stat.isDirectory() || stat.isSymbolicLink() || node_fs__WEBPACK_IMPORTED_MODULE_1___default().readdirSync(destination).length)
@@ -3543,6 +3626,28 @@ function activationDestinationAvailable(destination, stage) {
             return false;
         throw error;
     }
+}
+/** Only a destination capability identifies a relocated, unpublished stage. */
+function relocateActivationParticipant(participant, state, selected) {
+    if (!absolute(selected.location) || selected.destination !== undefined && !absolute(selected.destination))
+        throw new Error('Invalid activation path bytes.');
+    const staged = activationRootAt(participant.stage, participant), published = activationRootAt(participant.destination, participant), location = activationRootAt(selected.location, participant);
+    if (staged && published)
+        throw new Error('Both recovery locations contain the original identity. Preserve both roots before reconciliation.');
+    if (!location)
+        throw new Error('The selected activation location has a different permanent identity.');
+    if (published && published !== location || staged && staged !== location)
+        throw new Error('An original activation authority remains accessible. Reconcile it before rebinding.');
+    if (selected.destination !== undefined) {
+        if (published || state === 'complete')
+            throw new Error('A published activation retains its located publication root.');
+        if (!activationDestinationAvailable(selected.destination, location))
+            throw new Error('Choose an empty publication destination on the same filesystem as the staged recovery root.');
+        return { ...participant, stage: location, destination: selected.destination };
+    }
+    if (staged || !published && state !== 'complete')
+        throw new Error('Choose an empty publication destination for the relocated staged root.');
+    return { ...participant, destination: location };
 }
 function validActivationDecision(value) {
     if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value, ['schemaVersion', 'requestId', 'proposalId', 'manifestId', 'operationId', 'state', 'locations', 'participants']) || value.schemaVersion !== 2 || ![value.requestId, value.proposalId, value.manifestId, value.operationId].every(_domain_validation__WEBPACK_IMPORTED_MODULE_3__.isUuid) || !['await-coordinator', 'commit', 'complete'].includes(String(value.state)) || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_3__.closed)(value.locations, ['project', 'universe']) || value.locations.project !== null && !absolute(value.locations.project) || !absolute(value.locations.universe) || !Array.isArray(value.participants) || !value.participants.length || value.participants.length > 2)
@@ -4682,7 +4787,7 @@ else
                     if (story?.recordType === 'story')
                         return story.data.title;
                 }
-            } return r.command === 'protection.export' && r.owner.kind === 'project' && activeProjectLocation ? node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(activeProjectLocation) : activeSnapshot?.profile.name ?? 'WritingTool'; }, settings: async () => { const result = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'settings.get' }); if (result.status !== 'ok' || !result.settings)
+            } return r.command === 'protection.export' && r.owner.kind === 'project' && activeProjectLocation ? node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(activeProjectLocation) : activeSnapshot?.profile.name ?? 'WritingTool'; }, settings: async () => { workspaceClient?.fail(); workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_8__.WorkspaceHostClient(child); const result = await workspaceClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'settings.get' }); if (result.status !== 'ok' || !result.settings)
                 throw new Error('Read backup settings before continuing.'); return result.settings; }, send: async (r) => {
                 const persist = r.command !== 'protection.reconcile' && (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.protectionHasDurableEffects)(r);
                 if (persist) {
@@ -4782,7 +4887,7 @@ else
                             activeProjectLocation = undefined;
                             activeProjectIdentity = undefined;
                             activeLocation = undefined;
-                            activeSnapshot = undefined;
+                            activeSnapshot = null;
                         }
                     }
                     else {
@@ -4899,7 +5004,7 @@ else
                     else if (hostExited)
                         throw new Error('Original operation locations are unavailable');
                 }
-                if (request.command === 'workspace.reconcile' || request.command === 'settings.get') {
+                if (request.command === 'workspace.reconcile' || request.command === 'settings.get' || request.command === 'workspace.query') {
                     workspaceClient?.fail();
                     workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_8__.WorkspaceHostClient(child);
                 }

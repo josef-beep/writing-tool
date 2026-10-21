@@ -10,11 +10,71 @@
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   INITIAL_TIMELINE_VIEW: () => (/* binding */ INITIAL_TIMELINE_VIEW),
 /* harmony export */   PANEL_IDS: () => (/* binding */ PANEL_IDS),
-/* harmony export */   PRESENTATION_CHANNEL: () => (/* binding */ PRESENTATION_CHANNEL)
+/* harmony export */   PRESENTATION_CHANNEL: () => (/* binding */ PRESENTATION_CHANNEL),
+/* harmony export */   panelActionOpensMain: () => (/* binding */ panelActionOpensMain),
+/* harmony export */   resolveTimelineView: () => (/* binding */ resolveTimelineView),
+/* harmony export */   validPanelAction: () => (/* binding */ validPanelAction),
+/* harmony export */   validTimelineCalendar: () => (/* binding */ validTimelineCalendar),
+/* harmony export */   validTimelineView: () => (/* binding */ validTimelineView)
 /* harmony export */ });
+/* harmony import */ var _domain_calendar__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../domain/calendar */ "./src/domain/calendar.ts");
+/* harmony import */ var _domain_validation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../domain/validation */ "./src/domain/validation.ts");
+/* harmony import */ var _domain_workspace__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../domain/workspace */ "./src/domain/workspace.ts");
+
+
+
 const PRESENTATION_CHANNEL = 'writingtool:presentation:v1';
 const PANEL_IDS = ['navigation', 'timeline', 'context'];
+const INITIAL_TIMELINE_VIEW = { zoom: 1, focus: null, anchor: null, period: null, unresolved: false };
+const validTimelineView = (v) => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['zoom', 'focus', 'anchor', 'period', 'unresolved']) && typeof v.zoom === 'number' && Number.isFinite(v.zoom) && v.zoom >= .125 && v.zoom <= 64 && (v.anchor === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.signedInteger)(v.anchor)) && (v.period === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.positiveInteger)(v.period)) && typeof v.unresolved === 'boolean' && (v.focus === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v.focus, ['requestId', 'start', 'end']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.focus.requestId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.start) && (v.focus.end === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.focus.end)));
+function validTimelineCalendar(view, calendar) {
+    if (!view.focus)
+        return true;
+    if (!calendar)
+        return false;
+    try {
+        (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(view.focus.start, calendar);
+        if (view.focus.end)
+            (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(view.focus.end, calendar);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+/** Focus requests reset the interval once; ordinary mirrors/panning retain its shared state. */
+function resolveTimelineView(current, next, calendar) {
+    if (!validTimelineView(next) || !validTimelineCalendar(next, calendar))
+        return null;
+    if (!next.focus || next.focus.requestId === current.focus?.requestId)
+        return next;
+    const start = (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(next.focus.start, calendar), end = next.focus.end ? (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.elapsedPosition)(next.focus.end, calendar) : start, low = start < end ? start : end, high = start > end ? start : end;
+    return { ...next, anchor: low.toString(), period: high > low ? (high - low + 1n).toString() : '31' };
+}
+const panelActionOpensMain = (action) => ['select', 'edit', 'create', 'create-event', 'tree'].includes(action.kind);
+function validPanelAction(v) {
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'id']) && ['select', 'edit'].includes(String(v.kind)))
+        return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'id', 'direction']) && v.kind === 'move')
+        return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && [-1, 1].includes(Number(v.direction)) && typeof v.direction === 'number';
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'recordType']) && v.kind === 'create')
+        return ['story', 'volume', 'chapter', 'event', 'character', 'faction', 'decision', 'plot'].includes(String(v.recordType));
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'date']) && v.kind === 'create-event')
+        return (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_0__.validDatePosition)(v.date);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'value']) && v.kind === 'filters')
+        return (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.validWorkspaceData)('view', v.value);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'value']) && v.kind === 'timeline')
+        return validTimelineView(v.value);
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'tab', 'filter']) && v.kind === 'context')
+        return ['characters', 'factions', 'plots', 'decisions'].includes(String(v.tab)) && ['all', 'main', 'major', 'minor', 'extra'].includes(String(v.filter));
+    if ((0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'patch']) && v.kind === 'panel' && typeof v.patch === 'object' && v.patch !== null) {
+        const p = v.patch;
+        return Object.keys(p).length > 0 && Object.entries(p).every(([key, value]) => key === 'placement' ? ['left', 'right', 'bottom', 'center', 'floating'].includes(String(value)) : ['visible', 'collapsed'].includes(key) && typeof value === 'boolean');
+    }
+    return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind']) && v.kind === 'tree' || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['kind', 'direction']) && v.kind === 'panel-order' && typeof v.direction === 'number' && [-1, 1].includes(v.direction);
+}
 
 
 /***/ },
