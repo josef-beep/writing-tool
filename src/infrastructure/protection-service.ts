@@ -19,7 +19,7 @@ import {safeDisplayName} from '../domain/capture-time';
 import {FileProjectStorage} from './project-storage';
 import type {WorkspaceCoordinator} from './workspace-coordinator';
 import type {Owner} from '../domain/workspace';
-import {activationPath,activationRootAt,activationDestinationAvailable,validActivationDecision,type ActivationDecision,type ActivationParticipant,type ActivationLocation} from './recovery-activation';
+import {activationPath,activationRootAt,activationDestinationAvailable,relocateActivationParticipant,validActivationPath,validActivationDecision,type ActivationDecision,type ActivationParticipant,type ActivationLocation} from './recovery-activation';
 type ProtectionJob={schemaVersion:1;request:ProtectionHostRequest;state:'ready'|'started'|'prepared'|'complete'|'aborted';value?:ProtectionValue;destination?:NativeDestination;digest?:string};
 export class ProtectionService{
  readonly revisions:RevisionStorage;readonly archives:ArchiveStorage;readonly recovery:RecoveryStorage;
@@ -242,6 +242,7 @@ export class ProtectionService{
   const decision=this.readActivation(request);if(!decision)throw new Error('No original activation decision exists for these locations.');
   if(new Set(locations.map(p=>p.rootId)).size!==locations.length)throw new Error('Duplicate activation location capabilities.');
   for(const selected of locations){
+   if(!validActivationPath(selected.location)||selected.destination!==undefined&&!validActivationPath(selected.destination))throw new Error('Invalid activation path bytes.');
    const participant=decision.participants.find(p=>p.rootId===selected.rootId&&ownerKey(p.owner)===ownerKey(selected.owner));
    if(!participant){
     const universe=this.recovery.manifest(this.recovery.get(request.proposalId)).units.find(u=>u.snapshot.owner.kind==='universe')!.snapshot;
@@ -250,17 +251,9 @@ export class ProtectionService{
     this.assertActivationIdentity(selected.location,{owner:universe.owner,rootId:universe.rootId});
     decision.locations.universe=selected.location;continue;
    }
-   const staged=activationRootAt(participant.stage,participant),published=activationRootAt(participant.destination,participant),location=activationRootAt(selected.location,participant);
-   if(!location)throw new Error('The selected activation location has a different permanent identity.');
-   if(published&&published!==location||staged&&staged!==location)throw new Error('An original activation authority remains accessible. Reconcile it before rebinding.');
-   if(selected.destination){
-    if(published)throw new Error('A published activation retains its located publication root.');
-    if(!activationDestinationAvailable(selected.destination,location))throw new Error('Choose an empty publication destination on the same filesystem as the staged recovery root.');
-    participant.stage=location;participant.destination=selected.destination;
-    if(participant.owner.kind==='project')decision.locations.project=selected.destination;else decision.locations.universe=selected.destination;
-   }
-   else if(decision.state==='await-coordinator')throw new Error('Choose the empty publication destination for the relocated staged project.');
-   else{participant.destination=location;if(participant.owner.kind==='project')decision.locations.project=location;else decision.locations.universe=location;}
+   const relocated=relocateActivationParticipant(participant,decision.state,selected);
+   Object.assign(participant,relocated);
+   if(participant.owner.kind==='project')decision.locations.project=participant.destination;else decision.locations.universe=participant.destination;
   }
   if(!validActivationDecision(decision))throw new Error('The selected activation locations overlap.');
   this.saveActivation(decision);

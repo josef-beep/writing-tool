@@ -2,7 +2,7 @@
 
 User direction on 2026-10-18: finish **all remaining coding** before running tests. Continue through all 49 approved stories; finishing one story is not the stopping point. Defer tests, lint, typecheck, development launches, packaging and reviews requiring execution until the coding pass is finished. Source inspection and implementation planning continue. Do not mark unchecked technical/platform gates complete.
 
-Latest continuation: Jo repeated “continue with coding, leave the tests.” Continue implementation and keep tests/execution checks deferred; completion of a coding slice does not itself authorize starting verification in this continuation. The old agent names below describe a previous session. The current presentation handoff is active, followed sequentially by protection/export and platform I/O.
+Current checkpoint — 2026-10-21: **final coding integration is complete and checks have begun**. The older coding-only continuation notes below are history. The final integration spec and evidence at the end of this ledger supersede their next-step instructions. Full feature and installed-platform acceptance remains open.
 
 Standing product and technical authority: `../planning-artifacts/execution-approval.md`, canonical SPEC/requirements/contracts and final DESIGN/EXPERIENCE. The user has accepted the full release scope; do not ask to split or repeat routine signoff. Generated `.webpack` changes predate this pass and belong to the running app session; preserve them.
 
@@ -10,53 +10,53 @@ Standing product and technical authority: `../planning-artifacts/execution-appro
 |---|---|---|
 | 1.1 — Set up initial project from starter template | Complete | Previously passed |
 | 1.2 — Create and reopen a universe in a chosen folder | Complete | Previously passed |
-| 1.3 — Create and reopen a project linked to a universe | Coded; source inspection only | Deferred until coding pass finishes |
-| 1.4 — Create, name and manually order stories in a project | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 1.5 — Organize stories into optional, manually ordered volumes | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 1.6 — Build and save a universe's repeating fictional calendar | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 1.7 — Record standalone events on the universe timeline | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 1.8 — Manually arrange timeline events sharing a date | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 1.9 — Revise a populated calendar without changing elapsed chronology | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 2.1 — Create and organize undated chapters within a story | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 2.2 — Write, format and save chapter manuscripts | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 2.3 — Set independent chapter dates and view chapters chronologically | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 2.4 — Automatically save current work at a configurable interval | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 2.5 — Choose light, dark or system application appearance | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 2.6 — Configure independent saving and recovery settings | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 2.7 — Export and import application settings as JSON | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.1 — Create and filter universe characters by type | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.2 — Develop character profiles with guided prompts and explicit waivers | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.3 — Select and view multiple character personality labels | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.4 — Add and view optional character images | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.5 — Record character birth years on the universe timeline | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.6 — Record character background events on the shared timeline | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.7 — Record faction profiles and track completeness | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.8 — Record optional military unit types in faction profiles | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.9 — Track faction affiliation history on the character sheet | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.10 — Associate chapter characters and display writing targets | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.11 — Plan linked chapter events from the chapter or timeline | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.12 — Edit flashback historical dates independently of chapter dates | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.13 — Open the event editor from a chapter without chapter-driven event changes | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 3.14 — Inspect chapter chronology and characters alongside manuscript writing | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 4.1 — Maintain a story’s dated and undated plot sequence | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 4.2 — Record established decisions on the universe timeline | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 4.3 — Link established decisions to their resulting events | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 4.4 — Link an established decision to a decision it leads to | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 4.5 — Inspect established decision/result relationships in a tree view | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 4.6 — Find unresolved decisions from the universe timeline | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 4.7 — Inspect established decisions in character, story-arc and writing context | Backend and presentation coded; source inspection only | Deferred until coding pass finishes |
-| 5.1 — Capture and inspect complete scheduled revisions of current work | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.2 — Restore a chapter revision while preserving replaced work | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.3 — Restore a character revision against the authoritative universe | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.4 — Restore an event revision without changing its depicting chapters | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.5 — Create independent complete project and universe ZIP backups | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.6 — Restore a whole project against its authoritative universe | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.7 — Recover a project or standalone universe from one complete ZIP | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.8 — Create complete backups on an independent configurable schedule | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.9 — Finish normal close with complete revisions and backups, including fallback recovery | Source present; integration unverified | Deferred until coding pass finishes |
-| 5.10 — Apply time-based retention and safe manual deletion | Source present; integration unverified | Deferred until coding pass finishes |
-| 6.1 — Export a whole story or selected chapters as DOCX, PDF, Markdown or text | Source present; integration unverified | Deferred until coding pass finishes |
-| 6.2 — Export local database content through a separate consistent-export workflow | Source present; integration unverified | Deferred until coding pass finishes |
+| 1.3 — Create and reopen a project linked to a universe | Coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 1.4 — Create, name and manually order stories in a project | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 1.5 — Organize stories into optional, manually ordered volumes | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 1.6 — Build and save a universe's repeating fictional calendar | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 1.7 — Record standalone events on the universe timeline | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 1.8 — Manually arrange timeline events sharing a date | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 1.9 — Revise a populated calendar without changing elapsed chronology | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 2.1 — Create and organize undated chapters within a story | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 2.2 — Write, format and save chapter manuscripts | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 2.3 — Set independent chapter dates and view chapters chronologically | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 2.4 — Automatically save current work at a configurable interval | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 2.5 — Choose light, dark or system application appearance | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 2.6 — Configure independent saving and recovery settings | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 2.7 — Export and import application settings as JSON | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.1 — Create and filter universe characters by type | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.2 — Develop character profiles with guided prompts and explicit waivers | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.3 — Select and view multiple character personality labels | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.4 — Add and view optional character images | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.5 — Record character birth years on the universe timeline | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.6 — Record character background events on the shared timeline | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.7 — Record faction profiles and track completeness | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.8 — Record optional military unit types in faction profiles | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.9 — Track faction affiliation history on the character sheet | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.10 — Associate chapter characters and display writing targets | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.11 — Plan linked chapter events from the chapter or timeline | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.12 — Edit flashback historical dates independently of chapter dates | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.13 — Open the event editor from a chapter without chapter-driven event changes | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 3.14 — Inspect chapter chronology and characters alongside manuscript writing | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 4.1 — Maintain a story’s dated and undated plot sequence | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 4.2 — Record established decisions on the universe timeline | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 4.3 — Link established decisions to their resulting events | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 4.4 — Link an established decision to a decision it leads to | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 4.5 — Inspect established decision/result relationships in a tree view | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 4.6 — Find unresolved decisions from the universe timeline | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 4.7 — Inspect established decisions in character, story-arc and writing context | Backend and presentation coded; source inspection only | Full story acceptance pending; final integration evidence below |
+| 5.1 — Capture and inspect complete scheduled revisions of current work | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.2 — Restore a chapter revision while preserving replaced work | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.3 — Restore a character revision against the authoritative universe | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.4 — Restore an event revision without changing its depicting chapters | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.5 — Create independent complete project and universe ZIP backups | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.6 — Restore a whole project against its authoritative universe | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.7 — Recover a project or standalone universe from one complete ZIP | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.8 — Create complete backups on an independent configurable schedule | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.9 — Finish normal close with complete revisions and backups, including fallback recovery | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 5.10 — Apply time-based retention and safe manual deletion | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 6.1 — Export a whole story or selected chapters as DOCX, PDF, Markdown or text | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
+| 6.2 — Export local database content through a separate consistent-export workflow | Source present; integration unverified | Full story acceptance pending; final integration evidence below |
 
 ## Active coding checkpoint
 
@@ -137,3 +137,21 @@ Exports now pin their original saved text/formatting, chapter order/calendar, ca
 Added aborted export job evidence and terminal-only cache reclamation under the cross-host coordinator gate, preserving unresolved/shared pins and retrying interrupted cleanup. Completed jobs retain publication digests; service reconciliation and native acknowledgement verify original output bytes. Conversion timeout/cancellation is idempotent and cannot turn a timeout into success. Improved FODT whitespace/exact indent handling and DOCX content comparison for empty paragraphs and line breaks. Unsupported XML controls fail before output publication without changing saved writing.
 
 Source changes only, no execution checks. DOCX/PDF rendered fidelity, cache/replay fault cases and platform durability remain unverified; PDF validation remains structural. Next source target is partial recovery activation and moved stage/destination reconciliation. The coding pass and full release acceptance are not complete; preserve generated .webpack edits.
+
+
+## Final coding integration — 2026-10-21
+
+Completed the final recorded source gaps: original coordinator aborts remain terminal; verified empty preparation directories no longer block real root reopen; uncertain/nonempty evidence survives. Relocated recovery stages require explicit empty publication destinations, preserve permanent identities and distinguish published roots. Foreign replacements and physical aliases at old bindings are handled without inventing another authority.
+
+Docked/floating panels now share content and guarded actions, story/volume/context controls, selected records, timeline zoom/interval/unresolved/focus requests and app-wide appearance. Layout saves coalesce until acknowledged, normalize imported subsets, rebase after lost acknowledgements/conflicts, retain newer settings edits and flush actual bounds before departure. Actual resizing is separated from ordinary pointer clicks, including collapsed width changes. Startup reads have coherent loading/retry state; an unloaded snapshot cannot skip required close captures; explicit backup destination selection works independently of a settings read. Renderer config needed no change.
+
+Three independent review layers completed and were triaged in [spec-final-coding-integration.md](spec-final-coding-integration.md). Confirmed findings were corrected; preload transport wrappers refuted the claimed overlapping renderer-read cancellation and raw IPC-rejection escapes. No confirmed coding blocker from this pass remains.
+
+Verification after all source corrections:
+
+- `npm run typecheck`, `npm run lint`, `git diff --check`: passed.
+- `npm test`: **83/83 passed**, including registered converter descendant-termination tests and real temporary-file settings persistence fault tests. Managed sandbox subprocess output suppression was confirmed by rerunning outside that restriction; no converter change was made to accommodate it.
+- `npm run test:desktop`: actual Forge-generated main/utility, renderer and sandboxed preload compile into temporary output; all **five actual Electron scenarios pass** with production renderer isolation. Scenarios cover shared zoom and immediate-close floating bounds, failed snapshot read blocking close until recovery, lost layout acknowledgement plus real version conflict/retry, imported partial layout completion, and floating context tab/classification roundtrip with filtered records and retained focus. Every scenario completes a required revision, independent ZIP backup, window close and native exit. Final bounds are checked in saved settings.
+- Evidence is retained in [final-coding-evidence/summary.json](final-coding-evidence/summary.json), the result JSON and command/scenario logs alongside it. Reproduce with `npm test` and `npm run test:desktop` on an available desktop display; the latter always uses fresh temporary data and output.
+
+This closes the coding checkpoint, not all 49 story acceptances. Full scope/platform acceptance, Windows/macOS compilation and installed filesystem behavior, physical interruption/durability, rendered DOCX/PDF fidelity, representative-corpus performance and accessibility remain explicit verification work. Existing writing roots, unrelated untracked implementation and generated `.webpack` content were preserved. No commit was created across the mixed work.

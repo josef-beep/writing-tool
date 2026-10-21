@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-21",
+  "baselineCommit": "5e209b10c7bc90ad5422b878c5063b3eaf1dacbc",
+  "platform": "linux-x64",
+  "typecheck": "passed",
+  "lint": "passed",
+  "registeredTests": {
+    "total": 83,
+    "passed": 83,
+    "failed": 0
+  },
+  "forgeBundles": [
+    "main and utility-host",
+    "renderer",
+    "sandboxed preload"
+  ],
+  "desktopScenarios": 5,
+  "temporaryBuildAndFixtures": "/tmp/writingtool-desktop-verification-3ss50S",
+  "generatedWebpackModified": false,
+  "userWritingRootsModified": false,
+  "commitCreated": false,
+  "remainingAcceptance": [
+    "Full per-story feature acceptance",
+    "Windows/macOS native compilation and installed behavior",
+    "Installed platform and physical durability matrix",
+    "Rendered DOCX/PDF fidelity",
+    "Representative-corpus performance and accessibility"
+  ]
+}

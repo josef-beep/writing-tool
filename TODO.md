@@ -8,7 +8,7 @@ Use stable task IDs when discussing work. Mark a task `[x]` only when complete, 
 
 Working mode: Jo approved the [single approval pack](_bmad-output/planning-artifacts/execution-approval.md) on 2026-10-17. Continue routine technical choices, story work, tests, internal reviews/fixes and phase transitions without repeated signoff. Data/publication foundations are adopted; technical/test gaps remain open until evidence closes them. Ask only for material changes, necessary unavailable facts or new cost/credential/external/environment-enforced actions.
 
-Implementation progress: **2 of 49 stories complete** (Story 1.1 secured desktop starter and Story 1.2 universe creation/reopen/profile). Release code is now present for later features but remains unverified; native platform implementation and its outstanding acceptance gates are tracked in BUILD-25. See the [release coding ledger](_bmad-output/implementation-artifacts/release-implementation-pass.md). Evidence: [starter verification](_bmad-output/implementation-artifacts/story-1-1-evidence.md), [universe verification](_bmad-output/implementation-artifacts/story-1-2-evidence.md). Full release/platform/technical gates remain open.
+Implementation progress: **release coding integration complete; 2 of 49 stories formally accepted** (Stories 1.1/1.2). The final pass closed the recorded recovery, panel/layout and shutdown gaps. Typecheck/lint, **83 registered tests**, and **five isolated actual Electron scenarios with temporary Forge bundles** pass; see the [final integration spec](_bmad-output/implementation-artifacts/spec-final-coding-integration.md), [verification summary](_bmad-output/implementation-artifacts/final-coding-evidence/summary.json) and [release coding ledger](_bmad-output/implementation-artifacts/release-implementation-pass.md). Continue full story/release verification; native platform and installed acceptance gates remain BUILD-25/VERIFY. Historical coding-only checkpoints are superseded by this completed pass.
 
 ## Existing planning
 
@@ -80,6 +80,7 @@ Implementation progress: **2 of 49 stories complete** (Story 1.1 secured desktop
 
 ## Application implementation
 
+
 - [ ] BUILD-01 — Set up the Electron/TypeScript application and development tooling with the adopted Clean Architecture boundaries.
 - [ ] BUILD-02 — Implement React presentation, isolated preload, bounded validated IPC, Electron main lifecycle/OS integration and the background application host. Enforce the adopted renderer and filesystem security boundaries.
 - [ ] BUILD-03 — Implement project/universe JSON object files, plain-text .wrt writing and SQLite ID/filename/relationship/location catalogs, managed external images, migrations and UUID/location resolution, including whole-root moves that update only one base-folder database record while object paths remain relative and one live universe authority is preserved. SQLite/similar live database files must be in their own dedicated database subfolder inside the owning project/universe data folder tree, alongside the other category folders. Apply the later category-folder storage contract: actual saved objects grouped by category, with database/index/file responsibilities reconciled under DEC-33.
@@ -105,6 +106,7 @@ Implementation progress: **2 of 49 stories complete** (Story 1.1 secured desktop
 - [ ] BUILD-23 — Implement settings, independent save/revision/backup intervals, destination and retention configuration, JSON import/export and light/dark/system theme following OS changes. **CAP-12; FR-28–30/43.**
 - [ ] BUILD-24 — Produce installed desktop builds with bundled runtime and menu integration for the agreed platform matrix.
 - [ ] BUILD-25 — Verify and harden native platform filesystem delivery. Concrete macOS and Windows relative-I/O/flush sources and matching-host build hooks are present but uncompiled/unverified. Windows directory publication requires local NTFS and successful ReOpenFile/NtFlushBuffersFileEx metadata/storage synchronization through the pinned object. Validate handle interoperability, syscall ABI/access, non-NTFS rejection, interruption outcomes and installed resources before accepting the supported platform matrix. See [native source limitations](native/confined-fs/README.md).
+- [x] BUILD-26 — Finish final coding integration: interrupted coordinator/activation recovery, shared panel controls/timeline state, acknowledged layout persistence and safe failed-read close. Verified by typecheck/lint, 83 registered tests and five isolated desktop scenarios; [evidence](_bmad-output/implementation-artifacts/final-coding-evidence/summary.json). Full story and platform acceptance stays separate.
 
 ## Verification and completion
 

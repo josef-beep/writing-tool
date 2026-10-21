@@ -1,0 +1,10 @@
+
+> writingtool@0.1.0 test:desktop
+> node --import tsx scripts/verify-desktop.mjs
+
+panels: passed
+read-failure: passed
+layout-retry: passed
+partial-layout: passed
+context: passed
+Desktop verification evidence: /tmp/writingtool-desktop-verification-3ss50S
