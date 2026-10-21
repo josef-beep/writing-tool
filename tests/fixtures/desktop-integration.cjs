@@ -45,9 +45,70 @@ app.on('browser-window-created',(_event,window)=>{
  window.once('closed',()=>console.log('WINDOW_CLOSED'));
  window.webContents.once('did-finish-load',()=>void drive().catch(async error=>{console.error(error);console.error('BODY '+await evaluate('document.body.innerText'));app.exit(1);}));
 });
-async function evaluate(code){return main.webContents.executeJavaScript(code);}
+async function evaluate(code){
+ const result=await main.webContents.executeJavaScript(`(async()=>{try{return await (${code});}catch(error){return {__desktopError:error.message};}})()`);
+ if(result&&typeof result==='object'&&Object.hasOwn(result,'__desktopError'))throw new Error(result.__desktopError);
+ return result;
+}
 async function waitFor(code,description,timeout=15000){const until=Date.now()+timeout;while(Date.now()<until){if(await evaluate(code))return;await delay(100);}throw new Error('Timed out: '+description+'\n'+await evaluate('document.body.innerText'));}
 async function clickText(text){await evaluate(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim().startsWith(${JSON.stringify(text)}));if(!b)throw new Error('Missing button '+${JSON.stringify(text)});b.click();})()`);}
+async function verifyExclusiveMenus(){
+ await waitFor(`document.querySelectorAll('.workspace-panel').length===3&&!document.querySelector('.blocking')`,'settled menu workspace');
+ await evaluate(`(()=>{
+  const toolbar=[...document.querySelectorAll('header nav details')];
+  if(toolbar.length!==8)throw new Error('Expected all eight application menus');
+  for(const menu of toolbar){
+   menu.querySelector('summary').click();
+   const opened=toolbar.filter(item=>item.open);
+   if(opened.length!==1||opened[0]!==menu)throw new Error('Opening '+menu.querySelector('summary').textContent+' left another toolbar menu open');
+  }
+  const last=toolbar.at(-1);last.querySelector('summary').click();
+  if(toolbar.some(menu=>menu.open))throw new Error('Clicking the same menu did not close it');
+  toolbar[0].querySelector('summary').click();
+  const moves=[...document.querySelectorAll('aside .panel-heading details')];
+  if(moves.length!==3)throw new Error('Expected all panel Move menus');
+  const all=[...toolbar,...moves];
+  for(const move of moves){
+   move.querySelector('summary').click();
+   if(all.filter(menu=>menu.open).length!==1||!move.open)throw new Error('Panel Move menu did not close the previous menu');
+  }
+  const disclosure=document.querySelector('details.visibility');disclosure.querySelector('summary').click();
+  if(!disclosure.open||!moves.at(-1).open)throw new Error('Opening an independent filter disclosure closed the panel menu');
+  toolbar[0].querySelector('summary').click();
+  if(all.filter(menu=>menu.open).length!==1||!toolbar[0].open)throw new Error('Toolbar did not close the panel Move menu');
+  if(!disclosure.open)throw new Error('Opening a menu closed an independent filter disclosure');
+ })()`);
+ main.focus();
+ await delay(100);
+ const projectMenu=`document.querySelectorAll('header nav details')[0]`,universeMenu=`document.querySelectorAll('header nav details')[1]`,moveMenu=`document.querySelector('aside .panel-heading details')`;
+ async function expectMenu(menu,open=true){
+  await waitFor(`(${menu}).open===${open}&&document.querySelectorAll('details[name="writingtool-menu"][open]').length===${open?1:0}`,'exclusive menu state: '+menu);
+ }
+ async function pointerClick(element){
+  const point=await evaluate(`(()=>{const r=(${element}).getBoundingClientRect();return{x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};})()`);
+  main.webContents.sendInputEvent({type:'mouseDown',...point,button:'left',clickCount:1});
+  main.webContents.sendInputEvent({type:'mouseUp',...point,button:'left',clickCount:1});
+ }
+ async function pressSummary(menu,keyCode,character,open=true){
+  await evaluate(`(${menu}).querySelector('summary').focus()`);
+  main.webContents.sendInputEvent({type:'keyDown',keyCode});
+  main.webContents.sendInputEvent({type:'char',keyCode:character});
+  main.webContents.sendInputEvent({type:'keyUp',keyCode});
+  await expectMenu(menu,open);
+ }
+ await pointerClick(`(${universeMenu}).querySelector('summary')`);await expectMenu(universeMenu);
+ await pointerClick(`(${universeMenu}).querySelector('summary')`);await expectMenu(universeMenu,false);
+ await pointerClick(`(${moveMenu}).querySelector('summary')`);await expectMenu(moveMenu);
+ await pointerClick(`(${projectMenu}).querySelector('summary')`);await expectMenu(projectMenu);
+ await pressSummary(universeMenu,'Enter','\r');
+ await pressSummary(moveMenu,'Space',' ');
+ await pressSummary(moveMenu,'Space',' ',false);
+ await pressSummary(projectMenu,'Space',' ');
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='View');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='Font and layout…').click();})()`);
+ await waitFor(`document.querySelector('.center-form h2')?.textContent==='Settings'`,'portaled menu command');
+ await pointerClick(`(${projectMenu}).querySelector('summary')`);await expectMenu(projectMenu);
+ console.log('MENU_EXCLUSIVITY pointer, Enter/Space, portaled command, panel Move and independent disclosure passed');
+}
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
  await waitFor(`!document.querySelector('.blocking')`,'initial workspace loading');
@@ -55,7 +116,10 @@ async function drive(){
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
- if(mode==='read-failure'){
+ if(mode==='menus'){
+  await verifyExclusiveMenus();
+  main.close();
+ }else if(mode==='read-failure'){
   await waitFor(`document.body.innerText.includes('Injected temporary snapshot')`,'injected read failure');
   main.close();await delay(1200);
   if(main.isDestroyed()||captureCount||backupCount)throw new Error('Failed read bypassed close guard');

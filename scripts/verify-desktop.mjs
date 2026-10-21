@@ -15,6 +15,10 @@ import {DEFAULT_PANELS} from '../src/presentation/workspace/SettingsForm.tsx';
 import {runSmokeProcess} from './smoke.mjs';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
+const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus'];
+const selectedModes=process.argv.slice(2);
+if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
+const modes=selectedModes.length?selectedModes:availableModes;
 const output=fs.mkdtempSync(path.join(os.tmpdir(),'writingtool-desktop-verification-'));
 const webpack=require('webpack');
 const imported=await import(pathToFileURL(path.join(path.dirname(require.resolve('@electron-forge/plugin-webpack')),'WebpackConfig.js')).href);
@@ -34,7 +38,7 @@ for(const config of [await generator.getMainConfig(),...await generator.getRende
  });
 }
 const results=[];
-for(const mode of ['panels','read-failure','layout-retry','partial-layout','context']){
+for(const mode of modes){
  const fixture=path.join(output,mode);
  for(const directory of ['profile','project','universe','backups'])fs.mkdirSync(path.join(fixture,directory),{recursive:true});
  const coordinator=new WorkspaceCoordinator(path.join(fixture,'profile'));
