@@ -16,7 +16,7 @@ import {runSmokeProcess} from './smoke.mjs';
 import {unzipSync,strFromU8} from 'fflate';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
-const availableModes=['panels','read-queue','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions','writing','reconcile-defer','reconcile-background'];
+const availableModes=['panels','error-quit','combined-error-quit','error-profile-quit','error-quit-timeout','error-quit-copy-keep','close-stalled','close-drain-cancel','close-backup-error','error-quit-copy-failure','close-pending','read-queue','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions','writing','reconcile-defer','reconcile-background'];
 const selectedModes=process.argv.slice(2);
 if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
 const modes=selectedModes.length?selectedModes:availableModes;
@@ -53,6 +53,12 @@ for(const mode of modes){
  const project=new FileProjectStorage(coordinator).create(path.join(fixture,'project'),{operationId:randomUUID()},universe.snapshot().ownerId,universe.location).store;
  try{
   const snapshot={project:project.workspace.snapshot(),universe:universe.workspace.snapshot()};
+  if(mode==='close-pending'){
+   const id=randomUUID(),request={protocolVersion:1,requestId:id,command:'protection.apply',proposalId:randomUUID()};
+   const directory=path.join(fixture,'profile/protection/native-pending');fs.mkdirSync(directory,{recursive:true});
+   fs.writeFileSync(path.join(directory,id+'.json'),JSON.stringify({request,project:project.location,universe:universe.location,projectIdentity:{id:snapshot.project.owner.id,rootId:snapshot.project.rootId},universeIdentity:{id:snapshot.universe.owner.id,rootId:snapshot.universe.rootId},dispatch:'prepared'}));
+   fs.writeFileSync(path.join(fixture,'pending-id'),id);
+  }
   if(mode==='read-queue'){
    const id=randomUUID(),request={protocolVersion:1,requestId:id,command:'protection.capture',owner:snapshot.project.owner,reason:'Manual'};
    const directory=path.join(fixture,'profile/protection/native-pending');fs.mkdirSync(directory,{recursive:true});
@@ -111,6 +117,10 @@ for(const mode of modes){
   if(panel.width!==String(result.expectedBounds.width)||panel.height!==String(result.expectedBounds.height))throw new Error('Immediate-close bounds were not persisted: '+mode);
  }
  results.push(result);console.log(`${mode}: passed`);
+ if(mode==='error-quit'){
+  const restarted=await runSmokeProcess(require('electron'),[path.join(root,'tests/fixtures/desktop-integration.cjs')],{fault:'recovery-notice',timeoutMs:30000,env:{...process.env,WRITINGTOOL_TEST_ROOT:root,WRITINGTOOL_TEST_BUILD:generator.webpackDir,WRITINGTOOL_TEST_FIXTURE:fixture,WRITINGTOOL_TEST_MODE:'recovery-notice'},write:bytes=>fs.appendFileSync(path.join(output,'recovery-notice.log'),bytes)});
+  results.push(restarted);console.log('recovery-notice: passed');
+ }
  if(mode==='reconcile-background')verifyClosingArchive(fixture,' after failed closing');
  if(mode==='reconcile-defer'){
   const restarted=await runSmokeProcess(require('electron'),[path.join(root,'tests/fixtures/desktop-integration.cjs')],{

@@ -56,7 +56,11 @@ const bridge: WritingToolBridge & UniverseBridge & ProjectBridge & WorkspaceBrid
 contextBridge.exposeInMainWorld('writingTool', bridge);
 // Purpose-bound lifecycle notification; no extra public bridge or renderer payload.
 document.addEventListener('writingtool-request-quit', () => ipcRenderer.send('writingtool:quit-request:v1', { protocolVersion: 1, requestId: crypto.randomUUID(), command: 'application.quit' }));
+document.addEventListener('writingtool-request-recovery-quit',()=>ipcRenderer.send('writingtool:quit-request:v1',{protocolVersion:1,requestId:crypto.randomUUID(),command:'application.quit',recovery:true}));
 ipcRenderer.on('writingtool:close-aborted:v1', (_event, refresh:unknown) => document.dispatchEvent(new CustomEvent('writingtool-close-aborted', {detail:{refresh:refresh===true}})));
+document.addEventListener('writingtool-request-recovery-copies',()=>ipcRenderer.send('writingtool:recovery-copies-request:v1'));
+document.addEventListener('writingtool-open-recovery-folder',()=>ipcRenderer.send('writingtool:recovery-folder:v1'));
+ipcRenderer.on('writingtool:recovery-copies:v1',(_event,count:unknown)=>{if(typeof count==='number'&&Number.isSafeInteger(count)&&count>=0)document.dispatchEvent(new CustomEvent('writingtool-recovery-copies',{detail:count}));});
 // Explicit diagnostic-only probe; probes never expose arbitrary renderer IPC.
 if (process.argv.includes('--writingtool-smoke')) {
     const request = { protocolVersion: 1, requestId: crypto.randomUUID(), query: QUERY };

@@ -13,7 +13,7 @@ import { ProjectHostClient, projectUnavailable } from './project-host-client';
 import { randomUUID } from 'node:crypto';
 import { UNIVERSE_CHANNEL, validUniverseRequest, closed, isUuid, type SaveReceipt, type ReconciliationExpectation, type UniverseSnapshot } from '../application/contracts/universe';
 import { UniverseHostClient, hostUnavailable } from './universe-host-client';
-import { app, BrowserWindow, dialog, ipcMain, utilityProcess, nativeImage, powerMonitor, type IpcMainInvokeEvent, type UtilityProcess } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, utilityProcess, nativeImage, powerMonitor, shell, type IpcMainInvokeEvent, type UtilityProcess } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import squirrelStartup from 'electron-squirrel-startup';
@@ -150,9 +150,17 @@ else
             projectClient = new ProjectHostClient(undefined);
             hostExited = true;
         }
+        ipcMain.on('writingtool:recovery-copies-request:v1',event=>{
+            if(!authorized(event))return;
+            let count=0;try{count=fs.readdirSync(path.join(app.getPath('userData'),'recovery/interrupted-close')).filter(id=>isUuid(id)&&fs.existsSync(path.join(app.getPath('userData'),'recovery/interrupted-close',id,'recovery.json'))).length;}catch{}
+            event.sender.send('writingtool:recovery-copies:v1',count);
+        });
+        ipcMain.on('writingtool:recovery-folder:v1',event=>{
+            if(authorized(event))void shell.openPath(path.join(app.getPath('userData'),'recovery/interrupted-close')).catch(error=>console.error('Could not open recovery copies',error));
+        });
         ipcMain.on('writingtool:quit-request:v1', (event, value: unknown) => {
-            if (authorized(event) && closed(value, ['protocolVersion', 'requestId', 'command']) && value.protocolVersion === 1 && isUuid(value.requestId) && value.command === 'application.quit')
-                void requestNativeQuit('app');
+            if (authorized(event) && closed(value, ['protocolVersion', 'requestId', 'command',...(typeof value==='object'&&value!==null&&Object.hasOwn(value,'recovery')?['recovery']:[])]) && (!Object.hasOwn(value,'recovery')||value.recovery===true) && value.protocolVersion === 1 && isUuid(value.requestId) && value.command === 'application.quit')
+                void requestNativeQuit('app',value.recovery===true);
         });
         ipcMain.handle(READINESS_CHANNEL, (event, request: unknown) => {
             if (!authorized(event) || !validRequest(request))
@@ -203,7 +211,7 @@ else
                 if(result.status==='locate') return {...base,status:'error',code:'INTEGRITY_MISMATCH',message:'The matching universe could not be resolved.',outcome:'not-committed',retry:'new-request'};
                 if(request.command==='project.create' && !(result.status==='error' && result.outcome!=='not-committed')) pendingProjectCreation=undefined;
                 if(request.command==='project.open' && result.status==='ok') pendingProjectCreation=undefined;
-                if(result.status==='ok') {authorityRestorePending=false;activeProjectLocation=result.snapshot?.location;activeProjectIdentity=result.snapshot?{id:result.snapshot.ownerId,rootId:result.snapshot.rootId}:undefined;if(result.snapshot){activeSnapshot=result.snapshot.universe;activeLocation=activeSnapshot.location;}if(result.snapshot)new RecentRoots(app.getPath('userData')).remember({kind:'project',id:result.snapshot.ownerId},result.snapshot.rootId,path.basename(result.snapshot.location),result.snapshot.location);}
+                if(result.status==='ok') {authorityRestorePending=false;activeProjectLocation=result.snapshot?.location;activeProjectIdentity=result.snapshot?{id:result.snapshot.ownerId,rootId:result.snapshot.rootId}:undefined;if(result.snapshot){activeSnapshot=result.snapshot.universe;activeLocation=activeSnapshot.location;}if(result.snapshot)try{new RecentRoots(app.getPath('userData')).remember({kind:'project',id:result.snapshot.ownerId},result.snapshot.rootId,path.basename(result.snapshot.location),result.snapshot.location);}catch(error){console.error('Could not update recent projects',error);}}
                 return result;
             } catch {
                 if(!sent) return {...base,status:'error',code:'IO_FAILURE',message:'The project folder chooser could not complete. Try again.',outcome:'not-committed',retry:'new-request'};
@@ -252,7 +260,7 @@ else
                 if (result.status === 'ok') {
                     activeLocation = result.snapshot?.location;
                     activeSnapshot = result.snapshot;
-                    if(result.snapshot)new RecentRoots(app.getPath('userData')).remember({kind:'universe',id:result.snapshot.ownerId},result.snapshot.rootId,result.snapshot.profile.name,result.snapshot.location);
+                    if(result.snapshot)try{new RecentRoots(app.getPath('userData')).remember({kind:'universe',id:result.snapshot.ownerId},result.snapshot.rootId,result.snapshot.profile.name,result.snapshot.location);}catch(error){console.error('Could not update recent universes',error);}
                 }
                 if (request.command === 'universe.create' && !(result.status === 'error' && result.outcome === 'unknown'))
                     unresolvedOperations.delete(request.input.operationId);
@@ -431,7 +439,7 @@ else
                         return{...result,outcome:'unknown',operationId:value.operationId};
                     }
                     return result;
-                }catch(error){if(!canDeferProtection(pendingProtection.get(value.operationId)?.request.command??'protection.reconcile'))unresolvedOperations.add(value.operationId);else if(!hasBlockingOperations())window?.webContents.send('writingtool:recovered-context:v1');return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
+                }catch(error){if(pendingProtection.has(value.operationId)&&!canDeferProtection(pendingProtection.get(value.operationId)!.request.command))unresolvedOperations.add(value.operationId);else if(!hasBlockingOperations())window?.webContents.send('writingtool:recovered-context:v1');return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
                 finally{protectionInFlight=false;}
             }
 
@@ -730,9 +738,60 @@ async function smoke(): Promise<void> {
         await window.webContents.executeJavaScript(`(async()=>{for(let i=0;i<100&&!document.querySelector('#pending-heading');i++)await new Promise(resolve=>setTimeout(resolve,30));Array.from(document.querySelectorAll('.blocking button')).find(button=>button.textContent==='Discard')?.click();})()`).catch(() => {
         });
 }
-async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
-    if (quitDecisionInFlight || draining)
-        return;
+let recoveryQuitInFlight=false;
+async function quitAfterError(reason:string):Promise<void>{
+    if(recoveryQuitInFlight||drained)return;
+    recoveryQuitInFlight=true;
+    const directory=path.join(app.getPath('userData'),'recovery','interrupted-close',randomUUID());
+    let ownsDrain=false;
+    try{
+        const answer=await dialog.showMessageBox(window!,{type:'warning',title:'Quit application?',message:reason,detail:'You can quit now. The last operation will remain unconfirmed. Current drafts and recovery details will be kept in:\n'+directory,buttons:['Keep application open','Quit application'],defaultId:0,cancelId:0,noLink:true});
+        if(answer.response!==1||drained)return;
+        ownsDrain=!draining;
+        draining=true;
+        try{
+            let drafts:unknown=[],collectionError:string|null=null;
+            if(window&&!window.isDestroyed())try{
+                let timer:ReturnType<typeof setTimeout>|undefined;
+                try{drafts=await Promise.race([window.webContents.executeJavaScript(`(()=>{
+                    document.body.inert=true;
+                    const detail={drafts:[]};document.dispatchEvent(new CustomEvent('writingtool-collect-recovery',{detail}));
+                    detail.drafts.push({kind:'visible-editors',value:[...document.querySelectorAll('textarea,input:not([type=password]),[contenteditable=true]')].map(editor=>({label:editor.getAttribute('aria-label')||editor.getAttribute('name')||editor.id,text:'value'in editor?editor.value:editor.innerText,html:editor.isContentEditable?editor.innerHTML:null}))});
+                    return detail.drafts;
+                })()`),new Promise<never>((_resolve,reject)=>{timer=setTimeout(()=>reject(new Error('The editor did not respond while collecting drafts.')),5000);})]);}finally{clearTimeout(timer);}
+            }catch(error){collectionError=error instanceof Error?error.message:'Editor drafts could not be read.';}
+            if(!Array.isArray(drafts)||!['profile','workspace'].every(kind=>drafts.some(entry=>entry?.kind===kind&&Object.hasOwn(entry,'value')))||drafts.some(entry=>entry?.error))collectionError='Some editor state could not be collected. Available draft data has been retained.';
+            const copy={schemaVersion:1,createdAt:new Date().toISOString(),reason,drafts,collectionError,activeProjectLocation,activeProjectIdentity,activeLocation,activeSnapshot,pendingProjectCreation,mutations:[...mutationLocations],workspace:[...pendingWorkspace],protection:[...pendingProtection],unresolved:[...unresolvedOperations]};
+            const relative=path.relative(app.getPath('userData'),directory).split(path.sep).join('/');
+            ensureManagedDirectory(app.getPath('userData'),relative);
+            publishManagedBytes(app.getPath('userData'),relative+'/recovery.json',Buffer.from(JSON.stringify(copy,null,2)+'\n'),null);
+            if(Array.isArray(drafts))for(const [index,entry] of drafts.entries()){
+                if(!entry||typeof entry!=='object'||!entry.value||typeof entry.value!=='object')continue;
+                if(entry.kind==='workspace')for(const kind of ['writing','draft']){
+                    const draft=entry.value[kind];
+                    if(draft&&typeof draft.text==='string')publishManagedBytes(app.getPath('userData'),relative+`/${kind}-${index}.txt`,Buffer.from(draft.text),null);
+                }
+                if(entry.kind==='visible-editors'&&Array.isArray(entry.value))for(const [editorIndex,editor]of entry.value.entries())if(typeof editor.text==='string')publishManagedBytes(app.getPath('userData'),relative+`/editor-${index}-${editorIndex}.txt`,Buffer.from(editor.text),null);
+                if(entry.kind==='profile'&&entry.value.editor&&entry.value.draft)publishManagedBytes(app.getPath('userData'),relative+'/profile.txt',Buffer.from(String(entry.value.draft.name)+'\n\n'+String(entry.value.draft.description)),null);
+            }
+            if(collectionError)throw new Error('Recovery details were saved, but editor drafts could not be collected.');
+        }catch(error){
+            const withoutCopy=await dialog.showMessageBox(window!,{type:'warning',title:'Recovery copy could not be completed',message:error instanceof Error?error.message:'The recovery copy could not be written.',detail:'Existing saved files and recovery records will be kept. Unsaved edits may be lost if you quit without a recovery copy.',buttons:['Keep application open','Quit without recovery copy'],defaultId:0,cancelId:0,noLink:true});
+            if(withoutCopy.response!==1){if(ownsDrain)draining=false;void window?.webContents.executeJavaScript('document.body.inert=false').catch(()=>{});return;}
+        }
+        // An explicit error exit retains journals and pending inputs, then releases
+        // the host through the usual before-quit cleanup. It never fabricates an ack.
+        try{disposePresentation?.();}catch(error){console.error('Could not close floating panels',error);}
+        disposePresentation=undefined;
+        quitPermit='app';
+        drained=true;
+        app.quit();
+    }finally{recoveryQuitInFlight=false;if(ownsDrain&&!drained)draining=false;}
+}
+async function requestNativeQuit(kind: 'window' | 'app',recovery=false): Promise<void> {
+    if(recovery){await quitAfterError('An error is preventing normal closing.');return;}
+
+    if (quitDecisionInFlight || draining){await quitAfterError('Closing has not finished. You can keep waiting or quit with a recovery copy.');return;}
     quitDecisionInFlight = true;
     let authorityReleased = false;
     try {
@@ -750,7 +809,7 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
         }
         await workspaceReadCompletion;
         if (hasBlockingOperations() || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
-            dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
+            await quitAfterError(hasBlockingOperations()||pendingProjectCreation?'The last operation needs recovery before normal closing.':'An operation is still running and normal closing could not finish.');
             return;
         }
         draining = true;
@@ -763,7 +822,7 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
             projectClient = new ProjectHostClient(child);
             const projectResult = await projectClient.request({protocolVersion:1,requestId:randomUUID(),command:'project.close'});
             if(projectResult.status!=='ok' && !hostExited) {
-                dialog.showErrorBox('Unable to close project',projectResult.status==='error'?projectResult.message:'Shutdown was not acknowledged.');
+                await quitAfterError(projectResult.status==='error'?projectResult.message:'Project shutdown was not acknowledged.');
                 return;
             }
             if (projectResult.status === 'ok') {
@@ -773,7 +832,7 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
             }
             const result = await universeClient.request({ protocolVersion: 1, requestId: randomUUID(), command: 'universe.close' });
             if (result.status !== 'ok' && !hostExited) {
-                dialog.showErrorBox('Unable to close universe', result.status === 'error' ? result.message : 'Shutdown was not acknowledged.');
+                await quitAfterError(result.status==='error'?result.message:'Universe shutdown was not acknowledged.');
                 return;
             }
             if (result.status === 'ok') {
@@ -794,6 +853,7 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
     }
     catch (error) {
         console.error('Normal close remains pending', error);
+        await quitAfterError(error instanceof Error?error.message:'Normal closing could not finish.');
     }
     finally {
         draining = false;
@@ -815,6 +875,8 @@ app.on('before-quit', event => {
             ipcMain.removeHandler(WORKSPACE_CHANNEL);
             ipcMain.removeHandler(PROTECTION_CHANNEL);
             ipcMain.removeAllListeners('writingtool:quit-request:v1');
+            ipcMain.removeAllListeners('writingtool:recovery-copies-request:v1');
+            ipcMain.removeAllListeners('writingtool:recovery-folder:v1');
             client?.fail('UNAVAILABLE');
             child?.kill();
         }

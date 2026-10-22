@@ -1,27 +1,33 @@
 const fs=require('node:fs');
 const path=require('node:path');
-const {app,BrowserWindow,ipcMain,dialog,utilityProcess}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,utilityProcess,shell}=require('electron');
 const repo=process.env.WRITINGTOOL_TEST_ROOT;
 const output=process.env.WRITINGTOOL_TEST_BUILD;
 const fixture=process.env.WRITINGTOOL_TEST_FIXTURE;
 const mode=process.env.WRITINGTOOL_TEST_MODE;
+const errorExitModes=['error-quit','combined-error-quit','error-profile-quit','error-quit-timeout','error-quit-copy-keep','close-stalled','close-backup-error','error-quit-copy-failure','close-pending'];
 app.setPath('userData',path.join(fixture,'profile'));
 app.setAppPath(repo);
 let opened=false,main,failedQueries=0,allowReads=mode!=='read-failure',captureCount=0,backupCount=0,pass=false,lostAck=false,conflicted=false,expectedBounds,panelId='timeline',host,corruptedBackup=null;
-let holdRead=false,releaseRead,activeRequests=0;
+let holdRead=false,releaseRead,holdProjectClose=false,releaseProjectClose,activeRequests=0,loseMutation=false,loseProfile=false,quitChoices=0,copyFailures=0,openedRecoveryFolder=false;
 const originalFork=utilityProcess.fork.bind(utilityProcess);
 utilityProcess.fork=(...args)=>{
  host=originalFork(...args);
  host.on('message',message=>{
-  if(mode==='reconcile-background'&&!corruptedBackup&&message.command==='protection.backup'&&message.status==='ok'&&message.value.output){
+  if(['reconcile-background','close-backup-error'].includes(mode)&&!corruptedBackup&&message.command==='protection.backup'&&message.status==='ok'&&message.value.output){
    corruptedBackup=message.requestId;fs.appendFileSync(message.value.output.path,'Injected changed output evidence');
   }
  });
  const originalOn=host.on.bind(host);
  host.on=(event,listener)=>originalOn(event,event==='message'?message=>{
-  if(holdRead&&message.command==='workspace.query'){
+  if(holdProjectClose&&message.command==='project.close'){holdProjectClose=false;releaseProjectClose=()=>listener(message);}
+  else if(holdRead&&message.command==='workspace.query'){
    holdRead=false;
    releaseRead=fail=>listener(fail?{protocolVersion:1,requestId:message.requestId,command:message.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected read failure',outcome:'not-committed',retry:'after-recovery',issues:[]}:message);
+  }else if(loseMutation&&message.command==='workspace.mutate'&&message.status==='ok'){
+   loseMutation=false;listener({protocolVersion:1,requestId:message.requestId,command:message.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected lost save acknowledgement',outcome:'unknown',retry:'after-recovery',issues:[]});
+  }else if(loseProfile&&message.command==='universe.profile.save'&&message.status==='ok'){
+   loseProfile=false;listener({protocolVersion:1,requestId:message.requestId,command:message.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected lost profile acknowledgement',outcome:'unknown',retry:'after-recovery'});
   }else listener(message);
  }:listener);
  return host;
@@ -47,6 +53,7 @@ ipcMain.handle=(channel,handler)=>originalHandle(channel,async(event,request)=>{
  if(mode==='layout-retry'&&layoutSave&&!lostAck&&result.status==='ok'&&request.values.panels.some(p=>p.id==='timeline'&&p.placement==='floating')){
   lostAck=true;return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected lost layout acknowledgement',outcome:'unknown',retry:'after-recovery',issues:[]};
  }
+ if(mode==='combined-error-quit'&&channel==='writingtool:protection:v1'&&request.command==='protection.resolve'&&result.status==='ok')return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',message:'Injected combined proposal save error',outcome:'unknown',operationId:request.requestId};
  if(channel==='writingtool:project:v1'&&request.command==='project.open'&&result.status==='ok')opened=true;
  return result;
 });
@@ -55,12 +62,50 @@ dialog.showOpenDialog=async(_window,options)=>{
  console.log('PICKER '+title);
  return{canceled:false,filePaths:[path.join(fixture,/backup/i.test(title)?'backups':/universe/i.test(title)?'universe':'project')]};
 };
-dialog.showErrorBox=(title,message)=>console.log('ERROR_BOX '+JSON.stringify({title,message}));
+dialog.showErrorBox=(title,message)=>{console.log('ERROR_BOX '+JSON.stringify({title,message}));if(errorExitModes.includes(mode))throw new Error('An OK-only native close error still blocks quitting');};
+const originalMessageBox=dialog.showMessageBox.bind(dialog);
+shell.openPath=async directory=>{if(directory!==path.join(fixture,'profile/recovery/interrupted-close'))throw new Error('Wrong recovery folder');openedRecoveryFolder=true;return '';};
+dialog.showMessageBox=async(window,options)=>{
+ if(options.title==='Quit application?'){
+  quitChoices++;
+  if(!options.buttons.includes('Quit application')||options.defaultId!==0||options.cancelId!==0)throw new Error('Native error exit has no safe cancel and explicit quit choice');
+  return{response:errorExitModes.includes(mode)&&!(mode==='close-pending'&&quitChoices===1)?1:0,checkboxChecked:false};
+ }
+ if(options.title==='Recovery copy could not be completed'&&['error-quit-copy-failure','error-quit-timeout','error-quit-copy-keep'].includes(mode)){copyFailures++;return{response:mode==='error-quit-copy-keep'?0:1,checkboxChecked:false};}
+ return originalMessageBox(window,options);
+};
+app.on('before-quit',()=>{
+ if(!errorExitModes.includes(mode))return;
+ const directory=path.join(fixture,'profile/recovery/interrupted-close');
+ if(!fs.existsSync(directory)){if(mode==='error-quit-copy-failure'&&quitChoices===1){pass=true;console.log('ERROR_EXIT_NO_COPY explicitly confirmed exit after recovery write failure');}return;}
+ const copies=fs.readdirSync(directory).map(name=>JSON.parse(fs.readFileSync(path.join(directory,name,'recovery.json'),'utf8')));
+ const copy=copies.at(-1);
+ if(mode==='error-quit'||mode==='error-quit-copy-keep'){
+  if(!copy?.drafts.some(d=>d.kind==='workspace'&&d.value.writing?.text.endsWith(' Retained after save error'))||copy.workspace.length!==1||copy.unresolved.length!==1)throw new Error('Error exit did not retain the exact manuscript draft and pending mutation');
+  if(mode==='error-quit'&&!copy.drafts.some(d=>d.kind==='visible-editors'&&d.value.some(editor=>editor.text.includes(' Visible editor text after adapter error'))))throw new Error('Latest visible editor text was omitted');
+ }else if(mode==='combined-error-quit'){
+  if(!copy.drafts.some(d=>d.kind==='protection'&&d.value.combinedText?.includes(' Combined recovery draft')&&d.value.combined?.data.formatting.paragraphs.some(p=>p.kind==='heading')))throw new Error('Combined recovery proposal text or formatting was omitted');
+ }else if(mode==='error-profile-quit'){
+  if(!copy.drafts.some(d=>d.kind==='profile'&&d.value.draft.description.includes(' Unsaved profile Ω'))||copy.mutations.length!==1)throw new Error('Dirty profile and pending profile save were omitted');
+ }else if(mode==='error-quit-timeout'){
+  if(!copy.collectionError||copy.workspace.length!==1||copyFailures!==1)throw new Error('Unresponsive collection did not offer explicit exit with pending inputs retained');
+ }else if(mode==='close-stalled'){
+  if(!copy.reason.includes('Closing has not finished'))throw new Error('A stalled normal close had no native escape');
+ }else{
+  const id=mode==='close-backup-error'?corruptedBackup:fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
+  if(!copy?.protection.some(([operationId])=>operationId===id)||!fs.existsSync(path.join(fixture,'profile/protection/native-pending',id+'.json')))throw new Error('Native error exit discarded original pending recovery evidence');
+ }
+ pass=true;console.log('ERROR_EXIT_RECOVERY exact drafts and pending operation context retained before normal app shutdown');
+});
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const deadline=setTimeout(()=>{console.error('TIMEOUT');app.exit(1);},120000);
 app.on('will-quit',()=>{clearTimeout(deadline);console.log('WRITINGTOOL_SMOKE '+JSON.stringify({mode,passed:pass,failedQueries,captureCount,backupCount,lostAck,conflicted,expectedBounds,panelId}));if(!pass)process.exitCode=1;});
 app.on('browser-window-created',(_event,window)=>{
  if(main)return;main=window;
+ if(mode==='error-quit-timeout'){
+  const execute=window.webContents.executeJavaScript.bind(window.webContents);
+  window.webContents.executeJavaScript=(code,...args)=>code.includes('writingtool-collect-recovery')?new Promise(()=>{}):execute(code,...args);
+ }
  window.once('closed',()=>console.log('WINDOW_CLOSED'));
  window.webContents.once('did-finish-load',()=>void drive().catch(async error=>{console.error(error);console.error('BODY '+await evaluate('document.body.innerText'));app.exit(1);}));
 });
@@ -657,17 +702,107 @@ async function verifyReadQueue(){
  }
  console.log('READ_QUEUE project, universe and reconcile wait for background reads; failed reads release queued requests');
 }
+async function verifyCombinedDraftQuit(){
+ const proposal=await evaluate(`(async()=>{
+  const queried=await window.writingTool.workspace({command:'workspace.query'});if(queried.status!=='ok')throw new Error('No recovery fixture snapshot');
+  const unit=queried.snapshot.project,chapter=structuredClone(unit.records.find(record=>record.recordType==='chapter'));
+  const captured=await window.writingTool.protection({command:'protection.capture',owner:unit.owner,reason:'Manual'});if(captured.status!=='ok'||!captured.value.manifest)throw new Error('Capture failed');
+  chapter.data.title+=' changed live';
+  const changed=await window.writingTool.workspace({command:'workspace.mutate',input:{operationId:crypto.randomUUID(),submittedEditorRevision:'0',units:[{owner:unit.owner,expectedUnitGeneration:unit.generation,changes:[{action:'put',record:chapter,expectedRecordVersion:chapter.recordVersion,manuscript:unit.manuscripts[chapter.id]}]}]}});if(changed.status!=='ok')throw new Error('Live comparison edit failed');
+  const recovered=await window.writingTool.protection({command:'protection.recover',owner:unit.owner,revisionId:captured.value.manifest.id,scope:[chapter.id]});if(recovered.status!=='ok'||!recovered.value.recovery)throw new Error('Recovery proposal failed');
+  return recovered.value.recovery.proposal.id;
+ })()`);
+ await evaluate(`document.querySelector('[data-top-reconcile]').click()`);
+ await waitFor(`document.querySelector('.protection-center')?.textContent.includes(${JSON.stringify('Resume recovery proposal '+proposal)})`,'resume comparison proposal');
+ await clickText('Resume recovery proposal '+proposal);
+ await waitFor(`[...document.querySelectorAll('button')].some(button=>button.textContent==='Edit combined')`,'comparison conflict');
+ await clickText('Edit combined');
+ await waitFor(`!!document.querySelector('.protection-center .manuscript')`,'combined manuscript editor');
+ await evaluate(`(()=>{const editor=document.querySelector('.protection-center .manuscript');editor.focus();const selection=getSelection();selection.selectAllChildren(editor);selection.collapseToEnd();})()`);
+ await main.webContents.insertText(' Combined recovery draft');
+ await waitFor(`document.querySelector('.protection-center .manuscript')?.textContent.includes(' Combined recovery draft')`,'combined proposal draft');
+ await clickText('Save combined proposal');
+ await waitFor(`document.querySelector('.blocking')?.textContent.includes('Injected combined proposal save error')`,'failed combined proposal save');
+ await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Quit application…').click()`);
+}
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
  await waitFor(`!document.querySelector('.blocking')`,'initial workspace loading');
+ if(mode==='recovery-notice'){
+  await waitFor(`document.body.innerText.includes('Drafts from an interrupted exit are available.')`,'retained recovery copy notice after restart');
+  await clickText('Open saved recovery copies');
+  const until=Date.now()+5000;while(!openedRecoveryFolder&&Date.now()<until)await delay(20);
+  if(!openedRecoveryFolder)throw new Error('Saved recovery copies could not be found after relaunch');
+  pass=true;main.close();return;
+ }
+ if(mode==='close-stalled'){
+  await evaluate(`document.addEventListener('writingtool-window-close',event=>event.stopImmediatePropagation(),{capture:true})`);
+  main.close();await delay(150);
+  if(quitChoices||main.isDestroyed())throw new Error('Normal close did not wait for the renderer decision');
+  main.close();return;
+ }
+ if(mode==='close-pending'){
+  main.close();
+  const until=Date.now()+5000;while(quitChoices!==1&&Date.now()<until)await delay(20);
+  if(quitChoices!==1||main.isDestroyed())throw new Error('Keeping the app open did not cancel the error exit');
+  await delay(100);
+  if(fs.existsSync(path.join(fixture,'profile/recovery/interrupted-close')))throw new Error('Canceling exit unexpectedly wrote recovery drafts');
+  main.close();return;
+ }
  if(mode==='reconcile-defer')await verifyDeferredReconcile();
  if(!opened)await clickText('Open project…');
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
- if(mode==='writing'||mode==='reconcile-defer'||mode==='reconcile-background'){
-  await verifyWriting();
+ if(mode==='close-drain-cancel'){
+  await waitFor(`document.querySelectorAll('.workspace-panel').length===3&&!document.querySelector('.blocking')`,'settled close-drain workspace');
+  holdProjectClose=true;main.close();
+  const until=Date.now()+15000;while(!releaseProjectClose&&Date.now()<until)await delay(20);
+  if(!releaseProjectClose)throw new Error('Native root-close response was not held');
   main.close();
+  const choiceUntil=Date.now()+5000;while(quitChoices!==1&&Date.now()<choiceUntil)await delay(20);
+  await delay(50);
+  const blocked=await evaluate(`window.writingTool.currentUniverse()`);
+  if(quitChoices!==1||blocked.status!=='error')throw new Error('Canceling recovery exit cleared another native drain lock');
+  pass=true;releaseProjectClose();return;
+ }
+ if(mode==='error-profile-quit'){
+  await waitFor(`!document.querySelector('.blocking')`,'settled profile workspace');
+  await evaluate(`document.querySelector('[data-top-profile-edit]').click()`);
+  await waitFor(`!!document.querySelector('.profile textarea')`,'profile editor');
+  await evaluate(`document.querySelector('.profile textarea').focus()`);await main.webContents.insertText(' Unsaved profile Ω');
+  loseProfile=true;await evaluate(`document.querySelector('.profile form').requestSubmit()`);
+  await waitFor(`document.querySelector('.blocking')?.textContent.includes('Injected lost profile acknowledgement')`,'unknown profile save result');
+  await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Quit application…').click()`);return;
+ }
+ if(mode==='writing'||mode==='reconcile-defer'||mode==='reconcile-background'||mode==='error-quit'||mode==='close-backup-error'||mode==='error-quit-copy-failure'||mode==='error-quit-timeout'||mode==='error-quit-copy-keep'||mode==='combined-error-quit'){
+  await verifyWriting();
+  if(mode==='combined-error-quit'){await verifyCombinedDraftQuit();return;}
+  if(mode==='error-quit'||mode==='error-quit-copy-failure'||mode==='error-quit-timeout'||mode==='error-quit-copy-keep'){
+   await evaluate(`(()=>{const editor=document.querySelector('.manuscript');editor.focus();const selection=getSelection();selection.selectAllChildren(editor);selection.collapseToEnd();})()`);
+   await main.webContents.insertText(' Retained after save error');
+   await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Unsaved changes')`,'unsaved recovery manuscript');
+   if(['error-quit-copy-failure','error-quit-copy-keep'].includes(mode))fs.writeFileSync(path.join(fixture,'profile/recovery'),'Injected unwritable recovery directory');
+   loseMutation=true;
+   await evaluate(`document.querySelector('.writing-meta button:nth-of-type(2)').click()`);
+   await waitFor(`document.querySelector('.blocking')?.textContent.includes('Injected lost save acknowledgement')`,'unknown save result');
+   if(mode==='error-quit')await evaluate(`document.addEventListener('writingtool-collect-recovery',()=>document.querySelector('.manuscript').append(' Visible editor text after adapter error'),{capture:true,once:true})`);
+   await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Quit application…').click()`);
+   if(mode==='error-quit-copy-keep'){
+    const until=Date.now()+5000;while(copyFailures!==1&&Date.now()<until)await delay(20);
+    await waitFor(`!document.body.inert&&!!document.querySelector('.blocking')`,'interactive editor after keeping app open');
+    if(copyFailures!==1||main.isDestroyed()||!await evaluate(`document.querySelector('.manuscript').textContent.endsWith(' Retained after save error')`))throw new Error('Keeping open after failed recovery copy lost draft or controls');
+    fs.unlinkSync(path.join(fixture,'profile/recovery'));
+    await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Quit application…').click()`);
+   }
+   return;
+  }
+  main.close();
+  if(mode==='close-backup-error'){
+   await waitFor(`document.querySelector('.blocking')?.textContent.includes('Required closing operation failed')`,'closing backup error');
+   await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Quit application…').click()`);
+   return;
+  }
   if(mode==='reconcile-background'){
    await waitFor(`document.querySelector('.blocking')?.textContent.includes('Required closing operation failed')`,'closing output failure');
    await clickText('Cancel closing');

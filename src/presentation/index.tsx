@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { type ReadinessResult, unavailable } from '../application/contracts/readiness';
 import { type CreateInput, type SaveInput, type UniverseResult, type UniverseSnapshot, type ProfileData } from '../application/contracts/universe';
 import './shell.css';
+import {QuitApplication,useRecoveryDraft} from './QuitApplication';
 import {Workspace,type WorkspaceHandle} from './workspace/Workspace';
 import {FloatingPanel} from './workspace/FloatingPanel';
 import {appShortcut} from './keyboard';
@@ -21,6 +22,8 @@ function Shell() {
     projectOpenRef.current = projectSnapshot !== null;
     const [projectUncertain, setProjectUncertain] = useState(false);
     const [pendingProtectionCount, setPendingProtectionCount] = useState(0);
+    const [recoveryCopies,setRecoveryCopies]=useState(0);
+    useEffect(()=>{const receive=(event:Event)=>setRecoveryCopies((event as CustomEvent<number>).detail);document.addEventListener('writingtool-recovery-copies',receive);document.dispatchEvent(new Event('writingtool-request-recovery-copies'));return()=>document.removeEventListener('writingtool-recovery-copies',receive);},[]);
     const [editor, setEditor] = useState<'create' | 'profile' | null>(null);
     const [draft, setDraft] = useState<ProfileData>({ name: '', description: '' });
     const [busy, setBusy] = useState(false);
@@ -56,6 +59,7 @@ function Shell() {
     editorRef.current = editor;
     const dirty = editor !== null && (editor === 'create' ? !!draft.name || !!draft.description : !!snapshot && (draft.name !== snapshot.profile.name || draft.description !== snapshot.profile.description));
     const state = result?.status ?? 'checking';
+    useRecoveryDraft('profile',{draft,editor,snapshot,projectSnapshot,pending,projectUncertain});
     useEffect(() => {
         let active = true;
         let timer: ReturnType<typeof setTimeout> | undefined;
@@ -442,6 +446,7 @@ function Shell() {
       <details name="writingtool-menu"><summary>Universe</summary><div className="menu"><div id="universe-workspace-menu"/><button data-top-profile-edit disabled={!snapshot || !!editor || busy || !!pending} onClick={editProfile}>Edit profile</button><button data-top-profile-save disabled={!editor || busy || !!pending} onClick={() => void save()}>Save profile <kbd>Ctrl+S</kbd></button><button data-top-reconcile disabled={busy} onClick={() => pending ? void reconcile() : void workspaceRef.current?.recover()}>Reopen and reconcile…</button><button data-top-profile-close disabled={!editor || busy || !!pending} onClick={() => requestDeparture('dismiss')}>Close profile <kbd>Ctrl+W</kbd></button></div></details>
       <span id="workspace-menus"/>
     </nav></header>
+    {recoveryCopies>0&&<div className="status" role="status" inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><strong>Drafts from an interrupted exit are available.</strong><button onClick={()=>document.dispatchEvent(new Event('writingtool-open-recovery-folder'))}>Open saved recovery copies</button></div>}
     {pendingProtectionCount>0&&<div className="status unavailable" role="alert" inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><strong>Unfinished backup or recovery needs attention</strong><p>The original operation is retained. Reconcile it, or choose Continue writing where available.</p><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Reconcile pending operations…</button></div>}
     <section hidden={!!editor || !!snapshot || utilityShown} inert={!!pendingDeparture || !!error || closing} aria-labelledby="heading">
       <p className="eyebrow">{projectSnapshot ? 'PROJECT' : snapshot ? 'UNIVERSE' : 'YOUR WRITING SPACE'}</p><h1 id="heading">{projectSnapshot ? 'Your project' : snapshot?.profile.name ?? 'Open your writing project.'}</h1>
@@ -479,7 +484,7 @@ function Shell() {
                     else if (action === 'workspace-action') { workspaceDeparture.current?.(false); workspaceDeparture.current=null; }
                 });
             }}>Save</button><button onClick={() => void depart(pendingDeparture)}>Discard</button><button autoFocus onClick={cancelDeparture}>Cancel</button></div></section></div>}
-    {error && <div className="scrim blocking"><section className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="error-heading"><h2 id="error-heading">Unable to complete operation</h2><p>{error}</p><div className="actions">{pending && <button onClick={() => void reconcile()} disabled={busy}>Reopen same folder…</button>}{projectUncertain && <button onClick={() => {setError(undefined); void depart('project-open');}} disabled={busy}>Reopen project…</button>}<button autoFocus onClick={() => setError(undefined)}>Return to editor</button></div></section></div>}
+    {error && <div className="scrim blocking"><section className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="error-heading"><h2 id="error-heading">Unable to complete operation</h2><p>{error}</p><div className="actions">{pending && <button onClick={() => void reconcile()} disabled={busy}>Reopen same folder…</button>}{projectUncertain && <button onClick={() => {setError(undefined); void depart('project-open');}} disabled={busy}>Reopen project…</button>}<button autoFocus onClick={() => setError(undefined)}>Return to editor</button><QuitApplication/></div></section></div>}
     <footer inert={!!pendingDeparture || !!error || closing} role="status">{closing ? 'Finishing the required closing revision and complete backup…' : busy ? 'Working…' : status}{calendarUpdate.required&&<span className="calendar-update-status">Calendar update required. Writing remains available. <button disabled={busy||!!pending||projectUncertain||calendarUpdate.busy||workspaceBlocked||closing} onClick={()=>requestDeparture('calendar-update')}>Update to current calendar</button></span>}</footer>
   </main>;
 }
