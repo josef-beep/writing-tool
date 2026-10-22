@@ -59,7 +59,8 @@ const unresolvedOperations = new Set<string>();
 function hasBlockingOperations():boolean{return [...unresolvedOperations].some(id=>{const operation=pendingProtection.get(id);return !operation||!canDeferProtection(operation.request.command);});}
 function pendingProtectionPath(id:string){return `protection/native-pending/${id}.json`;}
 function savePendingProtection(id:string,value:PendingProtection){const root=app.getPath('userData');ensureManagedDirectory(root,'protection/native-pending');const relative=pendingProtectionPath(id),old=fs.existsSync(path.join(root,relative))?hash(readManaged(root,relative)):null;publishManagedBytes(root,relative,Buffer.from(jsonBytes(value)),old);}
-function forgetPendingProtection(id:string){const root=app.getPath('userData'),relative=pendingProtectionPath(id);try{if(fs.existsSync(path.join(root,relative)))removeManagedBytes(root,relative,hash(readManaged(root,relative)));}catch(error){unresolvedOperations.add(id);throw error;}pendingProtection.delete(id);unresolvedOperations.delete(id);}
+function notifyPendingProtection():void{if(window&&!window.isDestroyed())window.webContents.send('writingtool:pending-protection-changed:v1');}
+function forgetPendingProtection(id:string){const root=app.getPath('userData'),relative=pendingProtectionPath(id);try{if(fs.existsSync(path.join(root,relative)))removeManagedBytes(root,relative,hash(readManaged(root,relative)));}catch(error){unresolvedOperations.add(id);throw error;}const changed=pendingProtection.delete(id);unresolvedOperations.delete(id);if(changed)notifyPendingProtection();}
 function pendingProtectionState(){return{pending:[...pendingProtection.keys()],deferrable:[...pendingProtection].filter(([,pending])=>canDeferProtection(pending.request.command)).map(([id])=>id),deferred:[...pendingProtection].filter(([,pending])=>pending.deferred).map(([id])=>id)};}
 function loadPendingProtection(){
  const root=app.getPath('userData');fs.mkdirSync(root,{recursive:true,mode:0o700});ensureManagedDirectory(root,'protection/native-pending');
@@ -219,16 +220,18 @@ else
             } finally {projectInFlight=false;}
         });
         ipcMain.handle(UNIVERSE_CHANNEL, async (event, value: unknown) => {
-            if (!authorized(event) || !validUniverseRequest(value) || draining)
+            if (!authorized(event) || !validUniverseRequest(value))
                 throw new Error('Universe request denied');
             await workspaceReadCompletion;
-            if(draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)throw new Error('Universe request denied');
+            const original=(value.command==='universe.profile.save'||value.command==='universe.create')&&unresolvedOperations.has(value.input.operationId)||value.command==='universe.open'&&!!value.reconcileOperationId;
+            const busyResult=()=>({protocolVersion:1 as const,requestId:value.requestId,command:value.command,status:'error' as const,code:'RECOVERY_REQUIRED' as const,message:original||hasBlockingOperations()||pendingProjectCreation?'Reconcile the original pending operation before continuing. Your edits were retained.':'Another operation is finishing. Your edits were retained; retry in a moment.',outcome:original?'unknown' as const:'not-committed' as const,retry:original?'after-recovery' as const:'new-request' as const});
+            if(draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)return busyResult();
             universeInFlight=true;
             try {
             const request = value;
             const reconcilesPending = request.command === 'universe.open' && request.reconcileOperationId && mutationLocations.has(request.reconcileOperationId);
             if ((pendingProjectCreation || hasBlockingOperations()) && request.command !== 'universe.current' && !reconcilesPending)
-                return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the pending operation in its original folder before another operation or close.', outcome: 'unknown', retry: 'after-recovery' };
+                return busyResult();
             await ensureApplicationHost(request.command==='universe.current'||request.command==='universe.profile.save'||request.command==='universe.close');
             if (request.command === 'universe.create' || request.command === 'universe.open') {
                 const injected = diagnostic ? process.env.WRITINGTOOL_UNIVERSE_FOLDER : undefined;
@@ -359,11 +362,11 @@ else
                     }
                     const deferred:PendingProtection={...pending,deferred:true};
                     savePendingProtection(value.operationId,deferred);
-                    pendingProtection.set(value.operationId,deferred);unresolvedOperations.delete(value.operationId);
+                    pendingProtection.set(value.operationId,deferred);unresolvedOperations.delete(value.operationId);notifyPendingProtection();
                     if(!hasBlockingOperations()&&!pendingProjectCreation)window?.webContents.send('writingtool:recovered-context:v1');
                     return{...base,status:'ok',value:{...pendingProtectionState(),warnings:['The unfinished operation is retained for later reconciliation. It has not been marked complete.']}};
                 }catch(error){return{...base,status:'error',message:error instanceof Error?error.message:'The operation could not be set aside. Retry or reconcile it.',outcome:'unknown',operationId:value.operationId};}
-                finally{protectionInFlight=false;}
+                finally{protectionInFlight=false;notifyPendingProtection();}
             }
             // Listing recent roots has no authority effects and must remain available during recovery.
             if(value.command==='protection.recents')return runProtection(value);
@@ -440,16 +443,19 @@ else
                     }
                     return result;
                 }catch(error){if(pendingProtection.has(value.operationId)&&!canDeferProtection(pendingProtection.get(value.operationId)!.request.command))unresolvedOperations.add(value.operationId);else if(!hasBlockingOperations())window?.webContents.send('writingtool:recovered-context:v1');return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
-                finally{protectionInFlight=false;}
+                finally{protectionInFlight=false;notifyPendingProtection();}
             }
 
             if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight||hasBlockingOperations())return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Finish or reconcile the pending authority operation first.',outcome:'not-committed',operationId:null};
-            protectionInFlight=true;try{await ensureApplicationHost();const result=await runProtection(value);if(result.status==='ok'&&result.value.activated||value.command==='protection.recent'&&value.action!=='remove')await synchronizeProtectionContext();if(result.status==='error'&&result.outcome==='unknown')unresolvedOperations.add(value.requestId);else forgetPendingProtection(value.requestId);return result;}catch(error){const uncertain=pendingProtection.has(value.requestId);if(uncertain)unresolvedOperations.add(value.requestId);return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'The native protection result could not be confirmed.',outcome:uncertain?'unknown':'not-committed',operationId:uncertain?value.requestId:null};}finally{protectionInFlight=false;}
+            protectionInFlight=true;try{await ensureApplicationHost();const result=await runProtection(value);if(result.status==='ok'&&result.value.activated||value.command==='protection.recent'&&value.action!=='remove')await synchronizeProtectionContext();if(result.status==='error'&&result.outcome==='unknown')unresolvedOperations.add(value.requestId);else forgetPendingProtection(value.requestId);return result;}catch(error){const uncertain=pendingProtection.has(value.requestId);if(uncertain)unresolvedOperations.add(value.requestId);return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'The native protection result could not be confirmed.',outcome:uncertain?'unknown':'not-committed',operationId:uncertain?value.requestId:null};}finally{protectionInFlight=false;notifyPendingProtection();}
         });
         ipcMain.handle(WORKSPACE_CHANNEL,async(event,value:unknown):Promise<WorkspaceResult>=>{
-            if(!authorized(event)||!validWorkspaceRequest(value)||draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)throw new Error('Workspace request denied');
+            if(!authorized(event)||!validWorkspaceRequest(value))throw new Error('Workspace request denied');
             const request=value,base={protocolVersion:1 as const,requestId:request.requestId,command:request.command};
-            if((hasBlockingOperations()||pendingProjectCreation)&&request.command!=='workspace.reconcile'&&request.command!=='settings.get'&&request.command!=='workspace.query')return{...base,status:'error',code:'RECOVERY_REQUIRED',message:'Reconcile the original pending operation before continuing.',outcome:'unknown',retry:'after-recovery',issues:[]};
+            const original=request.command==='workspace.reconcile'||request.command==='workspace.mutate'&&pendingWorkspace.has(request.input.operationId)||request.command==='workspace.asset.import'&&pendingWorkspace.has(request.operationId);
+            const busyResult=():WorkspaceResult=>({...base,status:'error',code:'RECOVERY_REQUIRED',message:original||hasBlockingOperations()||pendingProjectCreation?'Reconcile the original pending operation before continuing. Your edits were retained.':'Another operation is finishing. Your edits were retained; retry in a moment.',outcome:original?'unknown':'not-committed',retry:original?'after-recovery':'new-request',issues:[]});
+            if(draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)return busyResult();
+            if((hasBlockingOperations()||pendingProjectCreation)&&request.command!=='workspace.reconcile'&&request.command!=='settings.get'&&request.command!=='workspace.query')return busyResult();
             workspaceInFlight=true;let sent=false,completeRead:(()=>void)|undefined;
             if(request.command==='workspace.query'||request.command==='settings.get')workspaceReadCompletion=new Promise<void>(resolve=>{completeRead=resolve;});
             try{

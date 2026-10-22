@@ -88,3 +88,5 @@ ipcRenderer.on('writingtool:system-resume:v1',()=>document.dispatchEvent(new Eve
 ipcRenderer.on('writingtool:protection-progress:v1',(_event,value:unknown)=>{if(typeof value==='object'&&value&&'operationId'in value&&'phase'in value&&'cancelable'in value&&typeof value.operationId==='string'&&typeof value.phase==='string'&&typeof value.cancelable==='boolean')document.dispatchEvent(new CustomEvent('writingtool-protection-progress',{detail:value}));});
 
 ipcRenderer.on('writingtool:recovered-context:v1',()=>document.dispatchEvent(new Event('writingtool-recovered-context')));
+
+ipcRenderer.on('writingtool:pending-protection-changed:v1',()=>document.dispatchEvent(new Event('writingtool-pending-protection-changed')));

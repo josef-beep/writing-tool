@@ -4460,6 +4460,7 @@ const pendingProtection = new Map();
 let activeProjectLocation;
 let activeProjectIdentity;
 let workspaceInFlight = false;
+let workspaceReadCompletion;
 const pendingWorkspace = new Map();
 let projectInFlight = false;
 let universeInFlight = false;
@@ -4475,6 +4476,8 @@ const unresolvedOperations = new Set();
 function hasBlockingOperations() { return [...unresolvedOperations].some(id => { const operation = pendingProtection.get(id); return !operation || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(operation.request.command); }); }
 function pendingProtectionPath(id) { return `protection/native-pending/${id}.json`; }
 function savePendingProtection(id, value) { const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'); (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(root, 'protection/native-pending'); const relative = pendingProtectionPath(id), old = node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, relative)) ? (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(root, relative)) : null; (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(root, relative, Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.jsonBytes)(value)), old); }
+function notifyPendingProtection() { if (window && !window.isDestroyed())
+    window.webContents.send('writingtool:pending-protection-changed:v1'); }
 function forgetPendingProtection(id) { const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative = pendingProtectionPath(id); try {
     if (node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, relative)))
         (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.removeManagedBytes)(root, relative, (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(root, relative)));
@@ -4482,7 +4485,8 @@ function forgetPendingProtection(id) { const root = electron__WEBPACK_IMPORTED_M
 catch (error) {
     unresolvedOperations.add(id);
     throw error;
-} pendingProtection.delete(id); unresolvedOperations.delete(id); }
+} const changed = pendingProtection.delete(id); unresolvedOperations.delete(id); if (changed)
+    notifyPendingProtection(); }
 function pendingProtectionState() { return { pending: [...pendingProtection.keys()], deferrable: [...pendingProtection].filter(([, pending]) => (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pending.request.command)).map(([id]) => id), deferred: [...pendingProtection].filter(([, pending]) => pending.deferred).map(([id]) => id) }; }
 function loadPendingProtection() {
     const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData');
@@ -4592,9 +4596,23 @@ else
             projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_11__.ProjectHostClient(undefined);
             hostExited = true;
         }
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.on('writingtool:recovery-copies-request:v1', event => {
+            if (!authorized(event))
+                return;
+            let count = 0;
+            try {
+                count = node_fs__WEBPACK_IMPORTED_MODULE_17___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), 'recovery/interrupted-close')).filter(id => (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(id) && node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), 'recovery/interrupted-close', id, 'recovery.json'))).length;
+            }
+            catch { }
+            event.sender.send('writingtool:recovery-copies:v1', count);
+        });
+        electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.on('writingtool:recovery-folder:v1', event => {
+            if (authorized(event))
+                void electron__WEBPACK_IMPORTED_MODULE_15__.shell.openPath(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), 'recovery/interrupted-close')).catch(error => console.error('Could not open recovery copies', error));
+        });
         electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.on('writingtool:quit-request:v1', (event, value) => {
-            if (authorized(event) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(value, ['protocolVersion', 'requestId', 'command']) && value.protocolVersion === 1 && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(value.requestId) && value.command === 'application.quit')
-                void requestNativeQuit('app');
+            if (authorized(event) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(value, ['protocolVersion', 'requestId', 'command', ...(typeof value === 'object' && value !== null && Object.hasOwn(value, 'recovery') ? ['recovery'] : [])]) && (!Object.hasOwn(value, 'recovery') || value.recovery === true) && value.protocolVersion === 1 && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(value.requestId) && value.command === 'application.quit')
+                void requestNativeQuit('app', value.recovery === true);
         });
         electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_security__WEBPACK_IMPORTED_MODULE_21__.READINESS_CHANNEL, (event, request) => {
             if (!authorized(event) || !(0,_application_contracts_readiness__WEBPACK_IMPORTED_MODULE_19__.validRequest)(request))
@@ -4604,13 +4622,16 @@ else
         electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_project__WEBPACK_IMPORTED_MODULE_10__.PROJECT_CHANNEL, async (event, value) => {
             if (!authorized(event) || !(0,_application_contracts_project__WEBPACK_IMPORTED_MODULE_10__.validProjectRequest)(value) || draining)
                 throw new Error('Project request denied');
+            await workspaceReadCompletion;
+            if (draining)
+                throw new Error('Project request denied');
             const request = value, base = { protocolVersion: 1, requestId: request.requestId, command: request.command };
             if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || hasBlockingOperations() || (pendingProjectCreation && !['project.open', 'project.current'].includes(request.command)))
                 return { ...base, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Finish or reconcile the pending operation before changing projects.', outcome: pendingProjectCreation ? 'unknown' : 'not-committed', retry: 'after-recovery' };
             projectInFlight = true;
             let sent = false;
             try {
-                await ensureApplicationHost(request.command === 'project.current');
+                await ensureApplicationHost(request.command === 'project.current' || request.command === 'project.close');
                 let basePath, universePath;
                 if (request.command === 'project.create' || request.command === 'project.open') {
                     if (request.command === 'project.create') {
@@ -4665,7 +4686,12 @@ else
                         activeLocation = activeSnapshot.location;
                     }
                     if (result.snapshot)
-                        new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_2__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData')).remember({ kind: 'project', id: result.snapshot.ownerId }, result.snapshot.rootId, node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(result.snapshot.location), result.snapshot.location);
+                        try {
+                            new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_2__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData')).remember({ kind: 'project', id: result.snapshot.ownerId }, result.snapshot.rootId, node_path__WEBPACK_IMPORTED_MODULE_16___default().basename(result.snapshot.location), result.snapshot.location);
+                        }
+                        catch (error) {
+                            console.error('Could not update recent projects', error);
+                        }
                 }
                 return result;
             }
@@ -4679,15 +4705,20 @@ else
             }
         });
         electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.UNIVERSE_CHANNEL, async (event, value) => {
-            if (!authorized(event) || !(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.validUniverseRequest)(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
+            if (!authorized(event) || !(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.validUniverseRequest)(value))
                 throw new Error('Universe request denied');
+            await workspaceReadCompletion;
+            const original = (value.command === 'universe.profile.save' || value.command === 'universe.create') && unresolvedOperations.has(value.input.operationId) || value.command === 'universe.open' && !!value.reconcileOperationId;
+            const busyResult = () => ({ protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', code: 'RECOVERY_REQUIRED', message: original || hasBlockingOperations() || pendingProjectCreation ? 'Reconcile the original pending operation before continuing. Your edits were retained.' : 'Another operation is finishing. Your edits were retained; retry in a moment.', outcome: original ? 'unknown' : 'not-committed', retry: original ? 'after-recovery' : 'new-request' });
+            if (draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
+                return busyResult();
             universeInFlight = true;
             try {
                 const request = value;
                 const reconcilesPending = request.command === 'universe.open' && request.reconcileOperationId && mutationLocations.has(request.reconcileOperationId);
                 if ((pendingProjectCreation || hasBlockingOperations()) && request.command !== 'universe.current' && !reconcilesPending)
-                    return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the pending operation in its original folder before another operation or close.', outcome: 'unknown', retry: 'after-recovery' };
-                await ensureApplicationHost(request.command === 'universe.current' || request.command === 'universe.profile.save');
+                    return busyResult();
+                await ensureApplicationHost(request.command === 'universe.current' || request.command === 'universe.profile.save' || request.command === 'universe.close');
                 if (request.command === 'universe.create' || request.command === 'universe.open') {
                     const injected = diagnostic ? process.env.WRITINGTOOL_UNIVERSE_FOLDER : undefined;
                     let selection;
@@ -4716,7 +4747,12 @@ else
                         activeLocation = result.snapshot?.location;
                         activeSnapshot = result.snapshot;
                         if (result.snapshot)
-                            new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_2__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData')).remember({ kind: 'universe', id: result.snapshot.ownerId }, result.snapshot.rootId, result.snapshot.profile.name, result.snapshot.location);
+                            try {
+                                new _infrastructure_recent_roots__WEBPACK_IMPORTED_MODULE_2__.RecentRoots(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData')).remember({ kind: 'universe', id: result.snapshot.ownerId }, result.snapshot.rootId, result.snapshot.profile.name, result.snapshot.location);
+                            }
+                            catch (error) {
+                                console.error('Could not update recent universes', error);
+                            }
                     }
                     if (request.command === 'universe.create' && !(result.status === 'error' && result.outcome === 'unknown'))
                         unresolvedOperations.delete(request.input.operationId);
@@ -4729,6 +4765,10 @@ else
                 if (request.command === 'universe.profile.save' && activeLocation && activeSnapshot)
                     rememberMutation(request.input.operationId, activeLocation, { identity: { ownerId: activeSnapshot.ownerId, rootId: activeSnapshot.rootId }, mutation: { command: request.command, input: request.input } });
                 let result = await universeClient.request(request);
+                if (result.status === 'ok') {
+                    activeSnapshot = result.snapshot;
+                    activeLocation = result.snapshot?.location;
+                }
                 if (diagnostic && diagnosticDelaySaveAck && request.command === 'universe.profile.save' && result.status === 'ok') {
                     diagnosticDelaySaveAck = false;
                     await new Promise(resolve => {
@@ -4888,6 +4928,7 @@ else
                     savePendingProtection(value.operationId, deferred);
                     pendingProtection.set(value.operationId, deferred);
                     unresolvedOperations.delete(value.operationId);
+                    notifyPendingProtection();
                     if (!hasBlockingOperations() && !pendingProjectCreation)
                         window?.webContents.send('writingtool:recovered-context:v1');
                     return { ...base, status: 'ok', value: { ...pendingProtectionState(), warnings: ['The unfinished operation is retained for later reconciliation. It has not been marked complete.'] } };
@@ -4897,12 +4938,16 @@ else
                 }
                 finally {
                     protectionInFlight = false;
+                    notifyPendingProtection();
                 }
             }
             // Listing recent roots has no authority effects and must remain available during recovery.
             if (value.command === 'protection.recents')
                 return runProtection(value);
             if (value.command === 'protection.reconcile') {
+                await workspaceReadCompletion;
+                if (draining)
+                    return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: 'Wait for normal closing to finish.', outcome: 'not-committed', operationId: null };
                 if (protectionInFlight || workspaceInFlight || projectInFlight || universeInFlight)
                     return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: 'Wait for the active authority operation before reconciliation.', outcome: 'not-committed', operationId: null };
                 protectionInFlight = true;
@@ -5013,7 +5058,7 @@ else
                     return result;
                 }
                 catch (error) {
-                    if (!(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pendingProtection.get(value.operationId)?.request.command ?? 'protection.reconcile'))
+                    if (pendingProtection.has(value.operationId) && !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pendingProtection.get(value.operationId).request.command))
                         unresolvedOperations.add(value.operationId);
                     else if (!hasBlockingOperations())
                         window?.webContents.send('writingtool:recovered-context:v1');
@@ -5021,6 +5066,7 @@ else
                 }
                 finally {
                     protectionInFlight = false;
+                    notifyPendingProtection();
                 }
             }
             if (protectionInFlight || workspaceInFlight || projectInFlight || universeInFlight || hasBlockingOperations())
@@ -5045,16 +5091,23 @@ else
             }
             finally {
                 protectionInFlight = false;
+                notifyPendingProtection();
             }
         });
         electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.WORKSPACE_CHANNEL, async (event, value) => {
-            if (!authorized(event) || !(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.validWorkspaceRequest)(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
+            if (!authorized(event) || !(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.validWorkspaceRequest)(value))
                 throw new Error('Workspace request denied');
             const request = value, base = { protocolVersion: 1, requestId: request.requestId, command: request.command };
+            const original = request.command === 'workspace.reconcile' || request.command === 'workspace.mutate' && pendingWorkspace.has(request.input.operationId) || request.command === 'workspace.asset.import' && pendingWorkspace.has(request.operationId);
+            const busyResult = () => ({ ...base, status: 'error', code: 'RECOVERY_REQUIRED', message: original || hasBlockingOperations() || pendingProjectCreation ? 'Reconcile the original pending operation before continuing. Your edits were retained.' : 'Another operation is finishing. Your edits were retained; retry in a moment.', outcome: original ? 'unknown' : 'not-committed', retry: original ? 'after-recovery' : 'new-request', issues: [] });
+            if (draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
+                return busyResult();
             if ((hasBlockingOperations() || pendingProjectCreation) && request.command !== 'workspace.reconcile' && request.command !== 'settings.get' && request.command !== 'workspace.query')
-                return { ...base, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the original pending operation before continuing.', outcome: 'unknown', retry: 'after-recovery', issues: [] };
+                return busyResult();
             workspaceInFlight = true;
-            let sent = false;
+            let sent = false, completeRead;
+            if (request.command === 'workspace.query' || request.command === 'settings.get')
+                workspaceReadCompletion = new Promise(resolve => { completeRead = resolve; });
             try {
                 await ensureApplicationHost();
                 if (request.command === 'workspace.reconcile' && !fault) {
@@ -5097,7 +5150,7 @@ else
                 }
                 if (request.command === 'workspace.reconcile' || request.command === 'settings.get' || request.command === 'workspace.query') {
                     workspaceClient?.fail();
-                    workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_8__.WorkspaceHostClient(child);
+                    workspaceClient = new _workspace_host_client__WEBPACK_IMPORTED_MODULE_8__.WorkspaceHostClient(hostExited ? undefined : child);
                 }
                 let internal = request;
                 if (request.command === 'workspace.asset.import') {
@@ -5194,6 +5247,10 @@ else
             }
             finally {
                 workspaceInFlight = false;
+                if (completeRead) {
+                    workspaceReadCompletion = undefined;
+                    completeRead();
+                }
             }
         });
         disposePresentation = (0,_presentation__WEBPACK_IMPORTED_MODULE_6__.registerPresentation)(() => window, 'http://localhost:3000/main_window/index.html', '/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs');
@@ -5252,12 +5309,22 @@ else
             }
         }
         if (diagnostic)
-            void smoke();
+            void smoke().catch(error => { console.error(error); console.log('WRITINGTOOL_SMOKE ' + JSON.stringify({ passed: false, fault: fault ?? 'none', error: error instanceof Error ? error.message : 'Diagnostic execution failed.' })); electron__WEBPACK_IMPORTED_MODULE_15__.app.exit(1); });
     }).catch(error => {
         console.error(error);
         electron__WEBPACK_IMPORTED_MODULE_15__.app.exit(1);
     });
 async function smoke() {
+    const waitForAuthorityIdle = async () => {
+        let settled = 0;
+        for (let attempt = 0; attempt < 250; attempt++) {
+            settled = projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight ? 0 : settled + 1;
+            if (settled === 2)
+                return;
+            await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        throw new Error('Diagnostic authority did not finish its background work.');
+    };
     const deadline = Date.now() + 14000;
     let observed = {};
     while (Date.now() < deadline && window && !window.isDestroyed()) {
@@ -5305,8 +5372,12 @@ async function smoke() {
             const staysOpen=document.querySelector('#profile-heading')?.textContent==='Universe profile';
             return {requiredName,pendingGuard,preservedDraft,failedSaveRetains,discarded,staysOpen};
         })()`);
+        await waitForAuthorityIdle();
         const created = await window.webContents.executeJavaScript('window.writingTool.currentUniverse()');
+        if (created.status !== 'ok' || !created.snapshot)
+            throw new Error('Diagnostic universe creation was not acknowledged.');
         const mouseClick = async (selector) => {
+            await waitForAuthorityIdle();
             const point = await window.webContents.executeJavaScript(`(() => {const rect=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:Math.round(rect.x+rect.width/2),y:Math.round(rect.y+rect.height/2)};})()`);
             window.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...point });
             window.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...point });
@@ -5363,6 +5434,7 @@ async function smoke() {
         const departureSaveRetainsNewer = await delayedAck(true, 'Departure submitted draft', 'Even newer retained draft');
         await window.webContents.executeJavaScript(`(async()=>{document.querySelector('[data-top-profile-close]').click();await new Promise(resolve=>setTimeout(resolve,70));Array.from(document.querySelectorAll('.blocking button')).find(button=>button.textContent==='Discard').click();})()`);
         const exactDescription = '  Exact\r\n Ω🌌 \t';
+        await waitForAuthorityIdle();
         const exactSaved = await window.webContents.executeJavaScript(`(async()=>{const current=await window.writingTool.currentUniverse();const s=current.snapshot;return window.writingTool.saveUniverseProfile({operationId:crypto.randomUUID(),ownerId:s.ownerId,expectedUnitGeneration:s.generation,expectedRecordVersion:s.recordVersion,submittedEditorRevision:'999',data:{name:'Saved smoke universe',description:${JSON.stringify(exactDescription)}}});})()`);
         const exactDescriptionSaved = exactSaved.status === 'ok' && exactSaved.snapshot?.profile.description === exactDescription;
         diagnosticChooserCanceled = true;
@@ -5435,9 +5507,102 @@ async function smoke() {
         await window.webContents.executeJavaScript(`(async()=>{for(let i=0;i<100&&!document.querySelector('#pending-heading');i++)await new Promise(resolve=>setTimeout(resolve,30));Array.from(document.querySelectorAll('.blocking button')).find(button=>button.textContent==='Discard')?.click();})()`).catch(() => {
         });
 }
-async function requestNativeQuit(kind) {
-    if (quitDecisionInFlight || draining)
+let recoveryQuitInFlight = false;
+async function quitAfterError(reason) {
+    if (recoveryQuitInFlight || drained)
         return;
+    recoveryQuitInFlight = true;
+    const directory = node_path__WEBPACK_IMPORTED_MODULE_16___default().join(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), 'recovery', 'interrupted-close', (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)());
+    let ownsDrain = false;
+    try {
+        const answer = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showMessageBox(window, { type: 'warning', title: 'Quit application?', message: reason, detail: 'You can quit now. The last operation will remain unconfirmed. Current drafts and recovery details will be kept in:\n' + directory, buttons: ['Keep application open', 'Quit application'], defaultId: 0, cancelId: 0, noLink: true });
+        if (answer.response !== 1 || drained)
+            return;
+        ownsDrain = !draining;
+        draining = true;
+        try {
+            let drafts = [], collectionError = null;
+            if (window && !window.isDestroyed())
+                try {
+                    let timer;
+                    try {
+                        drafts = await Promise.race([window.webContents.executeJavaScript(`(()=>{
+                    document.body.inert=true;
+                    const detail={drafts:[]};document.dispatchEvent(new CustomEvent('writingtool-collect-recovery',{detail}));
+                    detail.drafts.push({kind:'visible-editors',value:[...document.querySelectorAll('textarea,input:not([type=password]),[contenteditable=true]')].map(editor=>({label:editor.getAttribute('aria-label')||editor.getAttribute('name')||editor.id,text:'value'in editor?editor.value:editor.innerText,html:editor.isContentEditable?editor.innerHTML:null}))});
+                    return detail.drafts;
+                })()`), new Promise((_resolve, reject) => { timer = setTimeout(() => reject(new Error('The editor did not respond while collecting drafts.')), 5000); })]);
+                    }
+                    finally {
+                        clearTimeout(timer);
+                    }
+                }
+                catch (error) {
+                    collectionError = error instanceof Error ? error.message : 'Editor drafts could not be read.';
+                }
+            if (!Array.isArray(drafts) || !['profile', 'workspace'].every(kind => drafts.some(entry => entry?.kind === kind && Object.hasOwn(entry, 'value'))) || drafts.some(entry => entry?.error))
+                collectionError = 'Some editor state could not be collected. Available draft data has been retained.';
+            const copy = { schemaVersion: 1, createdAt: new Date().toISOString(), reason, drafts, collectionError, activeProjectLocation, activeProjectIdentity, activeLocation, activeSnapshot, pendingProjectCreation, mutations: [...mutationLocations], workspace: [...pendingWorkspace], protection: [...pendingProtection], unresolved: [...unresolvedOperations] };
+            const relative = node_path__WEBPACK_IMPORTED_MODULE_16___default().relative(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), directory).split((node_path__WEBPACK_IMPORTED_MODULE_16___default().sep)).join('/');
+            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative);
+            (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative + '/recovery.json', Buffer.from(JSON.stringify(copy, null, 2) + '\n'), null);
+            if (Array.isArray(drafts))
+                for (const [index, entry] of drafts.entries()) {
+                    if (!entry || typeof entry !== 'object' || !entry.value || typeof entry.value !== 'object')
+                        continue;
+                    if (entry.kind === 'workspace')
+                        for (const kind of ['writing', 'draft']) {
+                            const draft = entry.value[kind];
+                            if (draft && typeof draft.text === 'string')
+                                (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative + `/${kind}-${index}.txt`, Buffer.from(draft.text), null);
+                        }
+                    if (entry.kind === 'visible-editors' && Array.isArray(entry.value))
+                        for (const [editorIndex, editor] of entry.value.entries())
+                            if (typeof editor.text === 'string')
+                                (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative + `/editor-${index}-${editorIndex}.txt`, Buffer.from(editor.text), null);
+                    if (entry.kind === 'profile' && entry.value.editor && entry.value.draft)
+                        (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative + '/profile.txt', Buffer.from(String(entry.value.draft.name) + '\n\n' + String(entry.value.draft.description)), null);
+                }
+            if (collectionError)
+                throw new Error('Recovery details were saved, but editor drafts could not be collected.');
+        }
+        catch (error) {
+            const withoutCopy = await electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showMessageBox(window, { type: 'warning', title: 'Recovery copy could not be completed', message: error instanceof Error ? error.message : 'The recovery copy could not be written.', detail: 'Existing saved files and recovery records will be kept. Unsaved edits may be lost if you quit without a recovery copy.', buttons: ['Keep application open', 'Quit without recovery copy'], defaultId: 0, cancelId: 0, noLink: true });
+            if (withoutCopy.response !== 1) {
+                if (ownsDrain)
+                    draining = false;
+                void window?.webContents.executeJavaScript('document.body.inert=false').catch(() => { });
+                return;
+            }
+        }
+        // An explicit error exit retains journals and pending inputs, then releases
+        // the host through the usual before-quit cleanup. It never fabricates an ack.
+        try {
+            disposePresentation?.();
+        }
+        catch (error) {
+            console.error('Could not close floating panels', error);
+        }
+        disposePresentation = undefined;
+        quitPermit = 'app';
+        drained = true;
+        electron__WEBPACK_IMPORTED_MODULE_15__.app.quit();
+    }
+    finally {
+        recoveryQuitInFlight = false;
+        if (ownsDrain && !drained)
+            draining = false;
+    }
+}
+async function requestNativeQuit(kind, recovery = false) {
+    if (recovery) {
+        await quitAfterError('An error is preventing normal closing.');
+        return;
+    }
+    if (quitDecisionInFlight || draining) {
+        await quitAfterError('Closing has not finished. You can keep waiting or quit with a recovery copy.');
+        return;
+    }
     quitDecisionInFlight = true;
     let authorityReleased = false;
     try {
@@ -5453,12 +5618,13 @@ async function requestNativeQuit(kind) {
             if (!approved)
                 return;
         }
+        await workspaceReadCompletion;
         if (hasBlockingOperations() || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
-            electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
+            await quitAfterError(hasBlockingOperations() || pendingProjectCreation ? 'The last operation needs recovery before normal closing.' : 'An operation is still running and normal closing could not finish.');
             return;
         }
         draining = true;
-        if (!hostExited) {
+        if (!hostExited && (activeProjectLocation || activeLocation)) {
             // Reuse the same process, never create replacement authority. A
             // failed readiness/transport client is not a shutdown acknowledgment.
             universeClient?.fail();
@@ -5467,7 +5633,7 @@ async function requestNativeQuit(kind) {
             projectClient = new _project_host_client__WEBPACK_IMPORTED_MODULE_11__.ProjectHostClient(child);
             const projectResult = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.close' });
             if (projectResult.status !== 'ok' && !hostExited) {
-                electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showErrorBox('Unable to close project', projectResult.status === 'error' ? projectResult.message : 'Shutdown was not acknowledged.');
+                await quitAfterError(projectResult.status === 'error' ? projectResult.message : 'Project shutdown was not acknowledged.');
                 return;
             }
             if (projectResult.status === 'ok') {
@@ -5477,7 +5643,7 @@ async function requestNativeQuit(kind) {
             }
             const result = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.close' });
             if (result.status !== 'ok' && !hostExited) {
-                electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showErrorBox('Unable to close universe', result.status === 'error' ? result.message : 'Shutdown was not acknowledged.');
+                await quitAfterError(result.status === 'error' ? result.message : 'Universe shutdown was not acknowledged.');
                 return;
             }
             if (result.status === 'ok') {
@@ -5498,6 +5664,7 @@ async function requestNativeQuit(kind) {
     }
     catch (error) {
         console.error('Normal close remains pending', error);
+        await quitAfterError(error instanceof Error ? error.message : 'Normal closing could not finish.');
     }
     finally {
         draining = false;
@@ -5519,6 +5686,8 @@ electron__WEBPACK_IMPORTED_MODULE_15__.app.on('before-quit', event => {
             electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeHandler(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.WORKSPACE_CHANNEL);
             electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeHandler(_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.PROTECTION_CHANNEL);
             electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeAllListeners('writingtool:quit-request:v1');
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeAllListeners('writingtool:recovery-copies-request:v1');
+            electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.removeAllListeners('writingtool:recovery-folder:v1');
             client?.fail('UNAVAILABLE');
             child?.kill();
         }

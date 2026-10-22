@@ -1831,7 +1831,12 @@ const bridge = Object.freeze({
 electron__WEBPACK_IMPORTED_MODULE_8__.contextBridge.exposeInMainWorld('writingTool', bridge);
 // Purpose-bound lifecycle notification; no extra public bridge or renderer payload.
 document.addEventListener('writingtool-request-quit', () => electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.send('writingtool:quit-request:v1', { protocolVersion: 1, requestId: crypto.randomUUID(), command: 'application.quit' }));
+document.addEventListener('writingtool-request-recovery-quit', () => electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.send('writingtool:quit-request:v1', { protocolVersion: 1, requestId: crypto.randomUUID(), command: 'application.quit', recovery: true }));
 electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.on('writingtool:close-aborted:v1', (_event, refresh) => document.dispatchEvent(new CustomEvent('writingtool-close-aborted', { detail: { refresh: refresh === true } })));
+document.addEventListener('writingtool-request-recovery-copies', () => electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.send('writingtool:recovery-copies-request:v1'));
+document.addEventListener('writingtool-open-recovery-folder', () => electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.send('writingtool:recovery-folder:v1'));
+electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.on('writingtool:recovery-copies:v1', (_event, count) => { if (typeof count === 'number' && Number.isSafeInteger(count) && count >= 0)
+    document.dispatchEvent(new CustomEvent('writingtool-recovery-copies', { detail: count })); });
 // Explicit diagnostic-only probe; probes never expose arbitrary renderer IPC.
 if (process.argv.includes('--writingtool-smoke')) {
     const request = { protocolVersion: 1, requestId: crypto.randomUUID(), query: _application_contracts_readiness__WEBPACK_IMPORTED_MODULE_9__.QUERY };
@@ -1861,6 +1866,7 @@ electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.on('writingtool:system-resume:
 electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.on('writingtool:protection-progress:v1', (_event, value) => { if (typeof value === 'object' && value && 'operationId' in value && 'phase' in value && 'cancelable' in value && typeof value.operationId === 'string' && typeof value.phase === 'string' && typeof value.cancelable === 'boolean')
     document.dispatchEvent(new CustomEvent('writingtool-protection-progress', { detail: value })); });
 electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.on('writingtool:recovered-context:v1', () => document.dispatchEvent(new Event('writingtool-recovered-context')));
+electron__WEBPACK_IMPORTED_MODULE_8__.ipcRenderer.on('writingtool:pending-protection-changed:v1', () => document.dispatchEvent(new Event('writingtool-pending-protection-changed')));
 
 })();
 

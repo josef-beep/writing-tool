@@ -117,3 +117,28 @@ test('activation binding accepts an old physical alias to the same relocated aut
  f.project.releaseCandidate();fs.renameSync(old,moved);fs.symlinkSync(moved,old,'dir');
  assert.doesNotThrow(()=>f.coordinator.locateActivationParticipant(identity.owner,identity.rootId,identity.universeId,moved));
 });
+
+for(const kind of ['versions','assets'] as const)test(`retained ${kind} require exact immutable descriptors and reject removal, alteration and duplication`,t=>{
+ const f=fixture(t),store=f.stores[1],base=store.prepare(f.operationId,f.digest,f.plans[1].plan,{...f.receipt,units:[f.receipt.units[1]]},f.request);
+ const descriptors=Array.from({length:1000},()=>{
+  const id=randomUUID(),recordVersion=randomUUID();
+  return kind==='versions'?{recordVersion,recordId:id,recordType:'character',jsonPath:`history/objects/${recordVersion}/characters/${id}.json`,manuscriptPath:null}:{id,sha256:hash(id),mediaType:'image/png',relativePath:`images/${id}.png`,byteLength:'1'};
+ });
+ const valid=structuredClone(base);
+ // Exercise the persisted-journal validator, including duplicate checks and canonical descriptor equality.
+ Object.assign(valid.before,{[kind]:structuredClone(descriptors)});Object.assign(valid.after,{[kind]:structuredClone(descriptors)});
+ const journalPath=path.join(store.location,`database/operations/${f.operationId}/journal.json`);
+ const write=(journal:typeof base)=>{const {planDigest:_,...plan}=journal;fs.writeFileSync(journalPath,JSON.stringify({...plan,planDigest:hash(canonical(plan))}));};
+ write(valid);assert.doesNotThrow(()=>store.readJournal(f.operationId));
+ for(const change of ['removed','altered','duplicate'] as const){
+  const journal=structuredClone(valid),rows=journal.after[kind];
+  if(change==='removed')rows.pop();
+  else if(change==='duplicate')rows.push(structuredClone(rows[0]) as never);
+  else if(kind==='assets')journal.after.assets[0].byteLength='2';
+  else{const v=journal.after.versions[0];v.recordId=randomUUID();v.jsonPath=`history/objects/${v.recordVersion}/characters/${v.recordId}.json`;}
+  write(journal);assert.throws(()=>store.readJournal(f.operationId),error=>error instanceof UniverseFailure&&error.code==='INTEGRITY_MISMATCH',change);
+ }
+ // Descriptor order has no authority; equality is keyed by permanent identity.
+ const reordered=structuredClone(valid);reordered.after[kind].reverse();write(reordered);assert.doesNotThrow(()=>store.readJournal(f.operationId));
+ write(base);
+});

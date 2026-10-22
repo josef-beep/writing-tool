@@ -22,6 +22,7 @@ function Shell() {
     projectOpenRef.current = projectSnapshot !== null;
     const [projectUncertain, setProjectUncertain] = useState(false);
     const [pendingProtectionCount, setPendingProtectionCount] = useState(0);
+    const [pendingCopyCount,setPendingCopyCount]=useState(0);
     const [recoveryCopies,setRecoveryCopies]=useState(0);
     useEffect(()=>{const receive=(event:Event)=>setRecoveryCopies((event as CustomEvent<number>).detail);document.addEventListener('writingtool-recovery-copies',receive);document.dispatchEvent(new Event('writingtool-request-recovery-copies'));return()=>document.removeEventListener('writingtool-recovery-copies',receive);},[]);
     const [editor, setEditor] = useState<'create' | 'profile' | null>(null);
@@ -237,16 +238,20 @@ function Shell() {
     departureRef.current = requestDeparture;
     useEffect(() => {
         let active = true;
+        let latestCheck=0;
         const check = async () => {
+            const sequence=++latestCheck;
             const response = await window.writingTool.protection({command:'protection.pending'});
-            if (active && response.status === 'ok') setPendingProtectionCount(response.value.pending?.length ?? 0);
+            if (active && sequence===latestCheck && response.status === 'ok') {const ids=response.value.pending??[],copies=response.value.deferrable??[];setPendingProtectionCount(ids.filter(id=>!copies.includes(id)).length);setPendingCopyCount(ids.filter(id=>copies.includes(id)).length);}
         };
         void check();
         document.addEventListener('writingtool-close-aborted', check);
+        document.addEventListener('writingtool-pending-protection-changed', check);
         document.addEventListener('writingtool-recovered-context', check);
         return () => {
             active = false;
             document.removeEventListener('writingtool-close-aborted', check);
+            document.removeEventListener('writingtool-pending-protection-changed', check);
             document.removeEventListener('writingtool-recovered-context', check);
         };
     }, []);
@@ -447,6 +452,7 @@ function Shell() {
       <span id="workspace-menus"/>
     </nav></header>
     {recoveryCopies>0&&<div className="status" role="status" inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><strong>Drafts from an interrupted exit are available.</strong><button onClick={()=>document.dispatchEvent(new Event('writingtool-open-recovery-folder'))}>Open saved recovery copies</button></div>}
+    {pendingCopyCount>0&&pendingProtectionCount===0&&<div className="status" role="status" data-pending-copies inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><span>Unfinished saved copies are available for review. Writing can continue.</span><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Review unfinished copies…</button></div>}
     {pendingProtectionCount>0&&<div className="status unavailable" role="alert" inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><strong>Unfinished backup or recovery needs attention</strong><p>The original operation is retained. Reconcile it, or choose Continue writing where available.</p><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Reconcile pending operations…</button></div>}
     <section hidden={!!editor || !!snapshot || utilityShown} inert={!!pendingDeparture || !!error || closing} aria-labelledby="heading">
       <p className="eyebrow">{projectSnapshot ? 'PROJECT' : snapshot ? 'UNIVERSE' : 'YOUR WRITING SPACE'}</p><h1 id="heading">{projectSnapshot ? 'Your project' : snapshot?.profile.name ?? 'Open your writing project.'}</h1>

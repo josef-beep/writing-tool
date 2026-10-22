@@ -430,3 +430,8 @@ Failure: intervals require positive whole minutes and retention positive whole d
 3. **Climax:** Application closes only when required operations succeed, preserving current work and valid recovery output.
 
 Failure: any required failure keeps application open with outcomes reported separately; Retry, another backup folder where applicable or Cancel closing returns control without discarding writing. Progress/focus and restart-crash recovery UI remain unresolved.
+
+
+## October 22 error-exit amendment
+
+The user's later [DEC-08 instruction](../../../specs/spec-WritingTool/contracts.md#dec-08--explicit-error-exit-amendment-2026-10-22) supersedes Flow 16's implication that failed operations can prevent every exit. Preserve normal-close save/capture requirements and operation-specific retry/cancel behavior. Error and failed-close dialogs also offer confirmed Quit application; a subsequent native close can escape a stalled decision. Preserve available exact drafts/pending inputs and original recovery evidence before this interrupted exit, bound collection, separately confirm any exit without a complete copy, restore interactivity/lock ownership when canceled and expose saved copies after relaunch. Do not show success for the interrupted operation or silently replay a draft.

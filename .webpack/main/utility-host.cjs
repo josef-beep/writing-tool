@@ -6533,10 +6533,16 @@ class WorkspaceStore {
         const m = this.authority(), indexes = this.indexes();
         this.assertPlan(indexes);
         const records = [], manuscripts = {};
+        // Reuse live JSON/WRT reads only within this synchronous snapshot; retained history stays streamed.
+        const livePaths = new Set(indexes.files.map(f => f.relativePath)), reads = new Map(), read = (relative) => { if (!livePaths.has(relative))
+            return (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, relative); let bytes = reads.get(relative); if (!bytes) {
+            bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, relative);
+            reads.set(relative, bytes);
+        } return bytes; };
         ensure((0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(indexes.counters.event) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(indexes.counters.decision));
         for (const r of indexes.records) {
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.recordVersion) && [0, 1].includes(r.tombstone) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory, r.recordType) && r.relativePath === `${_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory[r.recordType]}/${r.id}.json`);
-            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, r.relativePath);
+            const bytes = read(r.relativePath);
             ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === r.sha256, 'Workspace file/catalog mismatch.');
             if (r.tombstone)
                 continue;
@@ -6546,7 +6552,7 @@ class WorkspaceStore {
             ensure(typed.id === r.id && typed.recordVersion === r.recordVersion && typed.recordType === r.recordType && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(typed.owner) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(m.owner) && typed.universeId === m.universeId);
             records.push(typed);
             if (typed.recordType === 'chapter') {
-                const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, typed.data.formatting.text.relativePath);
+                const bytes = read(typed.data.formatting.text.relativePath);
                 const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
                 ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === typed.data.formatting.text.sha256 && bytes.length.toString() === typed.data.formatting.text.byteLength && Array.from(text).length.toString() === typed.data.formatting.text.scalarLength);
                 (0,_domain_manuscript__WEBPACK_IMPORTED_MODULE_7__.assertManuscript)(text, typed.data.formatting.paragraphs);
@@ -6554,9 +6560,10 @@ class WorkspaceStore {
             }
         }
         for (const f of indexes.files) {
-            const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, f.relativePath);
+            const bytes = read(f.relativePath);
             ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === f.sha256 && bytes.length.toString() === f.byteLength);
         }
+        reads.clear();
         for (const a of indexes.assets) {
             const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, a.relativePath);
             ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === a.sha256 && bytes.length.toString() === a.byteLength);
@@ -6616,7 +6623,7 @@ class WorkspaceStore {
                 throw e;
         } if (prior && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(prior) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes))
             return; files.push({ relativePath, before: prior?.toString('base64') ?? null, after: bytes.toString('base64'), beforeHash: prior ? (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(prior) : null, afterHash: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), beforeByteLength: prior?.length.toString() ?? null, byteLength: bytes.length.toString() }); };
-        const live = new Set(commit.records.map(r => r.id));
+        const live = new Set(commit.records.map(r => r.id)), versions = new Set(before.versions.map(v => v.recordVersion)), assets = new Map(before.assets.map(a => [a.id, a]));
         for (const r of before.records)
             if (!live.has(r.id))
                 after.records.push({ ...r, tombstone: 1, deletedVersion: r.deletedVersion ?? receipt.units.flatMap(u => u.records).find(x => x.id === r.id && x.deleted)?.recordVersion ?? (0,node_crypto__WEBPACK_IMPORTED_MODULE_3__.randomUUID)() });
@@ -6626,8 +6633,9 @@ class WorkspaceStore {
             stage(relativePath, bytes);
             after.files.push({ relativePath, recordId: record.id, recordVersion: record.recordVersion, role: 'json', sha256: (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), byteLength: bytes.length.toString() });
             const jsonPath = `history/objects/${record.recordVersion}/${relativePath}`, manuscriptPath = record.recordType === 'chapter' ? `history/objects/${record.recordVersion}/chapters/${record.id}.wrt` : null;
-            if (!after.versions.some(v => v.recordVersion === record.recordVersion)) {
+            if (!versions.has(record.recordVersion)) {
                 stage(jsonPath, bytes);
+                versions.add(record.recordVersion);
                 after.versions.push({ recordVersion: record.recordVersion, recordId: record.id, recordType: record.recordType, jsonPath, manuscriptPath });
             }
             if (record.recordType === 'chapter') {
@@ -6650,14 +6658,16 @@ class WorkspaceStore {
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(asset.id) && /^[a-f0-9]{64}$/.test(asset.sha256) && ['image/png', 'image/jpeg', 'image/webp'].includes(asset.mediaType));
             const bytes = Buffer.from(asset.base64, 'base64');
             ensure(bytes.toString('base64') === asset.base64 && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes) === asset.sha256);
-            const existing = after.assets.find(a => a.id === asset.id);
+            const existing = assets.get(asset.id);
             if (existing) {
                 ensure(existing.sha256 === asset.sha256 && existing.mediaType === asset.mediaType);
                 continue;
             }
             const extension = asset.mediaType === 'image/png' ? 'png' : asset.mediaType === 'image/jpeg' ? 'jpg' : 'webp', relativePath = `images/${asset.id}.${extension}`;
             stage(relativePath, bytes);
-            after.assets.push({ id: asset.id, sha256: asset.sha256, mediaType: asset.mediaType, relativePath, byteLength: bytes.length.toString() });
+            const descriptor = { id: asset.id, sha256: asset.sha256, mediaType: asset.mediaType, relativePath, byteLength: bytes.length.toString() };
+            after.assets.push(descriptor);
+            assets.set(asset.id, descriptor);
         }
         after.records.sort((a, b) => lexical(a.id, b.id));
         after.files.sort((a, b) => lexical(a.relativePath, b.relativePath));
@@ -6733,14 +6743,14 @@ class WorkspaceStore {
         return;
     } transact(this.db, () => { const m = this.authority(); ensure(m.generation === j.expectedGeneration && (!recovery ? m.sessionToken === j.fencingToken : true)); ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.before), 'Prepared catalog expectations changed.'); this.writeIndexes(j.after); this.db.prepare('UPDATE unit_meta SET generation=? WHERE singleton=1').run(j.targetGeneration); const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.receipt); this.db.prepare('INSERT INTO committed_operations VALUES(?,?,?,?,?)').run(j.operationId, j.requestDigest, j.targetGeneration, (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)(bytes), bytes); }); }
     writeIndexes(p) { for (const table of ['workspace_records', 'workspace_files', 'workspace_relationships', 'workspace_codes', 'workspace_counters', 'workspace_assets', 'workspace_versions'])
-        this.db.exec(`DELETE FROM ${table}`); for (const r of p.records)
-        this.db.prepare('INSERT INTO workspace_records VALUES(?,?,?,?,?,?,?)').run(r.id, r.recordType, r.recordVersion, r.relativePath, r.sha256, r.tombstone, r.deletedVersion); for (const f of p.files)
-        this.db.prepare('INSERT INTO workspace_files VALUES(?,?,?,?,?,?)').run(f.relativePath, f.recordId, f.recordVersion, f.role, f.sha256, f.byteLength); for (const r of p.relationships)
-        this.db.prepare('INSERT INTO workspace_relationships VALUES(?,?,?,?)').run(r.sourceId, r.relation, r.targetId, r.targetUniverseId); for (const c of p.codes)
-        this.db.prepare('INSERT INTO workspace_codes VALUES(?,?,?)').run(c.recordId, c.code, c.codeKey); for (const kind of ['event', 'decision', 'story', 'chapter'])
-        this.db.prepare('INSERT INTO workspace_counters VALUES(?,?)').run(kind, p.counters[kind]); for (const a of p.assets)
-        this.db.prepare('INSERT INTO workspace_assets VALUES(?,?,?,?,?)').run(a.id, a.sha256, a.mediaType, a.relativePath, a.byteLength); for (const v of p.versions)
-        this.db.prepare('INSERT INTO workspace_versions VALUES(?,?,?,?,?)').run(v.recordVersion, v.recordId, v.recordType, v.jsonPath, v.manuscriptPath); }
+        this.db.exec(`DELETE FROM ${table}`); const insertRecords = this.db.prepare('INSERT INTO workspace_records VALUES(?,?,?,?,?,?,?)'); for (const r of p.records)
+        insertRecords.run(r.id, r.recordType, r.recordVersion, r.relativePath, r.sha256, r.tombstone, r.deletedVersion); const insertFiles = this.db.prepare('INSERT INTO workspace_files VALUES(?,?,?,?,?,?)'); for (const f of p.files)
+        insertFiles.run(f.relativePath, f.recordId, f.recordVersion, f.role, f.sha256, f.byteLength); const insertRelationships = this.db.prepare('INSERT INTO workspace_relationships VALUES(?,?,?,?)'); for (const r of p.relationships)
+        insertRelationships.run(r.sourceId, r.relation, r.targetId, r.targetUniverseId); const insertCodes = this.db.prepare('INSERT INTO workspace_codes VALUES(?,?,?)'); for (const c of p.codes)
+        insertCodes.run(c.recordId, c.code, c.codeKey); const insertCounters = this.db.prepare('INSERT INTO workspace_counters VALUES(?,?)'); for (const kind of ['event', 'decision', 'story', 'chapter'])
+        insertCounters.run(kind, p.counters[kind]); const insertAssets = this.db.prepare('INSERT INTO workspace_assets VALUES(?,?,?,?,?)'); for (const a of p.assets)
+        insertAssets.run(a.id, a.sha256, a.mediaType, a.relativePath, a.byteLength); const insertVersions = this.db.prepare('INSERT INTO workspace_versions VALUES(?,?,?,?,?)'); for (const v of p.versions)
+        insertVersions.run(v.recordVersion, v.recordId, v.recordType, v.jsonPath, v.manuscriptPath); }
     finalize(j) { this.health(); ensure(this.authority().generation === j.targetGeneration && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(this.indexes()) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(j.after)); for (const f of j.files)
         ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.readManaged)(this.location, f.relativePath)) === f.afterHash); this.marker(j, 'finalized'); this.blocked = false; }
     marker(j, state) { const relative = `database/operations/${j.operationId}/${state}.json`, value = { schemaVersion: 1, operationId: j.operationId, requestDigest: j.requestDigest }; if (node_fs__WEBPACK_IMPORTED_MODULE_0___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.location, relative)))
@@ -6817,11 +6827,13 @@ class WorkspaceStore {
         for (const r of p.records)
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(r, ['id', 'recordType', 'recordVersion', 'relativePath', 'sha256', 'tombstone', 'deletedVersion']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.recordVersion) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory, r.recordType) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.ownerKindForType)(r.recordType) === m.owner.kind && r.relativePath === `${_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory[r.recordType]}/${r.id}.json` && digest(r.sha256) && [0, 1].includes(r.tombstone) && (r.tombstone ? (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.deletedVersion) : r.deletedVersion === null));
         ensure(unique(p.records.map(r => r.id)) && unique(p.records.map(r => r.relativePath)));
+        const liveRecords = new Map(p.records.filter(r => !r.tombstone).map(r => [r.id, r])), fileCounts = new Map();
         for (const f of p.files) {
-            const r = p.records.find(r => r.id === f.recordId && !r.tombstone);
+            const r = liveRecords.get(f.recordId);
+            fileCounts.set(f.recordId, (fileCounts.get(f.recordId) ?? 0) + 1);
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(f, ['relativePath', 'recordId', 'recordVersion', 'role', 'sha256', 'byteLength']) && r && f.recordVersion === r.recordVersion && digest(f.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(f.byteLength) && (f.role === 'json' && f.relativePath === r.relativePath && f.sha256 === r.sha256 || f.role === 'wrt' && r.recordType === 'chapter' && f.relativePath === `chapters/${r.id}.wrt`));
         }
-        ensure(unique(p.files.map(f => f.relativePath)) && p.records.filter(r => !r.tombstone).every(r => p.files.filter(f => f.recordId === r.id).length === (r.recordType === 'chapter' ? 2 : 1)));
+        ensure(unique(p.files.map(f => f.relativePath)) && [...liveRecords.values()].every(r => fileCounts.get(r.id) === (r.recordType === 'chapter' ? 2 : 1)));
         for (const a of p.assets)
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(a, ['id', 'sha256', 'mediaType', 'relativePath', 'byteLength']) && m.owner.kind === 'universe' && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(a.id) && digest(a.sha256) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_9__.unsignedInteger)(a.byteLength) && ['image/png', 'image/jpeg', 'image/webp'].includes(a.mediaType) && a.relativePath === `images/${a.id}.${a.mediaType === 'image/png' ? 'png' : a.mediaType === 'image/jpeg' ? 'jpg' : 'webp'}`);
         ensure(unique(p.assets.map(a => a.id)) && unique(p.assets.map(a => a.sha256 + '/' + a.mediaType)));
@@ -6829,22 +6841,23 @@ class WorkspaceStore {
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(v, ['recordVersion', 'recordId', 'recordType', 'jsonPath', 'manuscriptPath']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(v.recordVersion) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(v.recordId) && Object.hasOwn(_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory, v.recordType) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.ownerKindForType)(v.recordType) === m.owner.kind && v.jsonPath === `history/objects/${v.recordVersion}/${_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.recordCategory[v.recordType]}/${v.recordId}.json` && (v.recordType === 'chapter' ? v.manuscriptPath === `history/objects/${v.recordVersion}/chapters/${v.recordId}.wrt` : v.manuscriptPath === null));
         ensure(unique(p.versions.map(v => v.recordVersion)));
         for (const c of p.codes) {
-            const r = p.records.find(r => r.id === c.recordId && !r.tombstone);
+            const r = liveRecords.get(c.recordId);
             ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(c, ['recordId', 'code', 'codeKey']) && r && ['event', 'decision'].includes(r.recordType) && typeof c.code === 'string' && c.codeKey === (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_6__.canonicalCodeKey)(c.code));
         }
         ensure(unique(p.codes.map(c => c.recordId)) && unique(p.codes.map(c => c.codeKey)));
         for (const r of p.relationships)
-            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(r, ['sourceId', 'relation', 'targetId', 'targetUniverseId']) && p.records.some(s => s.id === r.sourceId && !s.tombstone) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.targetId) && r.targetUniverseId === m.universeId && ['volume', 'story', 'character', 'depicts:main', 'depicts:flashback', 'decision', 'type', 'relevant-character', 'result-event', 'following-decision', 'maker', 'birth', 'background', 'faction'].includes(r.relation));
+            ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.closed)(r, ['sourceId', 'relation', 'targetId', 'targetUniverseId']) && liveRecords.has(r.sourceId) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_8__.isUuid)(r.targetId) && r.targetUniverseId === m.universeId && ['volume', 'story', 'character', 'depicts:main', 'depicts:flashback', 'decision', 'type', 'relevant-character', 'result-event', 'following-decision', 'maker', 'birth', 'background', 'faction'].includes(r.relation));
         ensure(unique(p.relationships.map(r => r.sourceId + '/' + r.relation + '/' + r.targetId)));
     }
     validateJournalPlans(j) {
         this.assertPlan(j.before);
         this.assertPlan(j.after);
         ensure(BigInt(j.after.counters.event) >= BigInt(j.before.counters.event) && BigInt(j.after.counters.decision) >= BigInt(j.before.counters.decision) && BigInt(j.after.counters.story) >= BigInt(j.before.counters.story) && BigInt(j.after.counters.chapter) >= BigInt(j.before.counters.chapter));
+        const assets = new Map(j.after.assets.map(a => [a.id, a])), versions = new Map(j.after.versions.map(v => [v.recordVersion, v]));
         for (const a of j.before.assets)
-            ensure(j.after.assets.some(v => (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(v) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(a)));
+            ensure(assets.has(a.id) && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(assets.get(a.id)) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(a));
         for (const v of j.before.versions)
-            ensure(j.after.versions.some(x => (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(x) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(v)));
+            ensure(versions.has(v.recordVersion) && (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(versions.get(v.recordVersion)) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.canonical)(v));
         const allowed = new Map();
         for (const r of j.after.records)
             allowed.set(r.relativePath, r.sha256);
@@ -6857,16 +6870,17 @@ class WorkspaceStore {
             if (v.manuscriptPath)
                 allowed.set(v.manuscriptPath, null);
         }
-        ensure(new Set(j.files.map(f => f.relativePath)).size === j.files.length);
+        const beforeFiles = new Map(j.before.files.map(f => [f.relativePath, f])), mutations = new Map(j.files.map(f => [f.relativePath, f]));
+        ensure(mutations.size === j.files.length);
         for (const f of j.files) {
             ensure(allowed.has(f.relativePath) && (allowed.get(f.relativePath) === null || allowed.get(f.relativePath) === f.afterHash), 'Journal path has no typed content role.');
             if (f.relativePath.startsWith('history/') || f.relativePath.startsWith('images/'))
                 ensure(f.before === null, 'Immutable bytes cannot be replaced.');
-            const beforeFile = j.before.files.find(v => v.relativePath === f.relativePath);
+            const beforeFile = beforeFiles.get(f.relativePath);
             if (beforeFile)
                 ensure(beforeFile.sha256 === f.beforeHash);
         }
-        const bytesFor = (relative, after) => { const f = j.files.find(f => f.relativePath === relative); if (f) {
+        const bytesFor = (relative, after) => { const f = mutations.get(relative); if (f) {
             const bytes = after ? f.after : f.before;
             if (bytes === null)
                 throw new Error('Missing typed before bytes');

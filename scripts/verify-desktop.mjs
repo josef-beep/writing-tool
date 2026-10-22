@@ -16,7 +16,7 @@ import {runSmokeProcess} from './smoke.mjs';
 import {unzipSync,strFromU8} from 'fflate';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
-const availableModes=['panels','error-quit','combined-error-quit','error-profile-quit','error-quit-timeout','error-quit-copy-keep','close-stalled','close-drain-cancel','close-backup-error','error-quit-copy-failure','close-pending','read-queue','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions','writing','reconcile-defer','reconcile-background'];
+const availableModes=['panels','error-quit','combined-error-quit','error-profile-quit','error-quit-timeout','error-quit-copy-keep','close-stalled','close-drain-cancel','close-backup-error','error-quit-copy-failure','close-pending','read-queue','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions','writing','reconcile-defer','reconcile-background','busy-inventory'];
 const selectedModes=process.argv.slice(2);
 if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
 const modes=selectedModes.length?selectedModes:availableModes;
@@ -59,7 +59,7 @@ for(const mode of modes){
    fs.writeFileSync(path.join(directory,id+'.json'),JSON.stringify({request,project:project.location,universe:universe.location,projectIdentity:{id:snapshot.project.owner.id,rootId:snapshot.project.rootId},universeIdentity:{id:snapshot.universe.owner.id,rootId:snapshot.universe.rootId},dispatch:'prepared'}));
    fs.writeFileSync(path.join(fixture,'pending-id'),id);
   }
-  if(mode==='read-queue'){
+  if(mode==='read-queue'||mode==='busy-inventory'){
    const id=randomUUID(),request={protocolVersion:1,requestId:id,command:'protection.capture',owner:snapshot.project.owner,reason:'Manual'};
    const directory=path.join(fixture,'profile/protection/native-pending');fs.mkdirSync(directory,{recursive:true});
    fs.writeFileSync(path.join(directory,id+'.json'),JSON.stringify({request,project:project.location,universe:universe.location,projectIdentity:{id:snapshot.project.owner.id,rootId:snapshot.project.rootId},universeIdentity:{id:snapshot.universe.owner.id,rootId:snapshot.universe.rootId},dispatch:'prepared'}));
@@ -120,6 +120,11 @@ for(const mode of modes){
  if(mode==='error-quit'){
   const restarted=await runSmokeProcess(require('electron'),[path.join(root,'tests/fixtures/desktop-integration.cjs')],{fault:'recovery-notice',timeoutMs:30000,env:{...process.env,WRITINGTOOL_TEST_ROOT:root,WRITINGTOOL_TEST_BUILD:generator.webpackDir,WRITINGTOOL_TEST_FIXTURE:fixture,WRITINGTOOL_TEST_MODE:'recovery-notice'},write:bytes=>fs.appendFileSync(path.join(output,'recovery-notice.log'),bytes)});
   results.push(restarted);console.log('recovery-notice: passed');
+ }
+ if(mode==='busy-inventory'){
+  const pending=fs.readdirSync(path.join(fixture,'profile/protection/native-pending'));if(pending.length)throw new Error('Normal close retained fabricated pending operations: '+pending.join(', '));
+  const restarted=await runSmokeProcess(require('electron'),[path.join(root,'tests/fixtures/desktop-integration.cjs')],{fault:mode+'-restart',timeoutMs:120000,env:{...process.env,WRITINGTOOL_TEST_ROOT:root,WRITINGTOOL_TEST_BUILD:generator.webpackDir,WRITINGTOOL_TEST_FIXTURE:fixture,WRITINGTOOL_TEST_MODE:mode+'-restart'},write:bytes=>fs.appendFileSync(path.join(output,mode+'-restart.log'),bytes)});
+  results.push(restarted);console.log(`${mode}-restart: passed`);
  }
  if(mode==='reconcile-background')verifyClosingArchive(fixture,' after failed closing');
  if(mode==='reconcile-defer'){

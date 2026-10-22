@@ -9,7 +9,7 @@ const errorExitModes=['error-quit','combined-error-quit','error-profile-quit','e
 app.setPath('userData',path.join(fixture,'profile'));
 app.setAppPath(repo);
 let opened=false,main,failedQueries=0,allowReads=mode!=='read-failure',captureCount=0,backupCount=0,pass=false,lostAck=false,conflicted=false,expectedBounds,panelId='timeline',host,corruptedBackup=null;
-let holdRead=false,releaseRead,holdProjectClose=false,releaseProjectClose,activeRequests=0,loseMutation=false,loseProfile=false,quitChoices=0,copyFailures=0,openedRecoveryFolder=false;
+let holdProtection=false,releaseProtection,holdRead=false,releaseRead,holdProjectClose=false,releaseProjectClose,activeRequests=0,loseMutation=false,loseProfile=false,quitChoices=0,copyFailures=0,openedRecoveryFolder=false;
 const originalFork=utilityProcess.fork.bind(utilityProcess);
 utilityProcess.fork=(...args)=>{
  host=originalFork(...args);
@@ -20,7 +20,8 @@ utilityProcess.fork=(...args)=>{
  });
  const originalOn=host.on.bind(host);
  host.on=(event,listener)=>originalOn(event,event==='message'?message=>{
-  if(holdProjectClose&&message.command==='project.close'){holdProjectClose=false;releaseProjectClose=()=>listener(message);}
+  if(holdProtection&&message.command==='protection.capture'&&message.status==='ok'&&message.value.manifest){holdProtection=false;releaseProtection=()=>listener(message);}
+  else if(holdProjectClose&&message.command==='project.close'){holdProjectClose=false;releaseProjectClose=()=>listener(message);}
   else if(holdRead&&message.command==='workspace.query'){
    holdRead=false;
    releaseRead=fail=>listener(fail?{protocolVersion:1,requestId:message.requestId,command:message.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected read failure',outcome:'not-committed',retry:'after-recovery',issues:[]}:message);
@@ -658,7 +659,7 @@ async function verifyDeferredReconcile(){
  await waitFor(`!document.querySelector('.blocking')&&!document.querySelector('.protection-center')?.textContent.includes(${JSON.stringify(liveId)})`,'live recovery removed from pending UI');
  await clickText('Open project…');
  await waitFor(`document.querySelector('footer')?.textContent.includes('Project opened with its authoritative universe.')&&!document.querySelector('.blocking')`,'open project while unfinished copies remain');
- await clickText('Reconcile pending operations…');
+ await clickText('Review unfinished copies…');
  await waitFor(`[...document.querySelectorAll('.protection-center button')].some(button=>button.textContent===${JSON.stringify('Reconcile '+id)})`,'reopen pending copy review');
  await clickText('Reconcile '+id);
  await waitFor(`document.querySelector('.blocking')?.textContent.includes('Operation needs attention')`,'failed reconciliation dialog');
@@ -682,6 +683,54 @@ async function verifyDeferredReconcile(){
  if(rejected.status!=='error')throw new Error('An unrelated operation could be deferred');
  console.log('RECONCILE_DEFER failed backup reconciliation escaped; metadata and original job retained');
 }
+
+async function verifyBusyInventory(){
+ const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
+ await waitFor(`!!document.querySelector('[data-pending-copies]')&&!document.querySelector('.status[role="alert"]')`,'quiet unfinished saved-copy status');
+ const metadata=fs.readFileSync(path.join(fixture,'profile/protection/native-pending',id+'.json'),'utf8');
+ const snapshot=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ const unit=snapshot.snapshot.universe,character=JSON.parse(fs.readFileSync(path.join(fixture,'characters.json'),'utf8'))[0];
+ const input={operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',units:[{owner:unit.owner,expectedUnitGeneration:unit.generation,changes:[{action:'put',record:character,expectedRecordVersion:null,manuscript:null}]}]};
+ const profile=await evaluate(`window.writingTool.currentUniverse()`);
+ const profileInput={operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'0',ownerId:profile.snapshot.ownerId,expectedUnitGeneration:profile.snapshot.generation,expectedRecordVersion:profile.snapshot.recordVersion,data:{...profile.snapshot.profile,description:'Retained profile candidate'}};
+ // Hold the utility acknowledgment of a real completed capture, leaving native authority busy.
+ await evaluate(`(()=>{window.__inventoryEvents=0;document.addEventListener('writingtool-pending-protection-changed',()=>window.__inventoryEvents++);return true;})()`);
+ holdProtection=true;
+ await evaluate(`(()=>{window.__heldProtection=window.writingTool.protection(${JSON.stringify({command:'protection.capture',owner:snapshot.snapshot.project.owner,reason:'Manual'})});return true;})()`);
+ const until=Date.now()+15000;while(!releaseProtection&&Date.now()<until)await delay(20);
+ if(!releaseProtection)throw new Error('The capture acknowledgment was not held');
+ for(const request of [`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input})})`,`window.writingTool.saveUniverseProfile(${JSON.stringify(profileInput)})`]){
+  const refused=await evaluate(request);
+  if(refused.status!=='error'||refused.code!=='RECOVERY_REQUIRED'||refused.outcome!=='not-committed'||refused.retry!=='new-request')throw new Error('An unsent busy save became uncertain: '+JSON.stringify(refused));
+  if(/reconcil/i.test(refused.message))throw new Error('Healthy background work incorrectly requested reconciliation');
+ }
+ if(fs.readFileSync(path.join(fixture,'profile/protection/native-pending',id+'.json'),'utf8')!==metadata)throw new Error('Busy requests altered retained copy evidence');
+ releaseProtection();if((await evaluate(`window.__heldProtection`)).status!=='ok')throw new Error('Held capture failed');
+ const retry=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input})})`);
+ if(retry.status!=='ok')throw new Error('Busy save could not retry without reconciliation: '+JSON.stringify(retry));
+ const current=await evaluate(`window.writingTool.currentUniverse()`);
+ Object.assign(profileInput,{expectedUnitGeneration:current.snapshot.generation,expectedRecordVersion:current.snapshot.recordVersion});
+ if((await evaluate(`window.writingTool.saveUniverseProfile(${JSON.stringify(profileInput)})`)).status!=='ok')throw new Error('Busy profile could not retry');
+ // A genuinely sent save keeps its original uncertainty; a new blocked ID stays known unsent.
+ const latest=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`),saved=latest.snapshot.universe.records.find(r=>r.id===character.id);
+ const uncertain={operationId:require('node:crypto').randomUUID(),submittedEditorRevision:'1',units:[{owner:unit.owner,expectedUnitGeneration:latest.snapshot.universe.generation,changes:[{action:'put',record:{...saved,data:{...saved.data,name:'Lost acknowledgment candidate'}},expectedRecordVersion:saved.recordVersion,manuscript:null}]}]};
+ loseMutation=true;
+ const unknown=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:uncertain})})`);
+ if(unknown.status!=='error'||unknown.outcome!=='unknown')throw new Error('Lost acknowledgment was not retained');
+ const original=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:uncertain})})`);
+ const fresh=await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.mutate',input:{...uncertain,operationId:require('node:crypto').randomUUID()}})})`);
+ if(original.status!=='error'||original.outcome!=='unknown'||fresh.status!=='error'||fresh.outcome!=='not-committed')throw new Error('Original uncertainty and a new unsent save were confused');
+ if((await evaluate(`window.writingTool.workspace(${JSON.stringify({command:'workspace.reconcile',operationId:uncertain.operationId})})`)).status!=='ok')throw new Error('Original save could not reconcile');
+ // Dedicated inventory notification removes the startup notice without relaunch or a close-aborted event.
+ const reconciled=await evaluate(`window.writingTool.protection(${JSON.stringify({command:'protection.reconcile',operationId:id})})`);
+ if(reconciled.status!=='ok')throw new Error('Prepared saved copy could not reconcile');
+ await waitFor(`!document.querySelector('[data-pending-copies]')&&!document.querySelector('.status[role="alert"]')`,'completed inventory removed from banner');
+ const inventory=await evaluate(`window.writingTool.protection({command:'protection.pending'})`);
+ if(inventory.status!=='ok'||inventory.value.pending.length)throw new Error('Successful operations invented pending work');
+ if(!await evaluate(`window.__inventoryEvents>0`))throw new Error('Inventory changes did not cross the isolated preload');
+ console.log('BUSY_INVENTORY known unsent retries, genuine lost acknowledgment, quiet copy status and inventory completion passed');
+}
+
 async function verifyReadQueue(){
  await waitFor(`document.querySelectorAll('.workspace-panel').length===3&&!document.querySelector('.blocking')`,'settled request queue workspace');
  const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
@@ -819,6 +868,12 @@ async function drive(){
    console.log('RECONCILE_BACKGROUND canceled failed close, continued writing and saved; original evidence retained');
    main.close();
   }
+ }else if(mode==='busy-inventory'){
+  await verifyBusyInventory();main.close();
+ }else if(mode==='busy-inventory-restart'){
+  const inventory=await evaluate(`window.writingTool.protection({command:'protection.pending'})`);
+  if(inventory.status!=='ok'||inventory.value.pending.length||await evaluate(`!!document.querySelector('[data-pending-copies]')||!!document.querySelector('.status[role="alert"]')`))throw new Error('Normal close and reopen fabricated pending work');
+  console.log('BUSY_INVENTORY_RESTART normal close reopened without pending jobs');main.close();
  }else if(mode==='read-queue'){
   await verifyReadQueue();
   main.close();
@@ -826,6 +881,7 @@ async function drive(){
   const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
   const retained=await evaluate(`window.writingTool.protection({command:'protection.pending'})`);
   if(retained.status!=='ok'||!retained.value.pending.includes(id))throw new Error('Restart lost the retained operation');
+  await waitFor(`!!document.querySelector('[data-pending-copies]')&&!document.querySelector('.status[role="alert"]')`,'old failed backup stays quiet after restart');
   await waitFor(`!!document.querySelector('.chapter-select')&&!document.querySelector('.blocking')`,'writing available after restart');
   await evaluate(`document.querySelector('.chapter-select').click()`);
   await waitFor(`!!document.querySelector('.manuscript')&&!document.querySelector('.blocking')`,'reopened writing after restart');

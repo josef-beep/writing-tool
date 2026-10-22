@@ -8,6 +8,8 @@ updated: 2026-10-17
 
 Jo adopted this technical foundation through the execution approval on 2026-10-17. Approved product rules remain binding. [Contracts](contracts.md) and final [Experience](../../planning-artifacts/ux-designs/ux-WritingTool-2026-10-17/EXPERIENCE.md) remain binding. TECH-01 stays open until the complete schema family, migrations and consuming adapters are defined. [Foundation schema](schemas/foundation.schema.json) and [chapter-format schema](schemas/chapter-format.schema.json) define only the explicitly named structures below.
 
+**Current planning status (2026-10-22):** The [prerequisite index](planning-contract-index.md) links the now-published closed consuming entity/command/settings/manifests, chronology, catalog and export definitions. Historical “remains open” shape/algorithm notes below are specialized there and in the workspace/storage contracts. TECH-01's full adapter/schema/migration conformance evidence remains open; publishing those definitions is not gate acceptance.
+
 ## Identity, versions and locations
 
 | Value | Proposed representation and rule |
