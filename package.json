@@ -19,7 +19,7 @@
     "lint": "oxlint --deny-warnings src tests scripts",
     "lint:fix": "oxlint --fix src tests scripts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx tests/readiness.test.ts && node --import tsx tests/universe.test.ts && node --import tsx tests/project.test.ts && node --import tsx tests/workspace-coordinator.test.ts && node --import tsx tests/workspace-domain.test.ts && node --import tsx tests/recovery-activation.test.ts && node --import tsx tests/presentation-integration.test.tsx && node --import tsx tests/converter-process.test.ts && node tests/smoke.test.mjs",
+    "test": "node --import tsx tests/readiness.test.ts && node --import tsx tests/universe.test.ts && node --import tsx tests/project.test.ts && node --import tsx tests/workspace-coordinator.test.ts && node --import tsx tests/workspace-domain.test.ts && node --import tsx tests/recovery-activation.test.ts && node --import tsx tests/protection-deferral.test.ts && node --import tsx tests/presentation-integration.test.tsx && node --import tsx tests/converter-process.test.ts && node tests/smoke.test.mjs",
     "test:desktop": "node --import tsx scripts/verify-desktop.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:packaged": "node scripts/smoke.mjs --packaged",

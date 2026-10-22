@@ -286,7 +286,7 @@ function Shell() {
         const recovered=()=>{void (async()=>{
             const pendingOperations=await window.writingTool.protection({command:'protection.pending'});
             // Keep the recovery panel in place until every pending operation is resolved.
-            if(pendingOperations.status==='ok'&&pendingOperations.value.pending?.length)return;
+            if(pendingOperations.status==='ok'&&pendingOperations.value.pending?.some(id=>!pendingOperations.value.deferred?.includes(id)))return;
             // Authority requests are exclusive in main; await each before sending the next.
             const project=await window.writingTool.currentProject();
             const universe=await window.writingTool.currentUniverse();
@@ -425,7 +425,7 @@ function Shell() {
       <details name="writingtool-menu"><summary>Universe</summary><div className="menu"><div id="universe-workspace-menu"/><button data-top-profile-edit disabled={!snapshot || !!editor || busy || !!pending} onClick={editProfile}>Edit profile</button><button data-top-profile-save disabled={!editor || busy || !!pending} onClick={() => void save()}>Save profile <kbd>Ctrl+S</kbd></button><button data-top-reconcile disabled={busy} onClick={() => pending ? void reconcile() : void workspaceRef.current?.recover()}>Reopen and reconcile…</button><button data-top-profile-close disabled={!editor || busy || !!pending} onClick={() => requestDeparture('dismiss')}>Close profile <kbd>Ctrl+W</kbd></button></div></details>
       <span id="workspace-menus"/>
     </nav></header>
-    {pendingProtectionCount>0&&<div className="status unavailable" role="alert" inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><strong>Unfinished backup or recovery needs attention</strong><p>Reconcile the original operation before closing or starting new work.</p><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Reconcile pending operations…</button></div>}
+    {pendingProtectionCount>0&&<div className="status unavailable" role="alert" inert={!!pendingDeparture||!!error||closing||workspaceBlocked}><strong>Unfinished backup or recovery needs attention</strong><p>The original operation is retained. Reconcile it, or choose Continue writing where available.</p><button disabled={busy||!!pending} onClick={()=>void workspaceRef.current?.recover()}>Reconcile pending operations…</button></div>}
     <section hidden={!!editor || !!snapshot || utilityShown} inert={!!pendingDeparture || !!error || closing} aria-labelledby="heading">
       <p className="eyebrow">{projectSnapshot ? 'PROJECT' : snapshot ? 'UNIVERSE' : 'YOUR WRITING SPACE'}</p><h1 id="heading">{projectSnapshot ? 'Your project' : snapshot?.profile.name ?? 'Open your writing project.'}</h1>
       {projectSnapshot && <div className="project-context"><p>Project <span className="location">{projectSnapshot.ownerId}</span></p><p className="location">{projectSnapshot.location}</p><p>Linked universe: <strong>{snapshot?.profile.name}</strong></p></div>}

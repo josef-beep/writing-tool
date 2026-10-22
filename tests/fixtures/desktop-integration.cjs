@@ -1,13 +1,23 @@
 const fs=require('node:fs');
 const path=require('node:path');
-const {app,BrowserWindow,ipcMain,dialog}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,utilityProcess}=require('electron');
 const repo=process.env.WRITINGTOOL_TEST_ROOT;
 const output=process.env.WRITINGTOOL_TEST_BUILD;
 const fixture=process.env.WRITINGTOOL_TEST_FIXTURE;
 const mode=process.env.WRITINGTOOL_TEST_MODE;
 app.setPath('userData',path.join(fixture,'profile'));
 app.setAppPath(repo);
-let opened=false,main,failedQueries=0,allowReads=mode!=='read-failure',captureCount=0,backupCount=0,pass=false,lostAck=false,conflicted=false,expectedBounds,panelId='timeline';
+let opened=false,main,failedQueries=0,allowReads=mode!=='read-failure',captureCount=0,backupCount=0,pass=false,lostAck=false,conflicted=false,expectedBounds,panelId='timeline',host,corruptedBackup=null;
+const originalFork=utilityProcess.fork.bind(utilityProcess);
+utilityProcess.fork=(...args)=>{
+ host=originalFork(...args);
+ host.on('message',message=>{
+  if(mode==='reconcile-background'&&!corruptedBackup&&message.command==='protection.backup'&&message.status==='ok'&&message.value.output){
+   corruptedBackup=message.requestId;fs.appendFileSync(message.value.output.path,'Injected changed output evidence');
+  }
+ });
+ return host;
+};
 const originalHandle=ipcMain.handle.bind(ipcMain);
 ipcMain.handle=(channel,handler)=>originalHandle(channel,async(event,request)=>{
  if(channel==='writingtool:workspace:v1'&&request.command==='workspace.query'&&opened&&!allowReads){
@@ -467,14 +477,143 @@ async function verifyFactionReopen(){
  await waitFor(`document.querySelector('.center-form label input')?.value===${JSON.stringify(factionName)}`,'floating faction opens canonical editor');
  console.log('FACTION_REOPEN create/save, browser return, unnamed-draft discard, saved edits, hidden/floating context, Save/Cancel/Discard guards and standalone/project universe reload passed');
 }
+async function verifyWriting(){
+ await waitFor(`document.querySelectorAll('.workspace-panel').length===3&&!document.querySelector('.blocking')`,'settled writing workspace');
+ await clickText('Create story…');
+ await waitFor(`!!document.querySelector('.center-form form')`,'new story form');
+ await evaluate(`document.querySelector('.center-form label input').focus()`);
+ await main.webContents.insertText('Writing fixture story');
+ await evaluate(`document.querySelector('.center-form form').requestSubmit()`);
+ await waitFor(`document.querySelector('.center-form form [role="status"]')?.textContent==='Saved.'&&!document.querySelector('.blocking')`,'saved story');
+ await evaluate(`document.querySelector('.center-heading button').click()`);
+ await waitFor(`!document.querySelector('.center-form')`,'back from story');
+ await clickText('Writing fixture story');
+ await waitFor(`[...document.querySelectorAll('header nav button')].some(button=>button.textContent==='New chapter…'&&!button.disabled)`,'selected story');
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='Writing');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='New chapter…').click();})()`);
+ await waitFor(`!!document.querySelector('.center-form form')`,'new chapter form');
+ await evaluate(`document.querySelector('.center-form label input').focus()`);
+ await main.webContents.insertText('Writing fixture chapter');
+ await evaluate(`document.querySelector('.center-form form').requestSubmit()`);
+ await waitFor(`document.querySelector('.center-form form [role="status"]')?.textContent==='Saved.'&&!document.querySelector('.blocking')`,'saved chapter');
+ await clickText('Write chapter');
+ await waitFor(`!!document.querySelector('.manuscript[contenteditable="true"]')&&!document.querySelector('.blocking')`,'editable chapter');
+ main.focus();
+ const point=await evaluate(`(()=>{const editor=document.querySelector('.manuscript');editor.scrollIntoView({block:'start'});const bounds=editor.getBoundingClientRect();const point={x:Math.round(bounds.left+Math.min(100,bounds.width/2)),y:Math.round(Math.max(bounds.top,0)+40)};if(!editor.contains(document.elementFromPoint(point.x,point.y)))throw new Error('Manuscript cannot be clicked');return point;})()`);
+ main.webContents.sendInputEvent({type:'mouseDown',...point,button:'left',clickCount:1});
+ main.webContents.sendInputEvent({type:'mouseUp',...point,button:'left',clickCount:1});
+ await waitFor(`document.activeElement===document.querySelector('.manuscript')`,'pointer focuses manuscript');
+ await main.webContents.insertText('Writing works 🌍');
+ await waitFor(`document.querySelector('.manuscript')?.textContent==='Writing works 🌍'&&document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Unsaved changes')&&!document.querySelector('.blocking')`,'typed manuscript reaches draft');
+ async function press(keyCode,character,modifiers=[]){
+  main.webContents.sendInputEvent({type:'keyDown',keyCode,modifiers});
+  if(character)main.webContents.sendInputEvent({type:'char',keyCode:character,modifiers});
+  main.webContents.sendInputEvent({type:'keyUp',keyCode,modifiers});
+  await delay(80);
+ }
+ await press('Enter','\r');
+ await press('A','a');
+ await waitFor(`document.querySelector('.manuscript')?.textContent==='Writing works 🌍a'&&!document.querySelector('.blocking')`,'keyboard Enter and letter input');
+ await press('A',null,['control']);
+ await press('B',null,['control']);
+ await waitFor(`document.querySelector('.manuscript .manuscript-bold')?.textContent==='Writing works 🌍'&&!document.querySelector('.blocking')`,'keyboard bold formatting');
+ await evaluate(`(()=>{const select=document.querySelector('select[aria-label="Paragraph style"]');select.value='h2';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+ await waitFor(`document.querySelector('.manuscript h2')?.textContent==='Writing works 🌍'&&!document.querySelector('.blocking')`,'heading formatting');
+ await evaluate(`document.querySelector('.writing-meta button:nth-of-type(2)').click()`);
+ await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Saved.')&&!document.querySelector('.blocking')`,'saved manuscript');
+ const queried=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+ if(queried.status!=='ok'||!Object.values(queried.snapshot.project.manuscripts).includes('Writing works 🌍\na'))throw new Error('Typed writing did not reach authoritative storage');
+ const chapter=queried.snapshot.project.records.find(record=>record.recordType==='chapter');
+ if(chapter.data.formatting.paragraphs[0].kind!=='heading'||!chapter.data.formatting.paragraphs[0].marks[0]?.styles.includes('bold'))throw new Error('Manuscript formatting was not saved');
+ await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='Project');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='Close project').click();})()`);
+ await waitFor(`document.querySelector('footer')?.textContent.includes('Project closed.')&&!document.querySelector('.manuscript')`,'closed writing project');
+ await clickText('Open project…');
+ await waitFor(`[...document.querySelectorAll('.chapter-select')].some(button=>button.textContent.startsWith('Writing fixture chapter'))`,'reloaded chapter navigation');
+ await evaluate(`document.querySelector('.chapter-select').click()`);
+ await waitFor(`document.querySelector('.manuscript h2 .manuscript-bold')?.textContent==='Writing works 🌍'&&!document.querySelector('.blocking')`,'reopened formatted manuscript');
+ console.log('MANUSCRIPT_WRITING chapter creation, text/keyboard input, bold, headings, durable save and reopening passed');
+}
+async function verifyDeferredReconcile(){
+ const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
+ const liveId=fs.readFileSync(path.join(fixture,'live-id'),'utf8');
+ const otherId=fs.readFileSync(path.join(fixture,'other-pending-id'),'utf8');
+ await waitFor(`document.body.innerText.includes('Unfinished backup or recovery needs attention')`,'pending backup warning');
+ await clickText('Reconcile pending operations…');
+ await waitFor(`!!document.querySelector('.protection-center')&&[...document.querySelectorAll('.protection-center button')].some(button=>button.textContent===${JSON.stringify('Reconcile '+id)})`,'retained pending backup');
+ const denied=await evaluate(`window.writingTool.protection({command:'protection.defer',operationId:${JSON.stringify(liveId)}})`);
+ if(denied.status!=='error'||JSON.parse(fs.readFileSync(path.join(fixture,'profile/protection/native-pending',liveId+'.json'),'utf8')).deferred)throw new Error('Live recovery was allowed to bypass reconciliation');
+ const cleared=await evaluate(`window.writingTool.protection({command:'protection.reconcile',operationId:${JSON.stringify(liveId)}})`);
+ if(cleared.status!=='ok'||cleared.value.reconciliation?.outcome!=='not-committed')throw new Error('Unsent recovery fixture did not reconcile safely');
+ await clickText('Reconcile '+id);
+ await waitFor(`document.querySelector('.blocking')?.textContent.includes('Operation needs attention')`,'failed reconciliation dialog');
+ const metadata=()=>JSON.parse(fs.readFileSync(path.join(fixture,'profile/protection/native-pending',id+'.json'),'utf8'));
+ if(metadata().deferred)throw new Error('Failed reconciliation was silently deferred');
+ if(process.platform!=='win32'){
+  const directory=path.join(fixture,'profile/protection/native-pending');fs.chmodSync(directory,0o500);
+  try{
+   await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Continue writing').click()`);
+   await waitFor(`document.querySelector('.blocking')?.textContent.includes('EACCES')`,'deferred marker write failure');
+   if(metadata().deferred)throw new Error('Failed marker publication falsely enabled writing');
+   const blocked=await evaluate(`window.writingTool.openProject()`);
+   if(blocked.status!=='error'||blocked.code!=='RECOVERY_REQUIRED')throw new Error('Failed deferral lost the authority block');
+  }finally{fs.chmodSync(directory,0o700);}
+ }
+ const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
+ await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Continue writing').click()`);
+ await waitFor(`!document.querySelector('.blocking')&&document.querySelector('.protection-center')?.textContent.includes('remaining unfinished operations')`,'other pending operations remain visible');
+ if(!metadata().deferred)throw new Error('First operation was not set aside');
+ await evaluate(`(()=>{const row=[...document.querySelectorAll('.protection-center p')].find(row=>row.textContent.includes(${JSON.stringify(id)}));if(!row?.textContent.includes('Set aside for later')||[...row.querySelectorAll('button')].some(button=>button.textContent==='Continue writing'))throw new Error('Deferred operation was offered as a blocker again');const other=[...document.querySelectorAll('.protection-center p')].find(row=>row.textContent.includes(${JSON.stringify(otherId)}));[...other.querySelectorAll('button')].find(button=>button.textContent==='Continue writing').click();})()`);
+ await waitFor(`!document.querySelector('.blocking')&&!document.querySelector('.protection-center')`,'continue writing escapes failed reconciliation');
+ if(!metadata().deferred)throw new Error('Continue writing was not persisted');
+ const retained=await evaluate(`window.writingTool.protection({command:'protection.pending'})`);
+ if(retained.status!=='ok'||!retained.value.pending.includes(id)||!retained.value.deferrable.includes(id))throw new Error('Deferred operation was lost');
+ const rejected=await evaluate(`window.writingTool.protection({command:'protection.defer',operationId:'00000000-0000-4000-8000-000000000000'})`);
+ if(rejected.status!=='error')throw new Error('An unrelated operation could be deferred');
+ console.log('RECONCILE_DEFER failed backup reconciliation escaped; metadata and original job retained');
+}
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
  await waitFor(`!document.querySelector('.blocking')`,'initial workspace loading');
+ if(mode==='reconcile-defer')await verifyDeferredReconcile();
  await clickText('Open project…');
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
- if(mode==='factions'){
+ if(mode==='writing'||mode==='reconcile-defer'||mode==='reconcile-background'){
+  await verifyWriting();
+  main.close();
+  if(mode==='reconcile-background'){
+   await waitFor(`document.querySelector('.blocking')?.textContent.includes('Required closing operation failed')`,'closing output failure');
+   await clickText('Cancel closing');
+   await waitFor(`document.querySelector('.blocking')?.textContent.includes('Protection needs attention')&&[...document.querySelectorAll('.blocking button')].some(button=>button.textContent==='Continue writing'&&!button.disabled)`,'background reconciliation escape');
+   await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Continue writing').click()`);
+   await waitFor(`!document.querySelector('.blocking')`,'background warning deferred');
+   await evaluate(`(()=>{const editor=document.querySelector('.manuscript');editor.focus();const selection=getSelection();selection.selectAllChildren(editor);selection.collapseToEnd();})()`);
+   await main.webContents.insertText(' after failed closing');
+   await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Unsaved changes')`,'writing after canceled closing');
+   await evaluate(`document.querySelector('.writing-meta button:nth-of-type(2)').click()`);
+   await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Saved.')&&!document.querySelector('.blocking')`,'save after canceled closing');
+   const metadata=JSON.parse(fs.readFileSync(path.join(fixture,'profile/protection/native-pending',corruptedBackup+'.json'),'utf8'));
+   if(!metadata.deferred)throw new Error('Background escape did not retain its deferred operation');
+   console.log('RECONCILE_BACKGROUND canceled failed close, continued writing and saved; original evidence retained');
+   main.close();
+  }
+ }else if(mode==='reconcile-defer-restart'){
+  const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
+  const retained=await evaluate(`window.writingTool.protection({command:'protection.pending'})`);
+  if(retained.status!=='ok'||!retained.value.pending.includes(id))throw new Error('Restart lost the retained operation');
+  await waitFor(`!!document.querySelector('.chapter-select')&&!document.querySelector('.blocking')`,'writing available after restart');
+  await evaluate(`document.querySelector('.chapter-select').click()`);
+  await waitFor(`!!document.querySelector('.manuscript')&&!document.querySelector('.blocking')`,'reopened writing after restart');
+  await evaluate(`(()=>{const editor=document.querySelector('.manuscript');editor.focus();const selection=getSelection();selection.selectAllChildren(editor);selection.collapseToEnd();})()`);
+  await main.webContents.insertText(' after restart');
+  await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Unsaved changes')`,'restart manuscript edited');
+  await evaluate(`document.querySelector('.writing-meta button:nth-of-type(2)').click()`);
+  await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Saved.')&&!document.querySelector('.blocking')`,'restart manuscript saved');
+  const queried=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+  if(queried.status!=='ok'||!Object.values(queried.snapshot.project.manuscripts).some(text=>text.endsWith(' after restart')))throw new Error('Deferred operation blocked saving after restart');
+  console.log('RECONCILE_DEFER_RESTART retained job, project opening, editing, saving and normal close passed');
+  main.close();
+ }else if(mode==='factions'){
   await verifyFactionReopen();
   main.close();
  }else if(mode==='intervals'){

@@ -13,9 +13,10 @@ import {SettingsStorage} from '../src/infrastructure/settings-storage.ts';
 import {createRecord,dateLabel} from '../src/presentation/workspace/model.ts';
 import {DEFAULT_PANELS} from '../src/presentation/workspace/SettingsForm.tsx';
 import {runSmokeProcess} from './smoke.mjs';
+import {unzipSync,strFromU8} from 'fflate';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
-const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions'];
+const availableModes=['panels','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions','writing','reconcile-defer','reconcile-background'];
 const selectedModes=process.argv.slice(2);
 if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
 const modes=selectedModes.length?selectedModes:availableModes;
@@ -38,6 +39,12 @@ for(const config of [await generator.getMainConfig(),...await generator.getRende
  });
 }
 const results=[];
+function verifyClosingArchive(fixture,suffix){
+ const found=fs.readdirSync(path.join(fixture,'backups')).filter(name=>name.endsWith('.zip')).some(name=>{
+  try{const files=unzipSync(fs.readFileSync(path.join(fixture,'backups',name)));return Object.entries(files).some(([name,bytes])=>/^project\/[^/]+\/chapters\/[^/]+\.wrt$/.test(name)&&strFromU8(bytes).endsWith(suffix));}catch{return false;}
+ });
+ if(!found)throw new Error('The fresh closing ZIP did not include writing saved after deferral.');
+}
 for(const mode of modes){
  const fixture=path.join(output,mode);
  for(const directory of ['profile','project','universe','backups'])fs.mkdirSync(path.join(fixture,directory),{recursive:true});
@@ -46,6 +53,21 @@ for(const mode of modes){
  const project=new FileProjectStorage(coordinator).create(path.join(fixture,'project'),{operationId:randomUUID()},universe.snapshot().ownerId,universe.location).store;
  try{
   const snapshot={project:project.workspace.snapshot(),universe:universe.workspace.snapshot()};
+  if(mode==='reconcile-defer'){
+   const id=randomUUID(),request={protocolVersion:1,requestId:id,command:'protection.backup',owner:snapshot.project.owner,reason:'Close',chooseLocation:false,closing:true,nativeBackupFolder:path.join(fixture,'missing-backups')};
+   const pending={request,project:project.location,universe:universe.location,projectIdentity:{id:snapshot.project.owner.id,rootId:snapshot.project.rootId},universeIdentity:{id:snapshot.universe.owner.id,rootId:snapshot.universe.rootId},dispatch:'attempted'};
+   for(const directory of ['native-pending','jobs'])fs.mkdirSync(path.join(fixture,'profile/protection',directory),{recursive:true});
+   fs.writeFileSync(path.join(fixture,'profile/protection/native-pending',id+'.json'),JSON.stringify(pending));
+   fs.writeFileSync(path.join(fixture,'profile/protection/jobs',id+'.json'),JSON.stringify({schemaVersion:1,state:'started',request}));
+   fs.writeFileSync(path.join(fixture,'pending-id'),id);
+   const otherId=randomUUID(),otherRequest={...request,requestId:otherId};
+   fs.writeFileSync(path.join(fixture,'profile/protection/native-pending',otherId+'.json'),JSON.stringify({...pending,request:otherRequest}));
+   fs.writeFileSync(path.join(fixture,'profile/protection/jobs',otherId+'.json'),JSON.stringify({schemaVersion:1,state:'started',request:otherRequest}));
+   fs.writeFileSync(path.join(fixture,'other-pending-id'),otherId);
+   const liveId=randomUUID(),liveRequest={protocolVersion:1,requestId:liveId,command:'protection.apply',proposalId:randomUUID()};
+   fs.writeFileSync(path.join(fixture,'profile/protection/native-pending',liveId+'.json'),JSON.stringify({...pending,request:liveRequest,dispatch:'prepared'}));
+   fs.writeFileSync(path.join(fixture,'live-id'),liveId);
+  }
   const characters=['major','minor'].map(type=>{const record=createRecord(snapshot,'character');record.data.name=`Fixture ${type}`;record.data.type=type;return record;});
   fs.writeFileSync(path.join(fixture,'characters.json'),JSON.stringify(characters));
   if(mode==='timeline'||mode==='intervals'){
@@ -83,6 +105,16 @@ for(const mode of modes){
   if(panel.width!==String(result.expectedBounds.width)||panel.height!==String(result.expectedBounds.height))throw new Error('Immediate-close bounds were not persisted: '+mode);
  }
  results.push(result);console.log(`${mode}: passed`);
+ if(mode==='reconcile-background')verifyClosingArchive(fixture,' after failed closing');
+ if(mode==='reconcile-defer'){
+  const restarted=await runSmokeProcess(require('electron'),[path.join(root,'tests/fixtures/desktop-integration.cjs')],{
+   fault:mode+'-restart',timeoutMs:120000,
+   env:{...process.env,WRITINGTOOL_TEST_ROOT:root,WRITINGTOOL_TEST_BUILD:generator.webpackDir,WRITINGTOOL_TEST_FIXTURE:fixture,WRITINGTOOL_TEST_MODE:mode+'-restart'},
+   write:bytes=>fs.appendFileSync(path.join(output,mode+'-restart.log'),bytes),
+  });
+  results.push(restarted);console.log(`${mode}-restart: passed`);
+  verifyClosingArchive(fixture,' after restart');
+ }
 }
 fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2)+'\n');
 console.log('Desktop verification evidence: '+output);

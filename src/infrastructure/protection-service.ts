@@ -63,6 +63,7 @@ export class ProtectionService{
   return value;
  }
  async execute(request:ProtectionHostRequest,replaying=false):Promise<ProtectionValue>{
+  if(request.command==='protection.defer')throw new Error('Unfinished operations are set aside by the native capability owner.');
   if(request.nativePrepareOnly){const {nativePrepareOnly:_nativePrepareOnly,...original}=request;this.prepare(original);return{};}
   if(request.command==='protection.reconcile'){
    const job=this.readJob(request.operationId);
@@ -125,7 +126,7 @@ export class ProtectionService{
    case 'protection.capture':{const manifest=this.revisions.capture(request.owner,request.reason,request.requestId);validateCaptureCatalogs(manifest,this.revisions);return{manifest,warnings:this.retentionWarnings(request.owner)};}
    case 'protection.inspect':{const manifest=this.revisions.get(request.owner,request.revisionId);return this.inspection(manifest);};
    case 'protection.backup':{const manifest=this.revisions.capture(request.owner,request.reason,request.requestId),destination=this.backupDestination(request.nativeDestination,request.owner,manifest,request.nativeBackupFolder);const record=await this.archives.write(manifest,destination,control,request.requestId);return{manifest,output:{id:record.id,path:destination.path,notice:null},warnings:this.retentionWarnings(request.owner)};}
-   case 'protection.delete':{const settings=this.settings.get();if(request.kind==='archive')this.archives.remove(request.owner,request.id,settings.retentionDays,true);else this.revisions.remove(request.owner,request.id,this.protectedIds(request.owner),settings.retentionDays,true);return{deleted:request.id};}
+   case 'protection.delete':{const settings=this.settings.get();if(request.kind==='archive'){if(this.pendingProtectionIds().has(request.id))throw new Error('An unfinished operation still references this archive. Reconcile it before deletion.');this.archives.remove(request.owner,request.id,settings.retentionDays,true);}else this.revisions.remove(request.owner,request.id,this.protectedIds(request.owner),settings.retentionDays,true);return{deleted:request.id};}
    case 'protection.recover':{const manifest=request.revisionId&&request.owner?this.revisions.get(request.owner,request.revisionId):request.nativeArchive?await this.archives.import(request.nativeArchive,control):null;if(!manifest)throw new Error('Choose a complete ZIP or retained revision.');return{...this.inspection(manifest),recovery:this.recovery.begin(manifest,request.scope)};}
    case 'protection.reference':return{recovery:this.recovery.reference(request.proposalId,request.sourceId,request.targetId,request.action,request.replacementId)};
    case 'protection.resume':{const recovery=this.recovery.resume(request.proposalId);return{...this.inspection(this.recovery.manifest(recovery.proposal)),recovery};};
@@ -134,6 +135,7 @@ export class ProtectionService{
    case 'protection.apply':return await this.applyRecovery(request,control);
    case 'protection.export':{if(!request.nativeDestination)throw new OperationCanceled();this.assertOutputOutsideRoots(request.nativeDestination.path,true);control.phase='Pinning the saved export generation';await exportSaved(this.exportCaptures.load(request),request.format,request.storyId,request.chapterIds,request.nativeDestination,request.nativeRuntime,control);return{output:{id:randomUUID(),path:request.nativeDestination.path,notice:request.format==='sqlite'?CATALOG_NOTICE:null}};}
    case 'protection.reconcile':throw new Error('Reconciliation must retain its original job.');
+   case 'protection.defer':throw new Error('Unfinished operations are set aside by the native capability owner.');
    case 'protection.open':throw new Error('Completed outputs are opened by the native capability owner.');
   }}catch(error){if(!control.cancelable)throw new UniverseFailure('RECOVERY_REQUIRED',error instanceof Error?error.message:'Publication outcome requires reconciliation.','unknown');throw error;}finally{this.operations.delete(request.requestId);}
  }
@@ -151,14 +153,18 @@ export class ProtectionService{
   const destination={path:path.join(folder,name),expectedHash:null};this.assertOutputOutsideRoots(destination.path);return destination;
  }
 
- private protectedIds(owner:Owner){const ids=this.archives.protectedRevisionIds();const live=this.workspace.snapshot(),owners=[owner,...[live.project?.owner,live.universe?.owner].filter((o):o is Owner=>!!o)];for(const candidate of new Map(owners.map(o=>[ownerKey(o),o])).values())for(const manifest of this.revisions.list(candidate))for(const id of manifest.retainedRevisionIds)ids.add(id);for(const name of fs.readdirSync(path.join(this.userData,'protection/proposals')).filter(n=>/^[a-f0-9-]{36}\.json$/.test(n))){try{const proposal=this.recovery.get(name.replace(/\.json$/,''));if(proposal.status!=='applied'){ids.add(proposal.revisionId);if(proposal.replacedRevisionId)ids.add(proposal.replacedRevisionId);}}catch{throw new Error('Uncertain pending recovery evidence blocks retention.');}}return ids;}
+ private protectedIds(owner:Owner){const ids=this.archives.protectedRevisionIds();for(const id of this.pendingProtectionIds())ids.add(id);const live=this.workspace.snapshot(),owners=[owner,...[live.project?.owner,live.universe?.owner].filter((o):o is Owner=>!!o)];for(const candidate of new Map(owners.map(o=>[ownerKey(o),o])).values())for(const manifest of this.revisions.list(candidate))for(const id of manifest.retainedRevisionIds)ids.add(id);for(const name of fs.readdirSync(path.join(this.userData,'protection/proposals')).filter(n=>/^[a-f0-9-]{36}\.json$/.test(n))){try{const proposal=this.recovery.get(name.replace(/\.json$/,''));if(proposal.status!=='applied'){ids.add(proposal.revisionId);if(proposal.replacedRevisionId)ids.add(proposal.replacedRevisionId);}}catch{throw new Error('Uncertain pending recovery evidence blocks retention.');}}return ids;}
+ private pendingProtectionIds():Set<string>{
+  ensureManagedDirectory(this.userData,'protection/native-pending');
+  return new Set(fs.readdirSync(path.join(this.userData,'protection/native-pending')).map(name=>{if(!/^[a-f0-9-]{36}\.json$/.test(name))throw new Error('Unrecognized pending operation evidence blocks retention.');return name.slice(0,-5);}));
+ }
  private retentionWarnings(owner:Owner):string[]{try{this.retain(owner);return[];}catch(error){return['The capture completed, but automatic cleanup was deferred. '+(error instanceof Error?error.message:'Retained evidence could not be checked.')];}}
  private retain(owner:Owner){
   const settings=this.settings.get(),protectedIds=this.protectedIds(owner);
   for(const m of this.revisions.list(owner).reverse())if(!protectedIds.has(m.id))this.revisions.remove(owner,m.id,protectedIds,settings.retentionDays);
   const archives=this.archives.registry().filter(a=>ownerKey(a.owner)===ownerKey(owner)).sort((a,b)=>Date.parse(b.capturedAt)-Date.parse(a.capturedAt)),newestTen=new Set(archives.slice(0,10).map(a=>a.id));
   for(const archive of archives.reverse()){
-   if(newestTen.has(archive.id)||BigInt(Date.now()-Date.parse(archive.capturedAt))<BigInt(settings.retentionDays)*86400000n)continue;
+   if(newestTen.has(archive.id)||this.pendingProtectionIds().has(archive.id)||BigInt(Date.now()-Date.parse(archive.capturedAt))<BigInt(settings.retentionDays)*86400000n)continue;
    this.archives.remove(owner,archive.id,settings.retentionDays);
   }
  }

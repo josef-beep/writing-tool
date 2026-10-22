@@ -2,7 +2,7 @@ import {activationPath,activationRootAt,validActivationDecision} from '../infras
 import {configureConfinedFs} from '../infrastructure/confined-fs';
 import {RecentRoots} from '../infrastructure/recent-roots';
 import {nativeProtection} from './protection';
-import {PROTECTION_CHANNEL,validProtectionRequest,protectionHasDurableEffects,type ProtectionResult} from '../application/contracts/protection';
+import {PROTECTION_CHANNEL,validProtectionRequest,protectionHasDurableEffects,canDeferProtection,type ProtectionResult} from '../application/contracts/protection';
 import {ProtectionHostClient} from './protection-host-client';
 import {registerPresentation} from './presentation';
 import {WORKSPACE_CHANNEL,validWorkspaceRequest,type WorkspaceHostRequest,type WorkspaceResult} from '../application/contracts/workspace';
@@ -35,7 +35,7 @@ let projectClient: ProjectHostClient | undefined;
 let workspaceClient:WorkspaceHostClient|undefined;
 let protectionClient:ProtectionHostClient|undefined;
 let protectionInFlight=false;
-type PendingProtection={request:import('../application/contracts/protection').ProtectionHostRequest;project:string|null;universe:string|null;projectIdentity:{id:string;rootId:string}|null;universeIdentity:{id:string;rootId:string}|null;dispatch:'prepared'|'attempted'};
+type PendingProtection={request:import('../application/contracts/protection').ProtectionHostRequest;project:string|null;universe:string|null;projectIdentity:{id:string;rootId:string}|null;universeIdentity:{id:string;rootId:string}|null;dispatch:'prepared'|'attempted';deferred?:true};
 const pendingProtection=new Map<string,PendingProtection>();
 let activeProjectLocation:string|undefined;
 let activeProjectIdentity:{id:string;rootId:string}|undefined;
@@ -57,13 +57,14 @@ const unresolvedOperations = new Set<string>();
 function pendingProtectionPath(id:string){return `protection/native-pending/${id}.json`;}
 function savePendingProtection(id:string,value:PendingProtection){const root=app.getPath('userData');ensureManagedDirectory(root,'protection/native-pending');const relative=pendingProtectionPath(id),old=fs.existsSync(path.join(root,relative))?hash(readManaged(root,relative)):null;publishManagedBytes(root,relative,Buffer.from(jsonBytes(value)),old);}
 function forgetPendingProtection(id:string){const root=app.getPath('userData'),relative=pendingProtectionPath(id);try{if(fs.existsSync(path.join(root,relative)))removeManagedBytes(root,relative,hash(readManaged(root,relative)));}catch(error){unresolvedOperations.add(id);throw error;}pendingProtection.delete(id);unresolvedOperations.delete(id);}
+function pendingProtectionState(){return{pending:[...pendingProtection.keys()],deferrable:[...pendingProtection].filter(([,pending])=>canDeferProtection(pending.request.command)).map(([id])=>id),deferred:[...pendingProtection].filter(([,pending])=>pending.deferred).map(([id])=>id)};}
 function loadPendingProtection(){
  const root=app.getPath('userData');fs.mkdirSync(root,{recursive:true,mode:0o700});ensureManagedDirectory(root,'protection/native-pending');
  for(const name of fs.readdirSync(path.join(root,'protection/native-pending'))){
   const value=decode(readManaged(root,'protection/native-pending/'+name));
-  if(!closed(value,['request','project','universe','projectIdentity','universeIdentity',...(typeof value==='object'&&value!==null&&Object.hasOwn(value,'dispatch')?['dispatch']:[])])||!validProtectionRequest(value.request,true)||value.request.nativePrepareOnly||name!==value.request.requestId+'.json'||Object.hasOwn(value,'dispatch')&&!['prepared','attempted'].includes(String(value.dispatch))||![value.projectIdentity,value.universeIdentity].every(identity=>identity===null||closed(identity,['id','rootId'])&&isUuid(identity.id)&&isUuid(identity.rootId))||(value.project!==null&&(typeof value.project!=='string'||!path.isAbsolute(value.project)))||(value.universe!==null&&(typeof value.universe!=='string'||!path.isAbsolute(value.universe))))throw new Error('Pending protection metadata is invalid. Preserve application data for recovery.');
-  const pending:PendingProtection={request:value.request,project:value.project as string|null,universe:value.universe as string|null,projectIdentity:value.projectIdentity as PendingProtection['projectIdentity'],universeIdentity:value.universeIdentity as PendingProtection['universeIdentity'],dispatch:value.dispatch==='prepared'?'prepared':'attempted'};
-  pendingProtection.set(value.request.requestId,pending);unresolvedOperations.add(value.request.requestId);
+  if(!closed(value,['request','project','universe','projectIdentity','universeIdentity',...(typeof value==='object'&&value!==null&&Object.hasOwn(value,'dispatch')?['dispatch']:[]),...(typeof value==='object'&&value!==null&&Object.hasOwn(value,'deferred')?['deferred']:[])])||!validProtectionRequest(value.request,true)||value.request.nativePrepareOnly||value.request.command==='protection.defer'||Object.hasOwn(value,'deferred')&&(value.deferred!==true||!canDeferProtection(value.request.command))||name!==value.request.requestId+'.json'||Object.hasOwn(value,'dispatch')&&!['prepared','attempted'].includes(String(value.dispatch))||![value.projectIdentity,value.universeIdentity].every(identity=>identity===null||closed(identity,['id','rootId'])&&isUuid(identity.id)&&isUuid(identity.rootId))||(value.project!==null&&(typeof value.project!=='string'||!path.isAbsolute(value.project)))||(value.universe!==null&&(typeof value.universe!=='string'||!path.isAbsolute(value.universe))))throw new Error('Pending protection metadata is invalid. Preserve application data for recovery.');
+  const pending:PendingProtection={request:value.request,project:value.project as string|null,universe:value.universe as string|null,projectIdentity:value.projectIdentity as PendingProtection['projectIdentity'],universeIdentity:value.universeIdentity as PendingProtection['universeIdentity'],dispatch:value.dispatch==='prepared'?'prepared':'attempted',...(value.deferred===true?{deferred:true as const}:{})};
+  pendingProtection.set(value.request.requestId,pending);if(!pending.deferred)unresolvedOperations.add(value.request.requestId);
  }
 }
 
@@ -305,10 +306,36 @@ else
             if(!authorized(event)||!validProtectionRequest(value))throw new Error('Protection request denied');
             if(draining)return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Wait for normal closing to finish.',outcome:'not-committed',operationId:null};
             if(value.command==='protection.pending'){
-                try{const root=app.getPath('userData'),relative='protection/proposals';ensureManagedDirectory(root,relative);const proposals=fs.readdirSync(path.join(root,relative)).filter(name=>name.endsWith('.json')&&isUuid(name.slice(0,-5))).map(name=>name.slice(0,-5));return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'ok',value:{pending:[...pendingProtection.keys()],proposals}};}
+                try{const root=app.getPath('userData'),relative='protection/proposals';ensureManagedDirectory(root,relative);const proposals=fs.readdirSync(path.join(root,relative)).filter(name=>name.endsWith('.json')&&isUuid(name.slice(0,-5))).map(name=>name.slice(0,-5));return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'ok',value:{...pendingProtectionState(),proposals}};}
                 catch(error){return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Pending recovery metadata could not be read.',outcome:'not-committed',operationId:null};}
             }
             if(value.command==='protection.cancel')return protectionClient!.request(value);
+            if(value.command==='protection.defer'){
+                const base={protocolVersion:1 as const,requestId:value.requestId,command:value.command};
+                if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight)return{...base,status:'error',message:'Wait for the active operation before continuing.',outcome:'not-committed',operationId:null};
+                const pending=pendingProtection.get(value.operationId);
+                if(!pending||!canDeferProtection(pending.request.command))return{...base,status:'error',message:'This operation changes live writing and must be reconciled before continuing.',outcome:'not-committed',operationId:null};
+                protectionInFlight=true;
+                try{
+                    if(hostExited){
+                        launchApplicationHost();
+                        if(activeProjectLocation){
+                            const opened=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:activeProjectLocation,universePath:activeLocation});
+                            if(opened.status!=='ok'||!opened.snapshot||opened.snapshot.ownerId!==activeProjectIdentity?.id||opened.snapshot.rootId!==activeProjectIdentity?.rootId)throw new Error('Reopen the saved project before continuing writing.');
+                        }else if(activeLocation){
+                            const opened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:activeLocation});
+                            if(opened.status!=='ok'||!opened.snapshot||opened.snapshot.ownerId!==activeSnapshot?.ownerId||opened.snapshot.rootId!==activeSnapshot?.rootId)throw new Error('Reopen the saved universe before continuing writing.');
+                        }
+                        await synchronizeProtectionContext(false);
+                    }
+                    const deferred:PendingProtection={...pending,deferred:true};
+                    savePendingProtection(value.operationId,deferred);
+                    pendingProtection.set(value.operationId,deferred);unresolvedOperations.delete(value.operationId);
+                    if(!unresolvedOperations.size&&!pendingProjectCreation)window?.webContents.send('writingtool:recovered-context:v1');
+                    return{...base,status:'ok',value:{...pendingProtectionState(),warnings:['The unfinished operation is retained for later reconciliation. It has not been marked complete.']}};
+                }catch(error){return{...base,status:'error',message:error instanceof Error?error.message:'The operation could not be set aside. Retry or reconcile it.',outcome:'unknown',operationId:value.operationId};}
+                finally{protectionInFlight=false;}
+            }
             // Listing recent roots has no authority effects and must remain available during recovery.
             if(value.command==='protection.recents')return runProtection(value);
             if(value.command==='protection.reconcile'){
@@ -372,8 +399,12 @@ else
                     }
                     const result=await runProtection(value);
                     if(result.status==='ok'){await synchronizeProtectionContext();forgetPendingProtection(value.operationId);}
+                    if(result.status!=='ok'&&pending?.deferred)await synchronizeProtectionContext();
+                    if(result.status==='error'){
+                        return{...result,outcome:'unknown',operationId:value.operationId};
+                    }
                     return result;
-                }catch(error){unresolvedOperations.add(value.operationId);return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
+                }catch(error){if(!pendingProtection.get(value.operationId)?.deferred)unresolvedOperations.add(value.operationId);else window?.webContents.send('writingtool:recovered-context:v1');return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
                 finally{protectionInFlight=false;}
             }
 

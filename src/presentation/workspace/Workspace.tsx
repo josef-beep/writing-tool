@@ -1,5 +1,6 @@
 import {ProtectionPanel,type ProtectionMode} from './ProtectionPanel';
-import type {ProtectionCommand,ProtectionResult} from '../../application/contracts/protection';
+import type {ProtectionCommand,ProtectionResult,ProtectionValue} from '../../application/contracts/protection';
+import {canDeferProtection} from '../../application/contracts/protection';
 import type {PresentationEvent,PanelAction,PanelId,PanelMirror,CharacterFilter,ContextTab,TimelineView} from '../../application/contracts/presentation';
 import {INITIAL_TIMELINE_VIEW,resolveTimelineView} from '../../application/contracts/presentation';
 import {forwardRef,useEffect,useImperativeHandle,useRef,useState,type ReactNode} from 'react';
@@ -24,7 +25,7 @@ type Draft={record:WorkspaceRecord;text:string|null;stories:string[];depictions?
 type Center='writing'|'record'|'tree'|'settings'|'utility'|'factions';
 type Pending={command:WorkspaceCommand;operationId:string;revision:string;draftId:string|null;origin:'writing'|'record'|'other'|'calendar'};
 export const Workspace=forwardRef<WorkspaceHandle,{identity:string;universeName:string;onStatus:(v:string)=>void;onCenterChange?:(active:boolean)=>void;closing?:boolean;navigating?:boolean;onBlockedChange?:(blocked:boolean)=>void;covered?:boolean;beforeNavigate?:()=>Promise<boolean>;onCalendarUpdateChange?:(state:{required:boolean;busy:boolean})=>void}>(function Workspace({identity,universeName,onStatus,onCenterChange,closing=false,navigating=false,onBlockedChange,onCalendarUpdateChange,covered=false,beforeNavigate},ref){
- const [backgroundFailure,setBackgroundFailure]=useState<{command:ProtectionCommand;message:string;operationId:string|null}|null>(null),backgroundFailureRef=useRef(backgroundFailure);backgroundFailureRef.current=backgroundFailure;
+ const [backgroundFailure,setBackgroundFailure]=useState<{command:ProtectionCommand;message:string;operationId:string|null;canDefer?:boolean}|null>(null),backgroundFailureRef=useRef(backgroundFailure);backgroundFailureRef.current=backgroundFailure;
  const utilityGuard=useRef<(()=>Promise<boolean>)|null>(null);
  const coveredRef=useRef(covered);coveredRef.current=covered;
  const closingRef=useRef(closing);closingRef.current=closing;
@@ -143,8 +144,23 @@ export const Workspace=forwardRef<WorkspaceHandle,{identity:string;universeName:
    const command:ProtectionCommand=failure.operationId?{command:'protection.reconcile',operationId:failure.operationId,chooseLocation}:chooseLocation&&failure.command.command==='protection.backup'?{...failure.command,chooseLocation:true}:failure.command;
    const result=await runProtection(command);
    if(result.status==='ok'&&result.value.reconciliation?.outcome==='not-committed'){const next={...failure,message:'The original operation was confirmed not completed. Retry to create the required complete capture.',operationId:null};backgroundFailureRef.current=next;setBackgroundFailure(next);}
-   else if(result.status==='ok'){backgroundFailureRef.current=null;setBackgroundFailure(null);}
+   else if(result.status==='ok'){const pending=await runProtection({command:'protection.pending'});if(pending.status!=='ok')throw new Error(pending.status==='error'?pending.message:'Pending protection operations could not be checked.');acceptBackgroundPending(pending.value);}
    else{const next={...failure,message:result.status==='error'?result.message:'This backup attempt is incomplete because folder selection was canceled. Your configured destination and schedule are retained.',operationId:result.status==='error'&&result.outcome==='unknown'?result.operationId:failure.operationId};backgroundFailureRef.current=next;setBackgroundFailure(next);}
+  }catch(error){const next={...failure,message:message(error)};backgroundFailureRef.current=next;setBackgroundFailure(next);}
+  finally{setProtectionWorking(false);}
+ }
+ function acceptBackgroundPending(value:ProtectionValue){
+  const remaining=value.pending?.find(id=>!value.deferred?.includes(id));
+  if(remaining){const next={command:{command:'protection.reconcile' as const,operationId:remaining},operationId:remaining,canDefer:value.deferrable?.includes(remaining)??false,message:'Another unfinished operation needs attention. Reconcile it or set it aside before continuing to write.'};backgroundFailureRef.current=next;setBackgroundFailure(next);return false;}
+  backgroundFailureRef.current=null;setBackgroundFailure(null);return true;
+ }
+ async function deferBackground(){
+  const failure=backgroundFailureRef.current;if(!failure?.operationId||!(failure.canDefer??canDeferProtection(failure.command.command))||utilityBusy.current||closingRef.current)return;
+  setProtectionWorking(true);
+  try{
+   const result=await runProtection({command:'protection.defer',operationId:failure.operationId});
+   if(result.status==='ok'){if(acceptBackgroundPending(result.value))status('Continue writing. The unfinished protection operation is retained in Recover work.');}
+   else{const next={...failure,message:result.status==='error'?result.message:'The unfinished operation could not be deferred.'};backgroundFailureRef.current=next;setBackgroundFailure(next);}
   }catch(error){const next={...failure,message:message(error)};backgroundFailureRef.current=next;setBackgroundFailure(next);}
   finally{setProtectionWorking(false);}
  }
@@ -252,7 +268,7 @@ export const Workspace=forwardRef<WorkspaceHandle,{identity:string;universeName:
  {prompt&&<Dialog title={prompt==='manual'?'Save your changes?':'Writing has not been saved'} onCancel={()=>choose('cancel')}><p>{prompt==='manual'?'Save your pending changes before leaving this editor?':'Your writing is retained. Retry the save to continue, or cancel navigation.'}</p><div className="actions"><button onClick={()=>choose('save')}>{prompt==='manual'?'Save':'Retry save'}</button>{prompt==='manual'&&<button onClick={()=>choose('discard')}>Discard</button>}<button autoFocus onClick={()=>choose('cancel')}>{prompt==='manual'?'Cancel':'Cancel navigation'}</button></div></Dialog>}
  {error&&<Dialog title="Unable to complete operation" onCancel={()=>setError(undefined)}><p className="error-message">{error}</p><div className="actions">{pending?<button disabled={busy} onClick={()=>void reconcile()}>Reconcile original save</button>:layoutError?<button disabled={busy} onClick={()=>{setError(undefined);void drainPanels();}}>Retry layout save</button>:readOnlyError.current?<button disabled={busy} onClick={()=>{setError(undefined);void loadWorkspace();}}>Retry loading</button>:<button disabled={busy} onClick={()=>{setError(undefined);void saveCurrent();}}>Retry Save</button>}<button autoFocus onClick={()=>setError(undefined)}>Return to editor</button></div></Dialog>}
  {deleteRecord&&<Dialog title="Delete this record?" onCancel={()=>setDeleteRecord(null)}><p>Delete {recordLabel(deleteRecord)}? Referenced records cannot be removed until their links are resolved.</p><div className="actions"><button onClick={()=>void confirmDelete()}>Delete</button><button autoFocus onClick={()=>setDeleteRecord(null)}>Cancel</button></div></Dialog>}
- {backgroundFailure&&!prompt&&!error&&!deleteRecord&&!closeFailure&&<Dialog title="Protection needs attention" onCancel={()=>{if(!backgroundFailure.operationId)setBackgroundFailure(null);}}><p>{backgroundFailure.message}</p><button disabled={protectionBusy} onClick={()=>void retryBackground()}>{backgroundFailure.operationId?'Reconcile original operation':'Retry now'}</button>{backgroundFailure.command.command==='protection.backup'&&<button disabled={protectionBusy} onClick={()=>void retryBackground(true)}>Choose another backup location</button>}{!backgroundFailure.operationId&&<button disabled={protectionBusy} onClick={()=>setBackgroundFailure(null)}>Try again at next interval</button>}</Dialog>}
+ {backgroundFailure&&!prompt&&!error&&!deleteRecord&&!closeFailure&&<Dialog title="Protection needs attention" onCancel={()=>{if(!backgroundFailure.operationId)setBackgroundFailure(null);}}><p>{backgroundFailure.message}</p><button disabled={protectionBusy} onClick={()=>void retryBackground()}>{backgroundFailure.operationId?'Reconcile original operation':'Retry now'}</button>{backgroundFailure.command.command==='protection.backup'&&<button disabled={protectionBusy} onClick={()=>void retryBackground(true)}>Choose another backup location</button>}{backgroundFailure.operationId&&(backgroundFailure.canDefer??canDeferProtection(backgroundFailure.command.command))&&<button disabled={protectionBusy} onClick={()=>void deferBackground()}>Continue writing</button>}{!backgroundFailure.operationId&&<button disabled={protectionBusy} onClick={()=>setBackgroundFailure(null)}>Try again at next interval</button>}</Dialog>}
  {closeFailure&&<Dialog title="Required closing operation failed" onCancel={()=>{closeChoice.current?.('cancel');closeChoice.current=null;setCloseFailure(null);}}><p>{closeFailure.message}</p><p>The application remains open until the required save, complete revision and ZIP succeed.</p>{(['retry','location','cancel'] as const).filter(choice=>choice!=='location'||closeFailure.backup).map(choice=><button key={choice} onClick={()=>{closeChoice.current?.(choice);closeChoice.current=null;setCloseFailure(null);}}>{choice==='retry'?'Retry':choice==='location'?'Choose another backup location':'Cancel closing'}</button>)}</Dialog>}</>;
 });
 function message(e:unknown):string{return e instanceof Error?e.message:'The operation could not complete. Your edits are retained.';}
