@@ -6,6 +6,7 @@ import { type CreateInput, type SaveInput, type UniverseResult, type UniverseSna
 import './shell.css';
 import {Workspace,type WorkspaceHandle} from './workspace/Workspace';
 import {FloatingPanel} from './workspace/FloatingPanel';
+import {appShortcut} from './keyboard';
 type Departure = 'project-new' | 'project-open' | 'project-close' | 'new' | 'open' | 'close' | 'quit' | 'dismiss' | 'calendar-update' | 'workspace-action';
 function Shell() {
     const [result, setResult] = useState<ReadinessResult>();
@@ -16,6 +17,8 @@ function Shell() {
     const [calendarUpdate, setCalendarUpdate] = useState({required:false,busy:false});
     const [snapshot, setSnapshot] = useState<UniverseSnapshot | null>(null);
     const [projectSnapshot, setProjectSnapshot] = useState<ProjectSnapshot | null>(null);
+    const projectOpenRef = useRef(false);
+    projectOpenRef.current = projectSnapshot !== null;
     const [projectUncertain, setProjectUncertain] = useState(false);
     const [pendingProtectionCount, setPendingProtectionCount] = useState(0);
     const [editor, setEditor] = useState<'create' | 'profile' | null>(null);
@@ -24,6 +27,13 @@ function Shell() {
     const [error, setError] = useState<string>();
     const [fieldError, setFieldError] = useState<string>();
     const [pendingDeparture, setPendingDeparture] = useState<Departure>();
+    const shellDialogOpen = !!pendingDeparture || !!error;
+    const shellDialogWasOpen = useRef(false);
+    const shellDialogOrigin = useRef<HTMLElement | null>(null);
+    // Capture before React mounts the dialog and its autoFocus moves focus.
+    if (shellDialogOpen && !shellDialogWasOpen.current)
+        shellDialogOrigin.current = document.activeElement as HTMLElement | null;
+    shellDialogWasOpen.current = shellDialogOpen;
     const [pending, setPending] = useState<CreateInput | SaveInput>();
     const [status, setStatus] = useState('Open a project or choose a universe to begin.');
     const workspaceRef = useRef<WorkspaceHandle>(null);
@@ -245,38 +255,37 @@ function Shell() {
             departureRef.current('quit');
         };
         const keys = (event: KeyboardEvent) => {
+            if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
+            const shortcut = appShortcut(event);
             if (closingRef.current) {
-                if ((event.ctrlKey || event.metaKey) && ['n', 'o', 's', 'w'].includes(event.key.toLowerCase())) {
+                if (shortcut && !shortcut.startsWith('zoom-')) {
                     event.preventDefault();
                     event.stopImmediatePropagation();
                 }
                 return;
             }
-            if (event.key === 'Escape' && editorRef.current && !document.querySelector('.blocking')) {
+            if (event.key === 'Escape' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && editorRef.current && !document.querySelector('.blocking')) {
                 event.preventDefault();
                 departureRef.current('dismiss');
                 return;
             }
-            if (!(event.ctrlKey || event.metaKey))
-                return;
-            const key = event.key.toLowerCase();
-            if (key === 's' && editorRef.current) event.stopImmediatePropagation();
+            if (!shortcut || shortcut.startsWith('zoom-')) return;
             if (document.querySelector('.blocking')) {
-                if (['n', 'o', 's', 'w'].includes(key))
-                    event.preventDefault();
+                event.preventDefault();
                 return;
             }
-            if (key === 'n' || key === 'o' || key === 's' || key === 'w') {
+            if (shortcut === 'save') {
+                if (!editorRef.current) return; // The workspace owns its save shortcut.
                 event.preventDefault();
-                if (key === 'n')
-                    departureRef.current('project-new');
-                else if (key === 'o')
-                    departureRef.current('project-open');
-                else if (key === 'w')
-                    departureRef.current(editorRef.current && !event.shiftKey ? 'dismiss' : 'close');
-                else if (editorRef.current)
-                    document.querySelector<HTMLButtonElement>('[data-profile-save]')?.click();
+                event.stopImmediatePropagation();
+                document.querySelector<HTMLButtonElement>('[data-profile-save]')?.click();
+                return;
             }
+            event.preventDefault();
+            if (shortcut === 'new-project') departureRef.current('project-new');
+            else if (shortcut === 'open-project') departureRef.current('project-open');
+            else if (shortcut === 'close') departureRef.current(editorRef.current ? 'dismiss' : projectOpenRef.current ? 'project-close' : 'close');
+            else if (shortcut === 'close-universe' && !projectOpenRef.current) departureRef.current('close');
         };
         const preventUnapprovedUnload = (event: BeforeUnloadEvent) => {
             event.preventDefault();
@@ -286,7 +295,7 @@ function Shell() {
         const recovered=()=>{void (async()=>{
             const pendingOperations=await window.writingTool.protection({command:'protection.pending'});
             // Keep the recovery panel in place until every pending operation is resolved.
-            if(pendingOperations.status==='ok'&&pendingOperations.value.pending?.some(id=>!pendingOperations.value.deferred?.includes(id)))return;
+            if(pendingOperations.status==='ok'&&pendingOperations.value.pending?.some(id=>!pendingOperations.value.deferrable?.includes(id)))return;
             // Authority requests are exclusive in main; await each before sending the next.
             const project=await window.writingTool.currentProject();
             const universe=await window.writingTool.currentUniverse();
@@ -333,12 +342,14 @@ function Shell() {
         const dialog = dialogs[dialogs.length - 1];
         if (!dialog)
             return;
-        const previous = document.activeElement as HTMLElement | null;
-        const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input, textarea, [tabindex="0"]'));
-        (dialog.querySelector<HTMLElement>('[autofocus]') ?? focusable()[0])?.focus();
+        const previous = shellDialogOrigin.current;
+        const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')).filter(item=>!item.matches(':disabled')&&!item.closest('[inert],[hidden]')&&item.getClientRects().length>0);
+        if (!dialog.contains(document.activeElement)) focusable()[0]?.focus();
         const trap = (event: KeyboardEvent) => {
+            if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
+                event.stopPropagation();
                 if (error)
                     setError(undefined);
                 else if (pendingDeparture)
@@ -352,11 +363,11 @@ function Shell() {
             if (!items.length)
                 return;
             const first = items[0], last = items[items.length - 1];
-            if (event.shiftKey && document.activeElement === first) {
+            if (event.shiftKey && (document.activeElement === first || !items.includes(document.activeElement as HTMLElement))) {
                 event.preventDefault();
                 last.focus();
             }
-            else if (!event.shiftKey && document.activeElement === last) {
+            else if (!event.shiftKey && (document.activeElement === last || !items.includes(document.activeElement as HTMLElement))) {
                 event.preventDefault();
                 first.focus();
             }
@@ -370,8 +381,13 @@ function Shell() {
     }, [pendingDeparture, error]);
     const previousEditor = useRef(editor);
     useEffect(() => {
-        if (previousEditor.current && !editor)
-            document.querySelector<HTMLElement>('nav details:nth-child(2) summary')?.focus();
+        if (previousEditor.current && !editor) {
+            const manuscript = document.querySelector<HTMLElement>('.manuscript');
+            if (manuscript && manuscript.getClientRects().length > 0 && !manuscript.closest('[hidden],[inert]'))
+                document.dispatchEvent(new Event('writingtool-restore-writing-focus'));
+            else
+                document.querySelector<HTMLElement>('nav details:nth-child(2) summary')?.focus();
+        }
         previousEditor.current = editor;
     }, [editor]);
     async function reconcile(): Promise<void> {

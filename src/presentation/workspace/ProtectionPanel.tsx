@@ -20,7 +20,7 @@ export function ProtectionPanel({mode,snapshot:initialSnapshot,run,back,busyChan
  const [capturedAssets,setCapturedAssets]=useState<AssetData[]>([]),[deleteRevision,setDeleteRevision]=useState<string|null>(null);
  const [archives,setArchives]=useState<NonNullable<ProtectionValue['archives']>>([]),[deleteArchive,setDeleteArchive]=useState<string|null>(null);
  const [recents,setRecents]=useState<NonNullable<ProtectionValue['recents']>>([]),[pendingJobs,setPendingJobs]=useState<string[]>([]),[deferrable,setDeferrable]=useState<string[]>([]),[deferredJobs,setDeferredJobs]=useState<string[]>([]),[proposals,setProposals]=useState<string[]>([]);
- const pendingJobsRef=useRef<string[]>([]),deferredJobsRef=useRef<string[]>([]);
+ const pendingJobsRef=useRef<string[]>([]),deferredJobsRef=useRef<string[]>([]),deferrableRef=useRef<string[]>([]);
  const [operation,setOperation]=useState<{operationId:string;phase:string;cancelable:boolean}|null>(null),[unknown,setUnknown]=useState<string|null>(null);
  const [replacements,setReplacements]=useState<Record<string,string>>({}),[combinedDirty,setCombinedDirty]=useState(false),[leave,setLeave]=useState<(()=>void)|null>(null);
  const combinedDirtyRef=useRef(combinedDirty);combinedDirtyRef.current=combinedDirty;
@@ -29,7 +29,7 @@ export function ProtectionPanel({mode,snapshot:initialSnapshot,run,back,busyChan
  function clearProgress(){operationRef.current=null;setOperation(null);}
  function acceptPending(value:ProtectionValue){
   if(value.pending){pendingJobsRef.current=value.pending;setPendingJobs(value.pending);}
-  if(value.deferrable)setDeferrable(value.deferrable);
+  if(value.deferrable){deferrableRef.current=value.deferrable;setDeferrable(value.deferrable);}
   if(value.deferred){deferredJobsRef.current=value.deferred;setDeferredJobs(value.deferred);}
  }
  function removePending(operationId:string){
@@ -37,7 +37,8 @@ export function ProtectionPanel({mode,snapshot:initialSnapshot,run,back,busyChan
   deferredJobsRef.current=deferredJobsRef.current.filter(id=>id!==operationId);setDeferredJobs(deferredJobsRef.current);
   setDeferrable(ids=>ids.filter(id=>id!==operationId));
  }
- function hasBlockingJobs(){return pendingJobsRef.current.some(id=>!deferredJobsRef.current.includes(id));}
+ function hasBlockingJobs(){return pendingJobsRef.current.some(id=>!deferrableRef.current.includes(id));}
+ function unknownBlocks(){return !!unknownRef.current&&!deferrableRef.current.includes(unknownRef.current)&&!canDeferProtection(unknownCommand.current?.command??'protection.reconcile');}
  async function execute(command:ProtectionCommand){
   if(busyRef.current)return false;
   if(unknownRef.current&&(command.command!=='protection.reconcile'||command.operationId!==unknownRef.current)){setError('Reconcile the original operation before starting another protection command.');return false;}
@@ -45,7 +46,7 @@ export function ProtectionPanel({mode,snapshot:initialSnapshot,run,back,busyChan
   setPhase(command.command==='protection.export'?'Capturing saved manuscript and preparing export…':command.command==='protection.backup'?'Capturing and validating complete backup…':'Working with retained recovery data…');
   try{
    const result=await run(command);
-   if(result.status==='error'){if(result.outcome==='unknown')retainUnknown(result.operationId!,command);setError(result.message);return false;}
+   if(result.status==='error'){if(result.outcome==='unknown')retainUnknown(result.operationId!,command);else if(command.command==='protection.reconcile'&&pendingJobsRef.current.includes(command.operationId))retainUnknown(command.operationId,command);setError(result.message);return false;}
    if(result.status==='canceled'){setPhase('Canceled. Previous output and live writing were preserved.');return false;}
    acceptPending(result.value);
    const completed=command.command==='protection.reconcile'?unknownCommand.current:command;
@@ -68,32 +69,23 @@ export function ProtectionPanel({mode,snapshot:initialSnapshot,run,back,busyChan
   finally{busyRef.current=false;setBusy(false);busyChanged(false);}
  }
 
- async function continueWriting(operationId:string){
-  if(busyRef.current)return;
-  busyRef.current=true;setBusy(true);busyChanged(true);setError(null);
-  let leavePanel=false;
-  try{
-   const result=await run({command:'protection.defer',operationId});
-   if(result.status!=='ok'){setError(result.status==='error'?result.message:'The unfinished operation could not be deferred.');return;}
-   if(unknownRef.current===operationId){unknownRef.current=null;unknownCommand.current=null;setUnknown(null);}
-   acceptPending(result.value);
-   leavePanel=!hasBlockingJobs();
-   setPhase(leavePanel?'The unfinished operation is retained in Recover work for reconciliation later.':'The operation was set aside. Reconcile or set aside the remaining unfinished operations below to continue writing.');
-  }catch(error){setError(error instanceof Error?error.message:'The unfinished operation could not be deferred.');}
-  finally{busyRef.current=false;setBusy(false);busyChanged(false);}
-  if(leavePanel)back();
+ function continueWriting(operationId:string){
+  if(busyRef.current||!deferrableRef.current.includes(operationId)&&!canDeferProtection(unknownCommand.current?.command??'protection.reconcile'))return;
+  setError(null);unknownRef.current=null;unknownCommand.current=null;setUnknown(null);
+  if(!hasBlockingJobs())back();
+  else setPhase('A change to live writing still needs reconciliation. The unfinished copies are retained for later.');
  }
- useEffect(()=>{registerGuard(()=>{if(unknownRef.current||hasBlockingJobs())return Promise.resolve(false);if(!combinedDirtyRef.current)return Promise.resolve(true);return new Promise<boolean>(resolve=>{leaveResolve.current=resolve;setLeave(()=>()=>resolve(true));});});return()=>registerGuard(null);},[]);
+ useEffect(()=>{registerGuard(()=>{if(busyRef.current||unknownBlocks()||hasBlockingJobs())return Promise.resolve(false);if(!combinedDirtyRef.current)return Promise.resolve(true);return new Promise<boolean>(resolve=>{leaveResolve.current=resolve;setLeave(()=>()=>resolve(true));});});return()=>registerGuard(null);},[]);
  useEffect(()=>{const progress=(event:Event)=>{if(!busyRef.current)return;const value=(event as CustomEvent<{operationId:string;phase:string;cancelable:boolean}>).detail;operationRef.current=value;setOperation(value);};document.addEventListener('writingtool-protection-progress',progress);return()=>document.removeEventListener('writingtool-protection-progress',progress);},[]);
  useEffect(()=>{if(mode==='backup'&&owner)void execute({command:'protection.archives',owner});if(mode==='history'&&owner)void execute({command:'protection.history',owner});if(mode==='recovery'){void execute({command:'protection.recents'}).then(()=>execute({command:'protection.pending'}));}},[]);
  const historicalSnapshot:WorkspaceSnapshot={project:units.find(u=>u.owner.kind==='project')??null,universe:units.find(u=>u.owner.kind==='universe')??null};
  const incoming=units.flatMap(u=>u.records),historical=incoming.find(r=>r.id===item),current=allRecords(snapshot).find(r=>r.id===item),chapters=orderedChapters(recordsOf(snapshot,'chapter').filter(c=>c.data.storyId===story),currentCalendar(snapshot));
  const proposalLocked=!!recovery&&recovery.proposal.status!=='review';
- const blockingJobs=pendingJobs.some(id=>!deferredJobs.includes(id));
+ const blockingJobs=pendingJobs.some(id=>!deferrable.includes(id));
  const canContinue=!!unknown&&(!!unknownCommand.current&&canDeferProtection(unknownCommand.current.command)||deferrable.includes(unknown));
  const activeConflict=recovery?.conflicts.find(c=>c.id===conflictId)??recovery?.conflicts.find(c=>!c.resolved)??recovery?.conflicts[0];
  async function choose(choice:'keep-live'|'use-recovered'|'combined'){if(!recovery||!activeConflict)return false;const saved=await execute({command:'protection.resolve',proposalId:recovery.proposal.id,resolution:{recordId:activeConflict.id,liveFingerprint:activeConflict.liveFingerprint,recoveredFingerprint:activeConflict.recoveredFingerprint,choice,record:choice==='combined'?combined:null,manuscript:choice==='combined'?combinedText:null}});if(saved)setConflictId(null);return saved;}
- return <section className="center-form protection-center" aria-label="Protection and export"><div className="actions"><button disabled={busy||!!unknown||blockingJobs} onClick={()=>{if(combinedDirty)setLeave(()=>back);else back();}}>Back to writing</button></div><h2>{mode==='history'?'Revisions':mode==='backup'?'Complete backup':mode==='recovery'?'Recover work':'Export saved work'}</h2>
+ return <section className="center-form protection-center" aria-label="Protection and export"><div className="actions"><button disabled={busy||!!unknown&&!canContinue||blockingJobs} onClick={()=>{if(combinedDirty)setLeave(()=>back);else back();}}>Back to writing</button></div><h2>{mode==='history'?'Revisions':mode==='backup'?'Complete backup':mode==='recovery'?'Recover work':'Export saved work'}</h2>
  {busy&&<div role="status" aria-live="polite"><p>{operation?.phase??phase}</p>{operation?.cancelable&&<button onClick={()=>void window.writingTool.protection({command:'protection.cancel',operationId:operation.operationId})}>Cancel operation</button>}<progress aria-label="Operation progress"/></div>}{!busy&&phase&&<p role="status">{phase}</p>}
  {warnings.length>0&&<div role="status" className="workspace-warning">{warnings.map((warning,index)=><p key={index}>{warning}</p>)}</div>}
  {unknown&&<div role="alert" className="workspace-warning"><p>The previous operation is still unconfirmed.{canContinue?' You can continue writing and reconcile it later in Recover work.':' Reconcile it before continuing.'}</p><button disabled={busy} onClick={()=>void execute({command:'protection.reconcile',operationId:unknown})}>Reconcile original operation</button>{canContinue&&<button disabled={busy} onClick={()=>void continueWriting(unknown)}>Continue writing</button>}{(unknownCommand.current?.command==='protection.backup'||unknownCommand.current?.command==='protection.apply'||unknownCommand.current?.command==='protection.export')&&<button disabled={busy} onClick={()=>void execute({command:'protection.reconcile',operationId:unknown,chooseLocation:true})}>{unknownCommand.current?.command==='protection.export'?'Reconcile with another export location':'Reconcile with another backup location'}</button>}</div>}
@@ -109,6 +101,6 @@ export function ProtectionPanel({mode,snapshot:initialSnapshot,run,back,busyChan
  {deleteRevision&&owner&&<Dialog title="Delete this eligible revision?" onCancel={()=>setDeleteRevision(null)}><p>Delete the selected revision only after active and retained references are checked?</p><button onClick={()=>{const id=deleteRevision;setDeleteRevision(null);void execute({command:'protection.delete',owner,kind:'revision',id}).then(saved=>{if(saved)void execute({command:'protection.history',owner});});}}>Delete revision</button><button onClick={()=>setDeleteRevision(null)}>Cancel</button></Dialog>}
  {deleteArchive&&owner&&<Dialog title="Delete this eligible archive?" onCancel={()=>setDeleteArchive(null)}><p>All known copies of this archive will be removed only after retention and protection evidence is rechecked.</p><button onClick={()=>{const id=deleteArchive;setDeleteArchive(null);void execute({command:'protection.delete',owner,kind:'archive',id}).then(saved=>{if(saved)void execute({command:'protection.archives',owner});});}}>Delete archive</button><button onClick={()=>setDeleteArchive(null)}>Cancel</button></Dialog>}
  {leave&&!error&&!unknown&&<Dialog title="Save combined proposal changes?" onCancel={()=>{leaveResolve.current?.(false);leaveResolve.current=null;setLeave(null);}}><p>Your recorded recovery choices are retained.</p><button onClick={()=>{void choose('combined').then(saved=>{if(!saved)return;combinedDirtyRef.current=false;setCombinedDirty(false);const next=leave;setLeave(null);next();});}}>Save proposal</button><button onClick={()=>{combinedDirtyRef.current=false;setCombinedDirty(false);const next=leave;setLeave(null);next();}}>Discard pending proposal edits</button><button onClick={()=>{leaveResolve.current?.(false);leaveResolve.current=null;setLeave(null);}}>Cancel</button></Dialog>}
- {error&&<Dialog title="Operation needs attention" onCancel={()=>setError(null)}><p>{error}</p>{unknown&&(unknownCommand.current?.command==='protection.apply'||unknownCommand.current?.command==='protection.backup'||unknownCommand.current?.command==='protection.export')&&<button onClick={()=>{setError(null);void execute({command:'protection.reconcile',operationId:unknown,chooseLocation:true});}}>{unknownCommand.current?.command==='protection.export'?'Reconcile with another export location':'Reconcile with another backup location'}</button>}{unknown&&<button onClick={()=>{setError(null);void execute({command:'protection.reconcile',operationId:unknown});}}>Reconcile original operation</button>}{canContinue&&unknown&&<button disabled={busy} onClick={()=>void continueWriting(unknown)}>Continue writing</button>}<button disabled={!!unknown||!last} onClick={()=>{setError(null);if(last)void execute(last);}}>Retry</button>{!unknown&&last?.command==='protection.backup'&&<button onClick={()=>{setError(null);void execute({...last,chooseLocation:true});}}>Choose another location</button>}<button onClick={()=>setError(null)}>Cancel</button></Dialog>}
+ {error&&<Dialog title="Operation needs attention" onCancel={()=>setError(null)}><p>{error}</p>{unknown&&(unknownCommand.current?.command==='protection.apply'||unknownCommand.current?.command==='protection.backup'||unknownCommand.current?.command==='protection.export')&&<button onClick={()=>{setError(null);void execute({command:'protection.reconcile',operationId:unknown,chooseLocation:true});}}>{unknownCommand.current?.command==='protection.export'?'Reconcile with another export location':'Reconcile with another backup location'}</button>}{unknown&&<button onClick={()=>{setError(null);void execute({command:'protection.reconcile',operationId:unknown});}}>Reconcile original operation</button>}{canContinue&&unknown&&<button autoFocus disabled={busy} onClick={()=>void continueWriting(unknown)}>Continue writing</button>}<button disabled={!!unknown||!last} onClick={()=>{setError(null);if(last)void execute(last);}}>Retry</button>{!unknown&&last?.command==='protection.backup'&&<button onClick={()=>{setError(null);void execute({...last,chooseLocation:true});}}>Choose another location</button>}<button autoFocus={!canContinue} onClick={()=>setError(null)}>Cancel</button></Dialog>}
  </section>;
 }

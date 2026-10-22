@@ -510,6 +510,9 @@ async function verifyWriting(){
   main.webContents.sendInputEvent({type:'keyUp',keyCode,modifiers});
   await delay(80);
  }
+ const beforeZoom=await evaluate(`document.querySelector('aside[aria-label="Universe timeline"]')?.innerText`);
+ await press('=',null,['control','shift']);
+ if(await evaluate(`document.querySelector('aside[aria-label="Universe timeline"]')?.innerText`)!==beforeZoom)throw new Error('Editor shortcut changed timeline zoom');
  await press('Enter','\r');
  await press('A','a');
  await waitFor(`document.querySelector('.manuscript')?.textContent==='Writing works 🌍a'&&!document.querySelector('.blocking')`,'keyboard Enter and letter input');
@@ -518,18 +521,39 @@ async function verifyWriting(){
  await waitFor(`document.querySelector('.manuscript .manuscript-bold')?.textContent==='Writing works 🌍'&&!document.querySelector('.blocking')`,'keyboard bold formatting');
  await evaluate(`(()=>{const select=document.querySelector('select[aria-label="Paragraph style"]');select.value='h2';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
  await waitFor(`document.querySelector('.manuscript h2')?.textContent==='Writing works 🌍'&&!document.querySelector('.blocking')`,'heading formatting');
- await evaluate(`document.querySelector('.writing-meta button:nth-of-type(2)').click()`);
+ await press('S',null,['control']);
  await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Saved.')&&!document.querySelector('.blocking')`,'saved manuscript');
  const queried=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
  if(queried.status!=='ok'||!Object.values(queried.snapshot.project.manuscripts).includes('Writing works 🌍\na'))throw new Error('Typed writing did not reach authoritative storage');
  const chapter=queried.snapshot.project.records.find(record=>record.recordType==='chapter');
  if(chapter.data.formatting.paragraphs[0].kind!=='heading'||!chapter.data.formatting.paragraphs[0].marks[0]?.styles.includes('bold'))throw new Error('Manuscript formatting was not saved');
- await evaluate(`(()=>{const menu=[...document.querySelectorAll('header nav details')].find(menu=>menu.querySelector('summary').textContent==='Project');menu.querySelector('summary').click();[...menu.querySelectorAll('button')].find(button=>button.textContent==='Close project').click();})()`);
+ await press('W',null,['control']);
  await waitFor(`document.querySelector('footer')?.textContent.includes('Project closed.')&&!document.querySelector('.manuscript')`,'closed writing project');
  await clickText('Open project…');
  await waitFor(`[...document.querySelectorAll('.chapter-select')].some(button=>button.textContent.startsWith('Writing fixture chapter'))`,'reloaded chapter navigation');
  await evaluate(`document.querySelector('.chapter-select').click()`);
  await waitFor(`document.querySelector('.manuscript h2 .manuscript-bold')?.textContent==='Writing works 🌍'&&!document.querySelector('.blocking')`,'reopened formatted manuscript');
+ if(mode==='writing'||mode==='reconcile-defer'){
+  const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
+  await evaluate(`document.querySelector('[data-top-profile-edit]').click()`);
+  await waitFor(`!!document.querySelector('#profile-heading')&&!document.querySelector('.blocking')`,'profile command restores crashed host');
+  await evaluate(`document.querySelector('.profile textarea').focus()`);
+  await main.webContents.insertText(' Keyboard profile edit');
+  await press('Escape');
+  await waitFor(`!!document.querySelector('#pending-heading')`,'profile departure dialog');
+  await press('Tab',null,['shift']);
+  if(!await evaluate(`document.querySelector('.blocking').contains(document.activeElement)`))throw new Error('Shift+Tab escaped the dialog');
+  await press('Tab');
+  if(!await evaluate(`document.querySelector('.blocking').contains(document.activeElement)`))throw new Error('Tab escaped the dialog');
+  await press('Escape');
+  await waitFor(`!document.querySelector('.blocking')&&document.activeElement===document.querySelector('.profile textarea')`,'Escape restores profile input focus');
+  await press('S',null,['control']);
+  await waitFor(`document.querySelector('footer')?.textContent.startsWith('Saved ')&&!document.querySelector('[data-profile-save]').disabled`,'keyboard profile save');
+  const universe=await evaluate(`window.writingTool.currentUniverse()`);
+  if(universe.status!=='ok'||!universe.snapshot.profile.description.includes('Keyboard profile edit'))throw new Error('Profile Ctrl+S was lost to workspace shortcut');
+  await press('W',null,['control']);
+  await waitFor(`!document.querySelector('#profile-heading')&&document.activeElement===document.querySelector('.manuscript')`,'profile close restores writing focus');
+ }
  console.log('MANUSCRIPT_WRITING chapter creation, text/keyboard input, bold, headings, durable save and reopening passed');
 }
 async function verifyDeferredReconcile(){
@@ -541,29 +565,37 @@ async function verifyDeferredReconcile(){
  await waitFor(`!!document.querySelector('.protection-center')&&[...document.querySelectorAll('.protection-center button')].some(button=>button.textContent===${JSON.stringify('Reconcile '+id)})`,'retained pending backup');
  const denied=await evaluate(`window.writingTool.protection({command:'protection.defer',operationId:${JSON.stringify(liveId)}})`);
  if(denied.status!=='error'||JSON.parse(fs.readFileSync(path.join(fixture,'profile/protection/native-pending',liveId+'.json'),'utf8')).deferred)throw new Error('Live recovery was allowed to bypass reconciliation');
- const cleared=await evaluate(`window.writingTool.protection({command:'protection.reconcile',operationId:${JSON.stringify(liveId)}})`);
- if(cleared.status!=='ok'||cleared.value.reconciliation?.outcome!=='not-committed')throw new Error('Unsent recovery fixture did not reconcile safely');
+ const projectBlocked=await evaluate(`window.writingTool.openProject()`);
+ if(projectBlocked.status!=='error'||projectBlocked.code!=='RECOVERY_REQUIRED')throw new Error('A pending live recovery did not block project changes');
+ const workspaceBlocked=await evaluate(`window.writingTool.workspace({command:'settings.select-backup'})`);
+ const universeBlocked=await evaluate(`window.writingTool.closeUniverse()`);
+ if(workspaceBlocked.status!=='error'||workspaceBlocked.code!=='RECOVERY_REQUIRED'||universeBlocked.status!=='error'||universeBlocked.code!=='RECOVERY_REQUIRED')throw new Error('A pending live recovery did not block workspace or universe changes');
+ main.close();await delay(150);
+ if(main.isDestroyed()||captureCount||backupCount)throw new Error('Native close bypassed a pending live recovery');
+ await clickText('Reconcile '+liveId);
+ await waitFor(`document.querySelector('.blocking')?.textContent.includes('confirmed not completed')`,'unsent recovery reconciled safely');
+ await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Cancel').click()`);
+ await waitFor(`!document.querySelector('.blocking')&&!document.querySelector('.protection-center')?.textContent.includes(${JSON.stringify(liveId)})`,'live recovery removed from pending UI');
+ await clickText('Open project…');
+ await waitFor(`document.querySelector('footer')?.textContent.includes('Project opened with its authoritative universe.')&&!document.querySelector('.blocking')`,'open project while unfinished copies remain');
+ await clickText('Reconcile pending operations…');
+ await waitFor(`[...document.querySelectorAll('.protection-center button')].some(button=>button.textContent===${JSON.stringify('Reconcile '+id)})`,'reopen pending copy review');
  await clickText('Reconcile '+id);
  await waitFor(`document.querySelector('.blocking')?.textContent.includes('Operation needs attention')`,'failed reconciliation dialog');
  const metadata=()=>JSON.parse(fs.readFileSync(path.join(fixture,'profile/protection/native-pending',id+'.json'),'utf8'));
  if(metadata().deferred)throw new Error('Failed reconciliation was silently deferred');
- if(process.platform!=='win32'){
-  const directory=path.join(fixture,'profile/protection/native-pending');fs.chmodSync(directory,0o500);
-  try{
-   await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Continue writing').click()`);
-   await waitFor(`document.querySelector('.blocking')?.textContent.includes('EACCES')`,'deferred marker write failure');
-   if(metadata().deferred)throw new Error('Failed marker publication falsely enabled writing');
-   const blocked=await evaluate(`window.writingTool.openProject()`);
-   if(blocked.status!=='error'||blocked.code!=='RECOVERY_REQUIRED')throw new Error('Failed deferral lost the authority block');
-  }finally{fs.chmodSync(directory,0o700);}
- }
- const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
- await evaluate(`[...document.querySelectorAll('.blocking button')].find(button=>button.textContent==='Continue writing').click()`);
- await waitFor(`!document.querySelector('.blocking')&&document.querySelector('.protection-center')?.textContent.includes('remaining unfinished operations')`,'other pending operations remain visible');
- if(!metadata().deferred)throw new Error('First operation was not set aside');
- await evaluate(`(()=>{const row=[...document.querySelectorAll('.protection-center p')].find(row=>row.textContent.includes(${JSON.stringify(id)}));if(!row?.textContent.includes('Set aside for later')||[...row.querySelectorAll('button')].some(button=>button.textContent==='Continue writing'))throw new Error('Deferred operation was offered as a blocker again');const other=[...document.querySelectorAll('.protection-center p')].find(row=>row.textContent.includes(${JSON.stringify(otherId)}));[...other.querySelectorAll('button')].find(button=>button.textContent==='Continue writing').click();})()`);
- await waitFor(`!document.querySelector('.blocking')&&!document.querySelector('.protection-center')`,'continue writing escapes failed reconciliation');
- if(!metadata().deferred)throw new Error('Continue writing was not persisted');
+ const directory=path.join(fixture,'profile/protection/native-pending');
+ if(process.platform!=='win32')fs.chmodSync(directory,0o500);
+ try{
+  const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
+  await waitFor(`document.activeElement?.textContent==='Continue writing'`,'safe action has keyboard focus');
+  main.webContents.sendInputEvent({type:'keyDown',keyCode:'Enter'});
+  main.webContents.sendInputEvent({type:'char',keyCode:'\r'});
+  main.webContents.sendInputEvent({type:'keyUp',keyCode:'Enter'});
+  await waitFor(`!document.querySelector('.blocking')&&!document.querySelector('.protection-center')`,'keyboard escape from failed reconciliation without metadata writes');
+  if(metadata().deferred)throw new Error('Returning to writing unexpectedly changed original evidence');
+  if(!fs.existsSync(path.join(directory,otherId+'.json')))throw new Error('Another pending backup was lost');
+ }finally{if(process.platform!=='win32')fs.chmodSync(directory,0o700);}
  const retained=await evaluate(`window.writingTool.protection({command:'protection.pending'})`);
  if(retained.status!=='ok'||!retained.value.pending.includes(id)||!retained.value.deferrable.includes(id))throw new Error('Deferred operation was lost');
  const rejected=await evaluate(`window.writingTool.protection({command:'protection.defer',operationId:'00000000-0000-4000-8000-000000000000'})`);
@@ -574,7 +606,7 @@ async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
  await waitFor(`!document.querySelector('.blocking')`,'initial workspace loading');
  if(mode==='reconcile-defer')await verifyDeferredReconcile();
- await clickText('Open project…');
+ if(!opened)await clickText('Open project…');
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
@@ -593,7 +625,7 @@ async function drive(){
    await evaluate(`document.querySelector('.writing-meta button:nth-of-type(2)').click()`);
    await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Saved.')&&!document.querySelector('.blocking')`,'save after canceled closing');
    const metadata=JSON.parse(fs.readFileSync(path.join(fixture,'profile/protection/native-pending',corruptedBackup+'.json'),'utf8'));
-   if(!metadata.deferred)throw new Error('Background escape did not retain its deferred operation');
+   if(metadata.request.requestId!==corruptedBackup)throw new Error('Background escape did not retain the original operation');
    console.log('RECONCILE_BACKGROUND canceled failed close, continued writing and saved; original evidence retained');
    main.close();
   }

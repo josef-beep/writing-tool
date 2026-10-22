@@ -45,6 +45,7 @@ let projectInFlight = false;
 let universeInFlight = false;
 let pendingProjectCreation: {operationId: string; location: string} | undefined;
 let hostExited = false;
+let authorityRestorePending=false;
 let drained = false;
 let draining = false;
 let quitPermit: 'window' | 'app' | undefined;
@@ -54,6 +55,7 @@ const mutationLocations = new Map<string, {
     expected: ReconciliationExpectation;
 }>();
 const unresolvedOperations = new Set<string>();
+function hasBlockingOperations():boolean{return [...unresolvedOperations].some(id=>{const operation=pendingProtection.get(id);return !operation||!canDeferProtection(operation.request.command);});}
 function pendingProtectionPath(id:string){return `protection/native-pending/${id}.json`;}
 function savePendingProtection(id:string,value:PendingProtection){const root=app.getPath('userData');ensureManagedDirectory(root,'protection/native-pending');const relative=pendingProtectionPath(id),old=fs.existsSync(path.join(root,relative))?hash(readManaged(root,relative)):null;publishManagedBytes(root,relative,Buffer.from(jsonBytes(value)),old);}
 function forgetPendingProtection(id:string){const root=app.getPath('userData'),relative=pendingProtectionPath(id);try{if(fs.existsSync(path.join(root,relative)))removeManagedBytes(root,relative,hash(readManaged(root,relative)));}catch(error){unresolvedOperations.add(id);throw error;}pendingProtection.delete(id);unresolvedOperations.delete(id);}
@@ -114,6 +116,19 @@ function launchApplicationHost(args: string[] = []): void {
 function authorized(event: Pick<IpcMainInvokeEvent, 'sender' | 'senderFrame'>): boolean {
     return !!window && !window.isDestroyed() && !!event.senderFrame && trustedSender(event.sender.id, window.webContents.id, event.senderFrame === window.webContents.mainFrame, event.senderFrame.url, MAIN_WINDOW_WEBPACK_ENTRY);
 }
+async function ensureApplicationHost(restoreActive=true):Promise<void>{
+    if(fault||hasBlockingOperations()||pendingProjectCreation)return;
+    if(hostExited){launchApplicationHost();authorityRestorePending=!!(activeProjectLocation||activeLocation);}
+    if(!restoreActive||!authorityRestorePending)return;
+    if(activeProjectLocation){
+        const opened=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:activeProjectLocation,universePath:activeLocation});
+        if(opened.status!=='ok'||!opened.snapshot||opened.snapshot.ownerId!==activeProjectIdentity?.id||opened.snapshot.rootId!==activeProjectIdentity?.rootId||opened.snapshot.universe.ownerId!==activeSnapshot?.ownerId||opened.snapshot.universe.rootId!==activeSnapshot?.rootId)throw new Error('Reopen the saved project before continuing.');
+    }else if(activeLocation){
+        const opened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:activeLocation});
+        if(opened.status!=='ok'||!opened.snapshot||opened.snapshot.ownerId!==activeSnapshot?.ownerId||opened.snapshot.rootId!==activeSnapshot?.rootId)throw new Error('Reopen the saved universe before continuing.');
+    }
+    authorityRestorePending=false;
+}
 if (squirrelStartup)
     app.quit();
 else
@@ -147,11 +162,12 @@ else
             if (!authorized(event) || !validProjectRequest(value) || draining)
                 throw new Error('Project request denied');
             const request=value, base={protocolVersion:1 as const,requestId:request.requestId,command:request.command};
-            if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || unresolvedOperations.size || (pendingProjectCreation && !['project.open','project.current'].includes(request.command)))
+            if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || hasBlockingOperations() || (pendingProjectCreation && !['project.open','project.current'].includes(request.command)))
                 return {...base,status:'error',code:'RECOVERY_REQUIRED',message:'Finish or reconcile the pending operation before changing projects.',outcome:pendingProjectCreation?'unknown':'not-committed',retry:'after-recovery'};
             projectInFlight=true;
             let sent=false;
             try {
+                await ensureApplicationHost(request.command==='project.current');
                 let basePath: string | undefined, universePath: string | undefined;
                 if(request.command==='project.create' || request.command==='project.open') {
                     if(request.command==='project.create') {
@@ -184,7 +200,7 @@ else
                 if(result.status==='locate') return {...base,status:'error',code:'INTEGRITY_MISMATCH',message:'The matching universe could not be resolved.',outcome:'not-committed',retry:'new-request'};
                 if(request.command==='project.create' && !(result.status==='error' && result.outcome!=='not-committed')) pendingProjectCreation=undefined;
                 if(request.command==='project.open' && result.status==='ok') pendingProjectCreation=undefined;
-                if(result.status==='ok') {activeProjectLocation=result.snapshot?.location;activeProjectIdentity=result.snapshot?{id:result.snapshot.ownerId,rootId:result.snapshot.rootId}:undefined;if(result.snapshot){activeSnapshot=result.snapshot.universe;activeLocation=activeSnapshot.location;}if(result.snapshot)new RecentRoots(app.getPath('userData')).remember({kind:'project',id:result.snapshot.ownerId},result.snapshot.rootId,path.basename(result.snapshot.location),result.snapshot.location);}
+                if(result.status==='ok') {authorityRestorePending=false;activeProjectLocation=result.snapshot?.location;activeProjectIdentity=result.snapshot?{id:result.snapshot.ownerId,rootId:result.snapshot.rootId}:undefined;if(result.snapshot){activeSnapshot=result.snapshot.universe;activeLocation=activeSnapshot.location;}if(result.snapshot)new RecentRoots(app.getPath('userData')).remember({kind:'project',id:result.snapshot.ownerId},result.snapshot.rootId,path.basename(result.snapshot.location),result.snapshot.location);}
                 return result;
             } catch {
                 if(!sent) return {...base,status:'error',code:'IO_FAILURE',message:'The project folder chooser could not complete. Try again.',outcome:'not-committed',retry:'new-request'};
@@ -198,11 +214,9 @@ else
             try {
             const request = value;
             const reconcilesPending = request.command === 'universe.open' && request.reconcileOperationId && mutationLocations.has(request.reconcileOperationId);
-            if ((pendingProjectCreation || unresolvedOperations.size > 0) && request.command !== 'universe.current' && !reconcilesPending)
+            if ((pendingProjectCreation || hasBlockingOperations()) && request.command !== 'universe.current' && !reconcilesPending)
                 return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the pending operation in its original folder before another operation or close.', outcome: 'unknown', retry: 'after-recovery' };
-            if (request.command === 'universe.open' && hostExited && !fault) {
-                launchApplicationHost();
-            }
+            await ensureApplicationHost(request.command==='universe.current'||request.command==='universe.profile.save');
             if (request.command === 'universe.create' || request.command === 'universe.open') {
                 const injected = diagnostic ? process.env.WRITINGTOOL_UNIVERSE_FOLDER : undefined;
                 let selection: {
@@ -237,6 +251,7 @@ else
                 }
                 if (request.command === 'universe.create' && !(result.status === 'error' && result.outcome === 'unknown'))
                     unresolvedOperations.delete(request.input.operationId);
+                if(result.status==='ok'&&['universe.open','universe.create','universe.close'].includes(request.command))authorityRestorePending=false;
                 if (request.command === 'universe.open' && result.status === 'ok' && request.reconcileOperationId)
                     unresolvedOperations.delete(request.reconcileOperationId);
                 return result;
@@ -286,7 +301,7 @@ else
             activeProjectLocation=project.snapshot?.location;
             activeProjectIdentity=project.snapshot?{id:project.snapshot.ownerId,rootId:project.snapshot.rootId}:undefined;
             activeLocation=universe.snapshot?.location;
-            activeSnapshot=universe.snapshot;
+            activeSnapshot=universe.snapshot;authorityRestorePending=false;
             if(notify)window?.webContents.send('writingtool:recovered-context:v1');
         };
         const runProtection=nativeProtection({openRoot:async(owner,location)=>{try{if(owner.kind==='project'){let result=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:location});if(result.status==='locate'){const chosen=await dialog.showOpenDialog(window!,{title:'Locate matching universe',properties:['openDirectory']});if(chosen.canceled||!chosen.filePaths[0])throw new Error('The matching universe is required.');result=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:location,universePath:chosen.filePaths[0]});}if(result.status!=='ok'||!result.snapshot)throw new Error(result.status==='error'?result.message:'Project opening was not acknowledged.');return{project:result.snapshot.location,universe:result.snapshot.universeLocation};}if(activeProjectLocation){const closed=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.close'});if(closed.status!=='ok')throw new Error('Close the active project before changing universes.');}const opened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:location});if(opened.status!=='ok'||!opened.snapshot)throw new Error(opened.status==='error'?opened.message:'Universe opening was not acknowledged.');return{project:null,universe:opened.snapshot.location};}finally{await synchronizeProtectionContext(false);}},window:()=>window!,originalRequest:id=>pendingProtection.get(id)?.request,originalUniverse:id=>{const pending=pendingProtection.get(id);return pending?.universe&&pending.universeIdentity?{owner:{kind:'universe' as const,id:pending.universeIdentity.id},rootId:pending.universeIdentity.rootId,location:pending.universe}:undefined;},roots:()=>[activeProjectLocation,activeLocation].filter((p):p is string=>!!p),activeOwners:()=>[...(activeProjectIdentity?[{kind:'project' as const,id:activeProjectIdentity.id}]:[]),...(activeSnapshot?[{kind:'universe' as const,id:activeSnapshot.ownerId}]:[])],sourceName:async r=>{if(r.command==='protection.export'&&r.storyId){const result=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'workspace.query'});if(result.status==='ok'){const story=result.snapshot.project?.records.find(record=>record.recordType==='story'&&record.id===r.storyId);if(story?.recordType==='story')return story.data.title;}}return r.command==='protection.export'&&r.owner.kind==='project'&&activeProjectLocation?path.basename(activeProjectLocation):activeSnapshot?.profile.name??'WritingTool';},settings:async()=>{workspaceClient?.fail();workspaceClient=new WorkspaceHostClient(child);const result=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'settings.get'});if(result.status!=='ok'||!result.settings)throw new Error('Read backup settings before continuing.');return result.settings;},send:async r=>{
@@ -331,7 +346,7 @@ else
                     const deferred:PendingProtection={...pending,deferred:true};
                     savePendingProtection(value.operationId,deferred);
                     pendingProtection.set(value.operationId,deferred);unresolvedOperations.delete(value.operationId);
-                    if(!unresolvedOperations.size&&!pendingProjectCreation)window?.webContents.send('writingtool:recovered-context:v1');
+                    if(!hasBlockingOperations()&&!pendingProjectCreation)window?.webContents.send('writingtool:recovered-context:v1');
                     return{...base,status:'ok',value:{...pendingProtectionState(),warnings:['The unfinished operation is retained for later reconciliation. It has not been marked complete.']}};
                 }catch(error){return{...base,status:'error',message:error instanceof Error?error.message:'The operation could not be set aside. Retry or reconcile it.',outcome:'unknown',operationId:value.operationId};}
                 finally{protectionInFlight=false;}
@@ -343,6 +358,10 @@ else
                 protectionInFlight=true;
                 try{
                     let pending=pendingProtection.get(value.operationId);
+                    if(pending&&canDeferProtection(pending.request.command)){
+                        const current=activeProjectIdentity??(activeSnapshot?{id:activeSnapshot.ownerId,rootId:activeSnapshot.rootId}:undefined),original=pending.projectIdentity??pending.universeIdentity;
+                        if(current&&(!original||!!activeProjectIdentity!==!!pending.projectIdentity||current.id!==original.id||current.rootId!==original.rootId))return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Open the original project or universe to reconcile this copy. You can continue writing in the current project.',outcome:'not-committed',operationId:null};
+                    }
                     if(pending?.dispatch==='prepared'&&!hostExited){
                         // Execution was never sent; reset a failed preparation transport too.
                         protectionClient?.fail();protectionClient=new ProtectionHostClient(child);
@@ -399,24 +418,25 @@ else
                     }
                     const result=await runProtection(value);
                     if(result.status==='ok'){await synchronizeProtectionContext();forgetPendingProtection(value.operationId);}
-                    if(result.status!=='ok'&&pending?.deferred)await synchronizeProtectionContext();
+                    if(result.status!=='ok'&&pending&&canDeferProtection(pending.request.command))await synchronizeProtectionContext();
                     if(result.status==='error'){
                         return{...result,outcome:'unknown',operationId:value.operationId};
                     }
                     return result;
-                }catch(error){if(!pendingProtection.get(value.operationId)?.deferred)unresolvedOperations.add(value.operationId);else window?.webContents.send('writingtool:recovered-context:v1');return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
+                }catch(error){if(!canDeferProtection(pendingProtection.get(value.operationId)?.request.command??'protection.reconcile'))unresolvedOperations.add(value.operationId);else if(!hasBlockingOperations())window?.webContents.send('writingtool:recovered-context:v1');return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
                 finally{protectionInFlight=false;}
             }
 
-            if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight||unresolvedOperations.size)return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Finish or reconcile the pending authority operation first.',outcome:'not-committed',operationId:null};
-            protectionInFlight=true;try{const result=await runProtection(value);if(result.status==='ok'&&result.value.activated||value.command==='protection.recent'&&value.action!=='remove')await synchronizeProtectionContext();if(result.status==='error'&&result.outcome==='unknown')unresolvedOperations.add(value.requestId);else forgetPendingProtection(value.requestId);return result;}catch(error){const uncertain=pendingProtection.has(value.requestId);if(uncertain)unresolvedOperations.add(value.requestId);return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'The native protection result could not be confirmed.',outcome:uncertain?'unknown':'not-committed',operationId:uncertain?value.requestId:null};}finally{protectionInFlight=false;}
+            if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight||hasBlockingOperations())return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Finish or reconcile the pending authority operation first.',outcome:'not-committed',operationId:null};
+            protectionInFlight=true;try{await ensureApplicationHost();const result=await runProtection(value);if(result.status==='ok'&&result.value.activated||value.command==='protection.recent'&&value.action!=='remove')await synchronizeProtectionContext();if(result.status==='error'&&result.outcome==='unknown')unresolvedOperations.add(value.requestId);else forgetPendingProtection(value.requestId);return result;}catch(error){const uncertain=pendingProtection.has(value.requestId);if(uncertain)unresolvedOperations.add(value.requestId);return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'The native protection result could not be confirmed.',outcome:uncertain?'unknown':'not-committed',operationId:uncertain?value.requestId:null};}finally{protectionInFlight=false;}
         });
         ipcMain.handle(WORKSPACE_CHANNEL,async(event,value:unknown):Promise<WorkspaceResult>=>{
             if(!authorized(event)||!validWorkspaceRequest(value)||draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)throw new Error('Workspace request denied');
             const request=value,base={protocolVersion:1 as const,requestId:request.requestId,command:request.command};
-            if((unresolvedOperations.size||pendingProjectCreation)&&request.command!=='workspace.reconcile'&&request.command!=='settings.get'&&request.command!=='workspace.query')return{...base,status:'error',code:'RECOVERY_REQUIRED',message:'Reconcile the original pending operation before continuing.',outcome:'unknown',retry:'after-recovery',issues:[]};
+            if((hasBlockingOperations()||pendingProjectCreation)&&request.command!=='workspace.reconcile'&&request.command!=='settings.get'&&request.command!=='workspace.query')return{...base,status:'error',code:'RECOVERY_REQUIRED',message:'Reconcile the original pending operation before continuing.',outcome:'unknown',retry:'after-recovery',issues:[]};
             workspaceInFlight=true;let sent=false;
             try{
+                await ensureApplicationHost();
                 if(request.command==='workspace.reconcile'&&!fault){
                     const pending=pendingWorkspace.get(request.operationId);
                     if(pending){
@@ -706,7 +726,7 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
             if (!approved)
                 return;
         }
-        if (unresolvedOperations.size || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
+        if (hasBlockingOperations() || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
             dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
             return;
         }

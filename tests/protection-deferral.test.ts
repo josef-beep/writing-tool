@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,randomBytes} from 'node:crypto';
 import {UniverseApplication,UniverseFailure} from '../src/application/universe';
 import {ProjectApplication} from '../src/application/project';
 import {WorkspaceApplication} from '../src/application/workspace';
@@ -130,4 +130,16 @@ test('a deferred archive older than the newest ten survives retention and explic
  await f.service.execute({protocolVersion:1,requestId:randomUUID(),command:'protection.capture',owner:f.owner,reason:'Automatic'});
  assert.equal(fs.existsSync(first.output.path),false);
  assert.equal(f.service.archives.registry().length,10);
+});
+
+
+test('a complete backup spanning archive read chunks preserves every manuscript byte',async t=>{
+ const f=fixture(t),text=randomBytes(524288).toString('base64');
+ f.write(text);
+ const result=await f.service.execute({protocolVersion:1,requestId:randomUUID(),command:'protection.backup',owner:f.owner,reason:'Manual',chooseLocation:false,closing:false,nativeBackupFolder:f.output});
+ assert.ok(result.output);
+ assert.ok(fs.statSync(result.output.path).size>262144,'The ZIP must span multiple archive read buffers.');
+ const archive=await f.service.archives.read(result.output.path,{canceled:false,cancelable:true,phase:'Verifying multi-chunk backup'});
+ const restored=f.service.revisions.resolve(archive.manifest.revision,(_owner,object)=>{const bytes=archive.objects.get(object.sha256);assert.ok(bytes);return bytes;});
+ assert.equal(restored.find(unit=>unit.owner.kind==='project')?.manuscripts[f.chapterId],text);
 });

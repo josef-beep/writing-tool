@@ -17,6 +17,31 @@ import {SettingsStorage} from '../src/infrastructure/settings-storage';
 import type {PanelLayout,AppSettings,WorkspaceSnapshot} from '../src/application/contracts/workspace';
 import {elapsedPosition,type CalendarData} from '../src/domain/calendar';
 import type {WorkspaceRecord} from '../src/domain/workspace';
+import {appShortcut} from '../src/presentation/keyboard';
+
+const shortcutEvent=(overrides:Partial<KeyboardEvent>={})=>({key:'s',ctrlKey:true,metaKey:false,altKey:false,shiftKey:false,isComposing:false,defaultPrevented:false,repeat:false,keyCode:83,...overrides});
+
+test('app shortcuts preserve claimed editor commands, composition, AltGr and shifted editing variants',()=>{
+ for(const overrides of [{defaultPrevented:true},{isComposing:true},{keyCode:229},{altKey:true},{repeat:true},{shiftKey:true},{ctrlKey:false}])assert.equal(appShortcut(shortcutEvent(overrides)),null);
+ for(const key of ['n','o','s','b','i','z','y'])assert.equal(appShortcut(shortcutEvent({key,shiftKey:true})),null);
+ for(const key of ['b','i','z','y','a','c','v','x'])assert.equal(appShortcut(shortcutEvent({key})),null);
+});
+
+test('save and project commands work with Control or Command while close has a separate universe command',()=>{
+ for(const modifiers of [{ctrlKey:true,metaKey:false},{ctrlKey:false,metaKey:true}]){
+  for(const [key,command] of [['S','save'],['n','new-project'],['o','open-project'],['w','close']] as const)assert.equal(appShortcut(shortcutEvent({...modifiers,key})),command);
+  assert.equal(appShortcut(shortcutEvent({...modifiers,key:'w',shiftKey:true})),'close-universe');
+ }
+});
+
+test('timeline zoom does not capture shortcuts from text editors and save remains available while writing',()=>{
+ for(const [key,command] of [['+','zoom-in'],['=','zoom-in'],['-','zoom-out']] as const){
+  assert.equal(appShortcut(shortcutEvent({key})),command);
+  assert.equal(appShortcut(shortcutEvent({key}),true),null);
+ }
+ assert.equal(appShortcut(shortcutEvent({key:'+',shiftKey:true})),'zoom-in');
+ assert.equal(appShortcut(shortcutEvent(),true),'save');
+});
 
 const panels=()=>structuredClone(DEFAULT_PANELS);
 const pickerLabels=(html:string)=>[...(html.match(/<select[^>]*aria-label="Go to event or decision"[^>]*>(.*?)<\/select>/s)?.[1]??'').matchAll(/<option value="[^"]+">([^<]+)<\/option>/g)].map(match=>match[1].split(': ')[0]);
