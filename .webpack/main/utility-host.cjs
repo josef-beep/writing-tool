@@ -74,6 +74,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   CATALOG_NOTICE: () => (/* binding */ CATALOG_NOTICE),
 /* harmony export */   PROTECTION_CHANNEL: () => (/* binding */ PROTECTION_CHANNEL),
+/* harmony export */   canDeferProtection: () => (/* binding */ canDeferProtection),
 /* harmony export */   digest: () => (/* binding */ digest),
 /* harmony export */   protectionHasDurableEffects: () => (/* binding */ protectionHasDurableEffects),
 /* harmony export */   protectionOperationId: () => (/* binding */ protectionOperationId),
@@ -99,7 +100,9 @@ __webpack_require__.r(__webpack_exports__);
 const PROTECTION_CHANNEL = 'writingtool:protection:v1';
 const CATALOG_NOTICE = 'Database catalog only. Writing, object files and images are not included. Use a complete ZIP backup for independent recovery.';
 /** Reconciliation retains the operation being reconciled, even if its transport attempt fails. */
-function protectionOperationId(request) { return request.command === 'protection.reconcile' ? request.operationId : request.requestId; }
+function protectionOperationId(request) { return request.command === 'protection.reconcile' || request.command === 'protection.defer' ? request.operationId : request.requestId; }
+/** These commands capture or publish saved copies without changing live writing. */
+function canDeferProtection(command) { return ['protection.capture', 'protection.backup', 'protection.export'].includes(command); }
 /** Read failures and cancellation signals do not create a new uncertain mutation. */
 function protectionHasDurableEffects(request) { return !['protection.history', 'protection.inspect', 'protection.pending', 'protection.recents', 'protection.open', 'protection.cancel'].includes(request.command); }
 function validProtectionRequest(v, internal = false) {
@@ -180,6 +183,7 @@ function validProtectionRequest(v, internal = false) {
             if (Object.hasOwn(x, 'chooseLocation') && typeof x.chooseLocation !== 'boolean' || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.operationId))
                 return false;
             break;
+        case 'protection.defer':
         case 'protection.cancel':
             keys = ['operationId'];
             if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.operationId))
@@ -234,8 +238,8 @@ function validResolution(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MOD
 function validProposal(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'revisionId', 'owner', 'status', 'scope', 'expected', 'choices', 'operationId', 'replacedRevisionId']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.revisionId) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['review', 'canceled', 'applied', 'backup-required'].includes(String(v.status)) && (v.scope === null || uuidList(v.scope)) && Array.isArray(v.expected) && v.expected.length <= 2 && v.expected.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['owner', 'generation']) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(e.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.generation)) && Array.isArray(v.choices) && v.choices.every(validResolution) && new Set(v.choices.map(c => c.recordId)).size === v.choices.length && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.operationId) && (v.replacedRevisionId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.replacedRevisionId)); }
 function validRecoveryView(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['proposal', 'conflicts', 'issues', 'missing']) && validProposal(v.proposal) && Array.isArray(v.conflicts) && v.conflicts.every(c => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(c, ['id', 'live', 'recovered', 'liveText', 'recoveredText', 'resolved', 'liveFingerprint', 'recoveredFingerprint']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(c.id) && (c.live === null || (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.live) && c.live.id === c.id) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.recovered) && c.recovered.id === c.id && (c.liveText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.liveText)) && (c.recoveredText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.recoveredText)) && typeof c.resolved === 'boolean' && (c.liveFingerprint === null || digest(c.liveFingerprint)) && digest(c.recoveredFingerprint)) && Array.isArray(v.issues) && v.issues.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText) && Array.isArray(v.missing) && v.missing.every(m => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(m, ['sourceId', 'targetId', 'label', 'canRemove']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.sourceId) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.targetId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(m.label) && typeof m.canRemove === 'boolean'); }
 function validProtectionValue(v) { if (typeof v !== 'object' || !v || Array.isArray(v))
-    return false; const x = v, keys = ['reconciliation', 'warnings', 'assets', 'archives', 'recents', 'pending', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
-    return false; return (!Object.hasOwn(x, 'reconciliation') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.reconciliation, ['operationId', 'outcome']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.reconciliation.operationId) && x.reconciliation.outcome === 'not-committed') && (!Object.hasOwn(x, 'warnings') || Array.isArray(x.warnings) && x.warnings.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)) && (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
+    return false; const x = v, keys = ['reconciliation', 'warnings', 'assets', 'archives', 'recents', 'pending', 'deferrable', 'deferred', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
+    return false; return (!Object.hasOwn(x, 'reconciliation') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.reconciliation, ['operationId', 'outcome']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.reconciliation.operationId) && x.reconciliation.outcome === 'not-committed') && (!Object.hasOwn(x, 'warnings') || Array.isArray(x.warnings) && x.warnings.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)) && (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'deferrable') || uuidList(x.deferrable) && Array.isArray(x.pending) && x.deferrable.every(id => x.pending.includes(id))) && (!Object.hasOwn(x, 'deferred') || uuidList(x.deferred) && Array.isArray(x.deferrable) && x.deferred.every(id => x.deferrable.includes(id))) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
 function validArchiveRecord(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'owner', 'sha256', 'capturedAt', 'completedAt', 'locations', 'evidence', 'revisionIds', 'state']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && digest(v.sha256) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && Array.isArray(v.locations) && v.locations.every(nativePath) && Array.isArray(v.evidence) && v.evidence.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['path', 'device', 'inode']) && nativePath(e.path) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.device) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.inode)) && uuidList(v.revisionIds) && ['valid', 'uncertain'].includes(String(v.state)); }
 
 
@@ -2290,6 +2294,7 @@ class ArchiveStorage {
             error = e;
         } });
         unzip.register(fflate__WEBPACK_IMPORTED_MODULE_4__.UnzipInflate);
+        // Unzip retains input views between pushes; each chunk must outlive the reused read buffer.
         const fd = node_fs__WEBPACK_IMPORTED_MODULE_0___default().openSync(file, (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_RDONLY | (node_fs__WEBPACK_IMPORTED_MODULE_0___default().constants).O_NOFOLLOW);
         try {
             const stat = node_fs__WEBPACK_IMPORTED_MODULE_0___default().fstatSync(fd);
@@ -2303,7 +2308,7 @@ class ArchiveStorage {
             while ((n = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readSync(fd, bytes, 0, bytes.length, position)) > 0) {
                 position += n;
                 checkCancel(control);
-                unzip.push(bytes.subarray(0, n));
+                unzip.push(Buffer.from(bytes.subarray(0, n)));
                 if (error)
                     throw error;
                 await checkpoint();
@@ -3734,6 +3739,8 @@ class ProtectionService {
         return value;
     }
     async execute(request, replaying = false) {
+        if (request.command === 'protection.defer')
+            throw new Error('Unfinished operations are set aside by the native capability owner.');
         if (request.nativePrepareOnly) {
             const { nativePrepareOnly: _nativePrepareOnly, ...original } = request;
             this.prepare(original);
@@ -3856,8 +3863,11 @@ class ProtectionService {
                 }
                 case 'protection.delete': {
                     const settings = this.settings.get();
-                    if (request.kind === 'archive')
+                    if (request.kind === 'archive') {
+                        if (this.pendingProtectionIds().has(request.id))
+                            throw new Error('An unfinished operation still references this archive. Reconcile it before deletion.');
                         this.archives.remove(request.owner, request.id, settings.retentionDays, true);
+                    }
                     else
                         this.revisions.remove(request.owner, request.id, this.protectedIds(request.owner), settings.retentionDays, true);
                     return { deleted: request.id };
@@ -3888,6 +3898,7 @@ class ProtectionService {
                     return { output: { id: (0,node_crypto__WEBPACK_IMPORTED_MODULE_2__.randomUUID)(), path: request.nativeDestination.path, notice: request.format === 'sqlite' ? _application_contracts_protection__WEBPACK_IMPORTED_MODULE_5__.CATALOG_NOTICE : null } };
                 }
                 case 'protection.reconcile': throw new Error('Reconciliation must retain its original job.');
+                case 'protection.defer': throw new Error('Unfinished operations are set aside by the native capability owner.');
                 case 'protection.open': throw new Error('Completed outputs are opened by the native capability owner.');
             }
         }
@@ -3928,7 +3939,8 @@ class ProtectionService {
         this.assertOutputOutsideRoots(destination.path);
         return destination;
     }
-    protectedIds(owner) { const ids = this.archives.protectedRevisionIds(); const live = this.workspace.snapshot(), owners = [owner, ...[live.project?.owner, live.universe?.owner].filter((o) => !!o)]; for (const candidate of new Map(owners.map(o => [(0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(o), o])).values())
+    protectedIds(owner) { const ids = this.archives.protectedRevisionIds(); for (const id of this.pendingProtectionIds())
+        ids.add(id); const live = this.workspace.snapshot(), owners = [owner, ...[live.project?.owner, live.universe?.owner].filter((o) => !!o)]; for (const candidate of new Map(owners.map(o => [(0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(o), o])).values())
         for (const manifest of this.revisions.list(candidate))
             for (const id of manifest.retainedRevisionIds)
                 ids.add(id); for (const name of node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, 'protection/proposals')).filter(n => /^[a-f0-9-]{36}\.json$/.test(n))) {
@@ -3944,6 +3956,11 @@ class ProtectionService {
             throw new Error('Uncertain pending recovery evidence blocks retention.');
         }
     } return ids; }
+    pendingProtectionIds() {
+        ;(0,_universe_files__WEBPACK_IMPORTED_MODULE_11__.ensureManagedDirectory)(this.userData, 'protection/native-pending');
+        return new Set(node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_1___default().join(this.userData, 'protection/native-pending')).map(name => { if (!/^[a-f0-9-]{36}\.json$/.test(name))
+            throw new Error('Unrecognized pending operation evidence blocks retention.'); return name.slice(0, -5); }));
+    }
     retentionWarnings(owner) { try {
         this.retain(owner);
         return [];
@@ -3958,7 +3975,7 @@ class ProtectionService {
                 this.revisions.remove(owner, m.id, protectedIds, settings.retentionDays);
         const archives = this.archives.registry().filter(a => (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(a.owner) === (0,_revisions__WEBPACK_IMPORTED_MODULE_6__.ownerKey)(owner)).sort((a, b) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt)), newestTen = new Set(archives.slice(0, 10).map(a => a.id));
         for (const archive of archives.reverse()) {
-            if (newestTen.has(archive.id) || BigInt(Date.now() - Date.parse(archive.capturedAt)) < BigInt(settings.retentionDays) * 86400000n)
+            if (newestTen.has(archive.id) || this.pendingProtectionIds().has(archive.id) || BigInt(Date.now() - Date.parse(archive.capturedAt)) < BigInt(settings.retentionDays) * 86400000n)
                 continue;
             this.archives.remove(owner, archive.id, settings.retentionDays);
         }

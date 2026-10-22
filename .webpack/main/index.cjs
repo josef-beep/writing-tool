@@ -1050,6 +1050,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   CATALOG_NOTICE: () => (/* binding */ CATALOG_NOTICE),
 /* harmony export */   PROTECTION_CHANNEL: () => (/* binding */ PROTECTION_CHANNEL),
+/* harmony export */   canDeferProtection: () => (/* binding */ canDeferProtection),
 /* harmony export */   digest: () => (/* binding */ digest),
 /* harmony export */   protectionHasDurableEffects: () => (/* binding */ protectionHasDurableEffects),
 /* harmony export */   protectionOperationId: () => (/* binding */ protectionOperationId),
@@ -1075,7 +1076,9 @@ __webpack_require__.r(__webpack_exports__);
 const PROTECTION_CHANNEL = 'writingtool:protection:v1';
 const CATALOG_NOTICE = 'Database catalog only. Writing, object files and images are not included. Use a complete ZIP backup for independent recovery.';
 /** Reconciliation retains the operation being reconciled, even if its transport attempt fails. */
-function protectionOperationId(request) { return request.command === 'protection.reconcile' ? request.operationId : request.requestId; }
+function protectionOperationId(request) { return request.command === 'protection.reconcile' || request.command === 'protection.defer' ? request.operationId : request.requestId; }
+/** These commands capture or publish saved copies without changing live writing. */
+function canDeferProtection(command) { return ['protection.capture', 'protection.backup', 'protection.export'].includes(command); }
 /** Read failures and cancellation signals do not create a new uncertain mutation. */
 function protectionHasDurableEffects(request) { return !['protection.history', 'protection.inspect', 'protection.pending', 'protection.recents', 'protection.open', 'protection.cancel'].includes(request.command); }
 function validProtectionRequest(v, internal = false) {
@@ -1156,6 +1159,7 @@ function validProtectionRequest(v, internal = false) {
             if (Object.hasOwn(x, 'chooseLocation') && typeof x.chooseLocation !== 'boolean' || !(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.operationId))
                 return false;
             break;
+        case 'protection.defer':
         case 'protection.cancel':
             keys = ['operationId'];
             if (!(0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.operationId))
@@ -1210,8 +1214,8 @@ function validResolution(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MOD
 function validProposal(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'revisionId', 'owner', 'status', 'scope', 'expected', 'choices', 'operationId', 'replacedRevisionId']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.revisionId) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && ['review', 'canceled', 'applied', 'backup-required'].includes(String(v.status)) && (v.scope === null || uuidList(v.scope)) && Array.isArray(v.expected) && v.expected.length <= 2 && v.expected.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['owner', 'generation']) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(e.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.generation)) && Array.isArray(v.choices) && v.choices.every(validResolution) && new Set(v.choices.map(c => c.recordId)).size === v.choices.length && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.operationId) && (v.replacedRevisionId === null || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.replacedRevisionId)); }
 function validRecoveryView(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['proposal', 'conflicts', 'issues', 'missing']) && validProposal(v.proposal) && Array.isArray(v.conflicts) && v.conflicts.every(c => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(c, ['id', 'live', 'recovered', 'liveText', 'recoveredText', 'resolved', 'liveFingerprint', 'recoveredFingerprint']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(c.id) && (c.live === null || (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.live) && c.live.id === c.id) && (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_0__.validateWorkspaceRecord)(c.recovered) && c.recovered.id === c.id && (c.liveText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.liveText)) && (c.recoveredText === null || (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(c.recoveredText)) && typeof c.resolved === 'boolean' && (c.liveFingerprint === null || digest(c.liveFingerprint)) && digest(c.recoveredFingerprint)) && Array.isArray(v.issues) && v.issues.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText) && Array.isArray(v.missing) && v.missing.every(m => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(m, ['sourceId', 'targetId', 'label', 'canRemove']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.sourceId) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(m.targetId) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(m.label) && typeof m.canRemove === 'boolean'); }
 function validProtectionValue(v) { if (typeof v !== 'object' || !v || Array.isArray(v))
-    return false; const x = v, keys = ['reconciliation', 'warnings', 'assets', 'archives', 'recents', 'pending', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
-    return false; return (!Object.hasOwn(x, 'reconciliation') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.reconciliation, ['operationId', 'outcome']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.reconciliation.operationId) && x.reconciliation.outcome === 'not-committed') && (!Object.hasOwn(x, 'warnings') || Array.isArray(x.warnings) && x.warnings.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)) && (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
+    return false; const x = v, keys = ['reconciliation', 'warnings', 'assets', 'archives', 'recents', 'pending', 'deferrable', 'deferred', 'proposals', 'history', 'manifest', 'units', 'recovery', 'output', 'deleted', 'activated']; if (Object.keys(x).some(k => !keys.includes(k)))
+    return false; return (!Object.hasOwn(x, 'reconciliation') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.reconciliation, ['operationId', 'outcome']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.reconciliation.operationId) && x.reconciliation.outcome === 'not-committed') && (!Object.hasOwn(x, 'warnings') || Array.isArray(x.warnings) && x.warnings.every(_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)) && (!Object.hasOwn(x, 'assets') || Array.isArray(x.assets) && x.assets.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validAssetData)) && (!Object.hasOwn(x, 'archives') || Array.isArray(x.archives) && x.archives.every(validArchiveRecord)) && (!Object.hasOwn(x, 'pending') || uuidList(x.pending)) && (!Object.hasOwn(x, 'deferrable') || uuidList(x.deferrable) && Array.isArray(x.pending) && x.deferrable.every(id => x.pending.includes(id))) && (!Object.hasOwn(x, 'deferred') || uuidList(x.deferred) && Array.isArray(x.deferrable) && x.deferred.every(id => x.deferrable.includes(id))) && (!Object.hasOwn(x, 'proposals') || uuidList(x.proposals)) && (!Object.hasOwn(x, 'recents') || Array.isArray(x.recents) && x.recents.every(r => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(r, ['id', 'owner', 'name', 'available']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(r.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(r.owner) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.scalarText)(r.name) && typeof r.available === 'boolean')) && (!Object.hasOwn(x, 'history') || Array.isArray(x.history) && x.history.every(validRevisionManifest)) && (!Object.hasOwn(x, 'manifest') || validRevisionManifest(x.manifest)) && (!Object.hasOwn(x, 'units') || Array.isArray(x.units) && x.units.every(_workspace__WEBPACK_IMPORTED_MODULE_3__.validWorkspaceUnit)) && (!Object.hasOwn(x, 'recovery') || validRecoveryView(x.recovery)) && (!Object.hasOwn(x, 'output') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.output, ['id', 'path', 'notice']) && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.output.id) && nativePath(x.output.path) && (x.output.notice === null || x.output.notice === CATALOG_NOTICE)) && (!Object.hasOwn(x, 'deleted') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(x.deleted)) && (!Object.hasOwn(x, 'activated') || (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(x.activated, ['project', 'universe']) && (x.activated.project === null || nativePath(x.activated.project)) && nativePath(x.activated.universe)); }
 function validArchiveRecord(v) { return (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(v, ['schemaVersion', 'id', 'owner', 'sha256', 'capturedAt', 'completedAt', 'locations', 'evidence', 'revisionIds', 'state']) && v.schemaVersion === 1 && (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.isUuid)(v.id) && (0,_workspace__WEBPACK_IMPORTED_MODULE_3__.validOwner)(v.owner) && digest(v.sha256) && typeof v.capturedAt === 'string' && Number.isFinite(Date.parse(v.capturedAt)) && typeof v.completedAt === 'string' && Number.isFinite(Date.parse(v.completedAt)) && Array.isArray(v.locations) && v.locations.every(nativePath) && Array.isArray(v.evidence) && v.evidence.every(e => (0,_domain_validation__WEBPACK_IMPORTED_MODULE_1__.closed)(e, ['path', 'device', 'inode']) && nativePath(e.path) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.device) && (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_2__.unsignedInteger)(e.inode)) && uuidList(v.revisionIds) && ['valid', 'uncertain'].includes(String(v.state)); }
 
 
@@ -4461,12 +4465,14 @@ let projectInFlight = false;
 let universeInFlight = false;
 let pendingProjectCreation;
 let hostExited = false;
+let authorityRestorePending = false;
 let drained = false;
 let draining = false;
 let quitPermit;
 let quitDecisionInFlight = false;
 const mutationLocations = new Map();
 const unresolvedOperations = new Set();
+function hasBlockingOperations() { return [...unresolvedOperations].some(id => { const operation = pendingProtection.get(id); return !operation || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(operation.request.command); }); }
 function pendingProtectionPath(id) { return `protection/native-pending/${id}.json`; }
 function savePendingProtection(id, value) { const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'); (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(root, 'protection/native-pending'); const relative = pendingProtectionPath(id), old = node_fs__WEBPACK_IMPORTED_MODULE_17___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, relative)) ? (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(root, relative)) : null; (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.publishManagedBytes)(root, relative, Buffer.from((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.jsonBytes)(value)), old); }
 function forgetPendingProtection(id) { const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative = pendingProtectionPath(id); try {
@@ -4477,17 +4483,19 @@ catch (error) {
     unresolvedOperations.add(id);
     throw error;
 } pendingProtection.delete(id); unresolvedOperations.delete(id); }
+function pendingProtectionState() { return { pending: [...pendingProtection.keys()], deferrable: [...pendingProtection].filter(([, pending]) => (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pending.request.command)).map(([id]) => id), deferred: [...pendingProtection].filter(([, pending]) => pending.deferred).map(([id]) => id) }; }
 function loadPendingProtection() {
     const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData');
     node_fs__WEBPACK_IMPORTED_MODULE_17___default().mkdirSync(root, { recursive: true, mode: 0o700 });
     (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(root, 'protection/native-pending');
     for (const name of node_fs__WEBPACK_IMPORTED_MODULE_17___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, 'protection/native-pending'))) {
         const value = (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)((0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.readManaged)(root, 'protection/native-pending/' + name));
-        if (!(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(value, ['request', 'project', 'universe', 'projectIdentity', 'universeIdentity', ...(typeof value === 'object' && value !== null && Object.hasOwn(value, 'dispatch') ? ['dispatch'] : [])]) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.validProtectionRequest)(value.request, true) || value.request.nativePrepareOnly || name !== value.request.requestId + '.json' || Object.hasOwn(value, 'dispatch') && !['prepared', 'attempted'].includes(String(value.dispatch)) || ![value.projectIdentity, value.universeIdentity].every(identity => identity === null || (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(identity, ['id', 'rootId']) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(identity.id) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(identity.rootId)) || (value.project !== null && (typeof value.project !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_16___default().isAbsolute(value.project))) || (value.universe !== null && (typeof value.universe !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_16___default().isAbsolute(value.universe))))
+        if (!(0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(value, ['request', 'project', 'universe', 'projectIdentity', 'universeIdentity', ...(typeof value === 'object' && value !== null && Object.hasOwn(value, 'dispatch') ? ['dispatch'] : []), ...(typeof value === 'object' && value !== null && Object.hasOwn(value, 'deferred') ? ['deferred'] : [])]) || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.validProtectionRequest)(value.request, true) || value.request.nativePrepareOnly || value.request.command === 'protection.defer' || Object.hasOwn(value, 'deferred') && (value.deferred !== true || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(value.request.command)) || name !== value.request.requestId + '.json' || Object.hasOwn(value, 'dispatch') && !['prepared', 'attempted'].includes(String(value.dispatch)) || ![value.projectIdentity, value.universeIdentity].every(identity => identity === null || (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.closed)(identity, ['id', 'rootId']) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(identity.id) && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(identity.rootId)) || (value.project !== null && (typeof value.project !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_16___default().isAbsolute(value.project))) || (value.universe !== null && (typeof value.universe !== 'string' || !node_path__WEBPACK_IMPORTED_MODULE_16___default().isAbsolute(value.universe))))
             throw new Error('Pending protection metadata is invalid. Preserve application data for recovery.');
-        const pending = { request: value.request, project: value.project, universe: value.universe, projectIdentity: value.projectIdentity, universeIdentity: value.universeIdentity, dispatch: value.dispatch === 'prepared' ? 'prepared' : 'attempted' };
+        const pending = { request: value.request, project: value.project, universe: value.universe, projectIdentity: value.projectIdentity, universeIdentity: value.universeIdentity, dispatch: value.dispatch === 'prepared' ? 'prepared' : 'attempted', ...(value.deferred === true ? { deferred: true } : {}) };
         pendingProtection.set(value.request.requestId, pending);
-        unresolvedOperations.add(value.request.requestId);
+        if (!pending.deferred)
+            unresolvedOperations.add(value.request.requestId);
     }
 }
 function rememberMutation(id, location, expected) {
@@ -4543,6 +4551,27 @@ function launchApplicationHost(args = []) {
 function authorized(event) {
     return !!window && !window.isDestroyed() && !!event.senderFrame && (0,_security__WEBPACK_IMPORTED_MODULE_21__.trustedSender)(event.sender.id, window.webContents.id, event.senderFrame === window.webContents.mainFrame, event.senderFrame.url, 'http://localhost:3000/main_window/index.html');
 }
+async function ensureApplicationHost(restoreActive = true) {
+    if (fault || hasBlockingOperations() || pendingProjectCreation)
+        return;
+    if (hostExited) {
+        launchApplicationHost();
+        authorityRestorePending = !!(activeProjectLocation || activeLocation);
+    }
+    if (!restoreActive || !authorityRestorePending)
+        return;
+    if (activeProjectLocation) {
+        const opened = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.open', basePath: activeProjectLocation, universePath: activeLocation });
+        if (opened.status !== 'ok' || !opened.snapshot || opened.snapshot.ownerId !== activeProjectIdentity?.id || opened.snapshot.rootId !== activeProjectIdentity?.rootId || opened.snapshot.universe.ownerId !== activeSnapshot?.ownerId || opened.snapshot.universe.rootId !== activeSnapshot?.rootId)
+            throw new Error('Reopen the saved project before continuing.');
+    }
+    else if (activeLocation) {
+        const opened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.open', basePath: activeLocation });
+        if (opened.status !== 'ok' || !opened.snapshot || opened.snapshot.ownerId !== activeSnapshot?.ownerId || opened.snapshot.rootId !== activeSnapshot?.rootId)
+            throw new Error('Reopen the saved universe before continuing.');
+    }
+    authorityRestorePending = false;
+}
 if ((electron_squirrel_startup__WEBPACK_IMPORTED_MODULE_18___default()))
     electron__WEBPACK_IMPORTED_MODULE_15__.app.quit();
 else
@@ -4576,11 +4605,12 @@ else
             if (!authorized(event) || !(0,_application_contracts_project__WEBPACK_IMPORTED_MODULE_10__.validProjectRequest)(value) || draining)
                 throw new Error('Project request denied');
             const request = value, base = { protocolVersion: 1, requestId: request.requestId, command: request.command };
-            if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || unresolvedOperations.size || (pendingProjectCreation && !['project.open', 'project.current'].includes(request.command)))
+            if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || hasBlockingOperations() || (pendingProjectCreation && !['project.open', 'project.current'].includes(request.command)))
                 return { ...base, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Finish or reconcile the pending operation before changing projects.', outcome: pendingProjectCreation ? 'unknown' : 'not-committed', retry: 'after-recovery' };
             projectInFlight = true;
             let sent = false;
             try {
+                await ensureApplicationHost(request.command === 'project.current');
                 let basePath, universePath;
                 if (request.command === 'project.create' || request.command === 'project.open') {
                     if (request.command === 'project.create') {
@@ -4627,6 +4657,7 @@ else
                 if (request.command === 'project.open' && result.status === 'ok')
                     pendingProjectCreation = undefined;
                 if (result.status === 'ok') {
+                    authorityRestorePending = false;
                     activeProjectLocation = result.snapshot?.location;
                     activeProjectIdentity = result.snapshot ? { id: result.snapshot.ownerId, rootId: result.snapshot.rootId } : undefined;
                     if (result.snapshot) {
@@ -4654,11 +4685,9 @@ else
             try {
                 const request = value;
                 const reconcilesPending = request.command === 'universe.open' && request.reconcileOperationId && mutationLocations.has(request.reconcileOperationId);
-                if ((pendingProjectCreation || unresolvedOperations.size > 0) && request.command !== 'universe.current' && !reconcilesPending)
+                if ((pendingProjectCreation || hasBlockingOperations()) && request.command !== 'universe.current' && !reconcilesPending)
                     return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the pending operation in its original folder before another operation or close.', outcome: 'unknown', retry: 'after-recovery' };
-                if (request.command === 'universe.open' && hostExited && !fault) {
-                    launchApplicationHost();
-                }
+                await ensureApplicationHost(request.command === 'universe.current' || request.command === 'universe.profile.save');
                 if (request.command === 'universe.create' || request.command === 'universe.open') {
                     const injected = diagnostic ? process.env.WRITINGTOOL_UNIVERSE_FOLDER : undefined;
                     let selection;
@@ -4691,6 +4720,8 @@ else
                     }
                     if (request.command === 'universe.create' && !(result.status === 'error' && result.outcome === 'unknown'))
                         unresolvedOperations.delete(request.input.operationId);
+                    if (result.status === 'ok' && ['universe.open', 'universe.create', 'universe.close'].includes(request.command))
+                        authorityRestorePending = false;
                     if (request.command === 'universe.open' && result.status === 'ok' && request.reconcileOperationId)
                         unresolvedOperations.delete(request.reconcileOperationId);
                     return result;
@@ -4758,6 +4789,7 @@ else
             activeProjectIdentity = project.snapshot ? { id: project.snapshot.ownerId, rootId: project.snapshot.rootId } : undefined;
             activeLocation = universe.snapshot?.location;
             activeSnapshot = universe.snapshot;
+            authorityRestorePending = false;
             if (notify)
                 window?.webContents.send('writingtool:recovered-context:v1');
         };
@@ -4821,7 +4853,7 @@ else
                     const root = electron__WEBPACK_IMPORTED_MODULE_15__.app.getPath('userData'), relative = 'protection/proposals';
                     (0,_infrastructure_universe_files__WEBPACK_IMPORTED_MODULE_9__.ensureManagedDirectory)(root, relative);
                     const proposals = node_fs__WEBPACK_IMPORTED_MODULE_17___default().readdirSync(node_path__WEBPACK_IMPORTED_MODULE_16___default().join(root, relative)).filter(name => name.endsWith('.json') && (0,_application_contracts_universe__WEBPACK_IMPORTED_MODULE_13__.isUuid)(name.slice(0, -5))).map(name => name.slice(0, -5));
-                    return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'ok', value: { pending: [...pendingProtection.keys()], proposals } };
+                    return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'ok', value: { ...pendingProtectionState(), proposals } };
                 }
                 catch (error) {
                     return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: error instanceof Error ? error.message : 'Pending recovery metadata could not be read.', outcome: 'not-committed', operationId: null };
@@ -4829,6 +4861,44 @@ else
             }
             if (value.command === 'protection.cancel')
                 return protectionClient.request(value);
+            if (value.command === 'protection.defer') {
+                const base = { protocolVersion: 1, requestId: value.requestId, command: value.command };
+                if (protectionInFlight || workspaceInFlight || projectInFlight || universeInFlight)
+                    return { ...base, status: 'error', message: 'Wait for the active operation before continuing.', outcome: 'not-committed', operationId: null };
+                const pending = pendingProtection.get(value.operationId);
+                if (!pending || !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pending.request.command))
+                    return { ...base, status: 'error', message: 'This operation changes live writing and must be reconciled before continuing.', outcome: 'not-committed', operationId: null };
+                protectionInFlight = true;
+                try {
+                    if (hostExited) {
+                        launchApplicationHost();
+                        if (activeProjectLocation) {
+                            const opened = await projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.open', basePath: activeProjectLocation, universePath: activeLocation });
+                            if (opened.status !== 'ok' || !opened.snapshot || opened.snapshot.ownerId !== activeProjectIdentity?.id || opened.snapshot.rootId !== activeProjectIdentity?.rootId)
+                                throw new Error('Reopen the saved project before continuing writing.');
+                        }
+                        else if (activeLocation) {
+                            const opened = await universeClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'universe.open', basePath: activeLocation });
+                            if (opened.status !== 'ok' || !opened.snapshot || opened.snapshot.ownerId !== activeSnapshot?.ownerId || opened.snapshot.rootId !== activeSnapshot?.rootId)
+                                throw new Error('Reopen the saved universe before continuing writing.');
+                        }
+                        await synchronizeProtectionContext(false);
+                    }
+                    const deferred = { ...pending, deferred: true };
+                    savePendingProtection(value.operationId, deferred);
+                    pendingProtection.set(value.operationId, deferred);
+                    unresolvedOperations.delete(value.operationId);
+                    if (!hasBlockingOperations() && !pendingProjectCreation)
+                        window?.webContents.send('writingtool:recovered-context:v1');
+                    return { ...base, status: 'ok', value: { ...pendingProtectionState(), warnings: ['The unfinished operation is retained for later reconciliation. It has not been marked complete.'] } };
+                }
+                catch (error) {
+                    return { ...base, status: 'error', message: error instanceof Error ? error.message : 'The operation could not be set aside. Retry or reconcile it.', outcome: 'unknown', operationId: value.operationId };
+                }
+                finally {
+                    protectionInFlight = false;
+                }
+            }
             // Listing recent roots has no authority effects and must remain available during recovery.
             if (value.command === 'protection.recents')
                 return runProtection(value);
@@ -4838,6 +4908,11 @@ else
                 protectionInFlight = true;
                 try {
                     let pending = pendingProtection.get(value.operationId);
+                    if (pending && (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pending.request.command)) {
+                        const current = activeProjectIdentity ?? (activeSnapshot ? { id: activeSnapshot.ownerId, rootId: activeSnapshot.rootId } : undefined), original = pending.projectIdentity ?? pending.universeIdentity;
+                        if (current && (!original || !!activeProjectIdentity !== !!pending.projectIdentity || current.id !== original.id || current.rootId !== original.rootId))
+                            return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: 'Open the original project or universe to reconcile this copy. You can continue writing in the current project.', outcome: 'not-committed', operationId: null };
+                    }
                     if (pending?.dispatch === 'prepared' && !hostExited) {
                         // Execution was never sent; reset a failed preparation transport too.
                         protectionClient?.fail();
@@ -4930,20 +5005,29 @@ else
                         await synchronizeProtectionContext();
                         forgetPendingProtection(value.operationId);
                     }
+                    if (result.status !== 'ok' && pending && (0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pending.request.command))
+                        await synchronizeProtectionContext();
+                    if (result.status === 'error') {
+                        return { ...result, outcome: 'unknown', operationId: value.operationId };
+                    }
                     return result;
                 }
                 catch (error) {
-                    unresolvedOperations.add(value.operationId);
+                    if (!(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pendingProtection.get(value.operationId)?.request.command ?? 'protection.reconcile'))
+                        unresolvedOperations.add(value.operationId);
+                    else if (!hasBlockingOperations())
+                        window?.webContents.send('writingtool:recovered-context:v1');
                     return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: error instanceof Error ? error.message : 'Protection reconciliation remains unconfirmed.', outcome: 'unknown', operationId: value.operationId };
                 }
                 finally {
                     protectionInFlight = false;
                 }
             }
-            if (protectionInFlight || workspaceInFlight || projectInFlight || universeInFlight || unresolvedOperations.size)
+            if (protectionInFlight || workspaceInFlight || projectInFlight || universeInFlight || hasBlockingOperations())
                 return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: 'Finish or reconcile the pending authority operation first.', outcome: 'not-committed', operationId: null };
             protectionInFlight = true;
             try {
+                await ensureApplicationHost();
                 const result = await runProtection(value);
                 if (result.status === 'ok' && result.value.activated || value.command === 'protection.recent' && value.action !== 'remove')
                     await synchronizeProtectionContext();
@@ -4967,11 +5051,12 @@ else
             if (!authorized(event) || !(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.validWorkspaceRequest)(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
                 throw new Error('Workspace request denied');
             const request = value, base = { protocolVersion: 1, requestId: request.requestId, command: request.command };
-            if ((unresolvedOperations.size || pendingProjectCreation) && request.command !== 'workspace.reconcile' && request.command !== 'settings.get' && request.command !== 'workspace.query')
+            if ((hasBlockingOperations() || pendingProjectCreation) && request.command !== 'workspace.reconcile' && request.command !== 'settings.get' && request.command !== 'workspace.query')
                 return { ...base, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the original pending operation before continuing.', outcome: 'unknown', retry: 'after-recovery', issues: [] };
             workspaceInFlight = true;
             let sent = false;
             try {
+                await ensureApplicationHost();
                 if (request.command === 'workspace.reconcile' && !fault) {
                     const pending = pendingWorkspace.get(request.operationId);
                     if (pending) {
@@ -5368,7 +5453,7 @@ async function requestNativeQuit(kind) {
             if (!approved)
                 return;
         }
-        if (unresolvedOperations.size || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
+        if (hasBlockingOperations() || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
             electron__WEBPACK_IMPORTED_MODULE_15__.dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
             return;
         }
