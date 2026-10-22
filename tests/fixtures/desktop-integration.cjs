@@ -8,6 +8,7 @@ const mode=process.env.WRITINGTOOL_TEST_MODE;
 app.setPath('userData',path.join(fixture,'profile'));
 app.setAppPath(repo);
 let opened=false,main,failedQueries=0,allowReads=mode!=='read-failure',captureCount=0,backupCount=0,pass=false,lostAck=false,conflicted=false,expectedBounds,panelId='timeline',host,corruptedBackup=null;
+let holdRead=false,releaseRead,activeRequests=0;
 const originalFork=utilityProcess.fork.bind(utilityProcess);
 utilityProcess.fork=(...args)=>{
  host=originalFork(...args);
@@ -16,6 +17,13 @@ utilityProcess.fork=(...args)=>{
    corruptedBackup=message.requestId;fs.appendFileSync(message.value.output.path,'Injected changed output evidence');
   }
  });
+ const originalOn=host.on.bind(host);
+ host.on=(event,listener)=>originalOn(event,event==='message'?message=>{
+  if(holdRead&&message.command==='workspace.query'){
+   holdRead=false;
+   releaseRead=fail=>listener(fail?{protocolVersion:1,requestId:message.requestId,command:message.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected read failure',outcome:'not-committed',retry:'after-recovery',issues:[]}:message);
+  }else listener(message);
+ }:listener);
  return host;
 };
 const originalHandle=ipcMain.handle.bind(ipcMain);
@@ -34,7 +42,8 @@ ipcMain.handle=(channel,handler)=>originalHandle(channel,async(event,request)=>{
   const current=JSON.parse(fs.readFileSync(file,'utf8'));current.recordVersion=require('node:crypto').randomUUID();
   const temporary=file+'.concurrent';fs.writeFileSync(temporary,JSON.stringify(current));fs.renameSync(temporary,file);conflicted=true;
  }
- const result=await handler(event,request);
+ activeRequests++;
+ let result;try{result=await handler(event,request);}finally{activeRequests--;}
  if(mode==='layout-retry'&&layoutSave&&!lostAck&&result.status==='ok'&&request.values.panels.some(p=>p.id==='timeline'&&p.placement==='floating')){
   lostAck=true;return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected lost layout acknowledgement',outcome:'unknown',retry:'after-recovery',issues:[]};
  }
@@ -527,8 +536,23 @@ async function verifyWriting(){
  if(queried.status!=='ok'||!Object.values(queried.snapshot.project.manuscripts).includes('Writing works 🌍\na'))throw new Error('Typed writing did not reach authoritative storage');
  const chapter=queried.snapshot.project.records.find(record=>record.recordType==='chapter');
  if(chapter.data.formatting.paragraphs[0].kind!=='heading'||!chapter.data.formatting.paragraphs[0].marks[0]?.styles.includes('bold'))throw new Error('Manuscript formatting was not saved');
+ if(mode==='writing'){
+  const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
+  const denied=await evaluate(`window.writingTool.closeUniverse()`);
+  if(denied.status!=='error'||denied.code!=='VALIDATION')throw new Error('Host restart bypassed the associated project guard');
+  const exitedAgain=new Promise(resolve=>host.once('exit',resolve));host.kill();await exitedAgain;
+ }
  await press('W',null,['control']);
  await waitFor(`document.querySelector('footer')?.textContent.includes('Project closed.')&&!document.querySelector('.manuscript')`,'closed writing project');
+ const remainingUniverse=await evaluate(`window.writingTool.currentUniverse()`);
+ if(remainingUniverse.status!=='ok'||remainingUniverse.snapshot?.ownerId!==queried.snapshot.universe.owner.id)throw new Error('Closing the project lost its open universe');
+ if(mode==='writing'){
+  const closed=await evaluate(`window.writingTool.closeUniverse()`);
+  if(closed.status!=='ok'||closed.snapshot!==null)throw new Error('The standalone universe did not close');
+  const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
+  const empty=await evaluate(`window.writingTool.workspace({command:'workspace.query'})`);
+  if(empty.status!=='ok'||empty.snapshot.universe||empty.snapshot.project)throw new Error('Host restart reopened a deliberately closed universe');
+ }
  await clickText('Open project…');
  await waitFor(`[...document.querySelectorAll('.chapter-select')].some(button=>button.textContent.startsWith('Writing fixture chapter'))`,'reloaded chapter navigation');
  await evaluate(`document.querySelector('.chapter-select').click()`);
@@ -551,6 +575,17 @@ async function verifyWriting(){
   await waitFor(`document.querySelector('footer')?.textContent.startsWith('Saved ')&&!document.querySelector('[data-profile-save]').disabled`,'keyboard profile save');
   const universe=await evaluate(`window.writingTool.currentUniverse()`);
   if(universe.status!=='ok'||!universe.snapshot.profile.description.includes('Keyboard profile edit'))throw new Error('Profile Ctrl+S was lost to workspace shortcut');
+  if(mode==='writing'){
+   const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
+   const restored=await evaluate(`window.writingTool.currentUniverse()`);
+   if(restored.status!=='ok'||restored.snapshot.generation!==universe.snapshot.generation||restored.snapshot.recordVersion!==universe.snapshot.recordVersion||restored.snapshot.profile.description!==universe.snapshot.profile.description)throw new Error('Restart lost the saved profile context');
+   await evaluate(`document.querySelector('.profile textarea').focus()`);
+   await main.webContents.insertText(' Second save after restart');
+   await press('S',null,['control']);
+   await waitFor(`document.querySelector('footer')?.textContent.startsWith('Saved ')&&!document.querySelector('[data-profile-save]').disabled`,'profile saved again after restart');
+   const savedAgain=await evaluate(`window.writingTool.currentUniverse()`);
+   if(savedAgain.status!=='ok'||!savedAgain.snapshot.profile.description.includes('Second save after restart')||savedAgain.snapshot.generation===universe.snapshot.generation)throw new Error('Second profile save used stale restored context');
+  }
   await press('W',null,['control']);
   await waitFor(`!document.querySelector('#profile-heading')&&document.activeElement===document.querySelector('.manuscript')`,'profile close restores writing focus');
  }
@@ -602,6 +637,26 @@ async function verifyDeferredReconcile(){
  if(rejected.status!=='error')throw new Error('An unrelated operation could be deferred');
  console.log('RECONCILE_DEFER failed backup reconciliation escaped; metadata and original job retained');
 }
+async function verifyReadQueue(){
+ await waitFor(`document.querySelectorAll('.workspace-panel').length===3&&!document.querySelector('.blocking')`,'settled request queue workspace');
+ const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
+ for(const [command,fail] of [['project',false],['universe',false],['reconcile',false],['project',true]]){
+  const idle=Date.now()+5000;while(Date.now()<idle){if(!activeRequests){await delay(100);if(!activeRequests)break;}await delay(10);}
+  if(activeRequests)throw new Error('Background requests did not settle');
+  releaseRead=undefined;holdRead=true;
+  await evaluate(`(()=>{window.__heldRead=window.writingTool.workspace({command:'workspace.query'});})()`);
+  const until=Date.now()+5000;while(!releaseRead&&Date.now()<until)await delay(10);
+  if(!releaseRead)throw new Error('Read response was not held');
+  const request=command==='project'?`window.writingTool.currentProject()`:command==='universe'?`window.writingTool.currentUniverse()`:`window.writingTool.protection({command:'protection.reconcile',operationId:${JSON.stringify(id)}})`;
+  await evaluate(`(()=>{window.__queuedDone=false;window.__queued=${request}.then(result=>{window.__queuedDone=true;return result;});})()`);
+  await delay(100);
+  if(await evaluate(`window.__queuedDone`))throw new Error(command+' did not wait for the active workspace read');
+  releaseRead(fail);releaseRead=undefined;
+  const read=await evaluate(`window.__heldRead`),result=await evaluate(`window.__queued`);
+  if(read.status!==(fail?'error':'ok')||result.status!=='ok')throw new Error(command+' was stranded or rejected after workspace read: '+JSON.stringify(result));
+ }
+ console.log('READ_QUEUE project, universe and reconcile wait for background reads; failed reads release queued requests');
+}
 async function drive(){
  await waitFor(`document.querySelector('[data-readiness="ready"]')`,'host readiness');
  await waitFor(`!document.querySelector('.blocking')`,'initial workspace loading');
@@ -629,6 +684,9 @@ async function drive(){
    console.log('RECONCILE_BACKGROUND canceled failed close, continued writing and saved; original evidence retained');
    main.close();
   }
+ }else if(mode==='read-queue'){
+  await verifyReadQueue();
+  main.close();
  }else if(mode==='reconcile-defer-restart'){
   const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
   const retained=await evaluate(`window.writingTool.protection({command:'protection.pending'})`);

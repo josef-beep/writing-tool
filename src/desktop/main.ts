@@ -40,6 +40,7 @@ const pendingProtection=new Map<string,PendingProtection>();
 let activeProjectLocation:string|undefined;
 let activeProjectIdentity:{id:string;rootId:string}|undefined;
 let workspaceInFlight=false;
+let workspaceReadCompletion:Promise<void>|undefined;
 const pendingWorkspace=new Map<string,{request:WorkspaceHostRequest;projectLocation:string|undefined;universeLocation:string|undefined;projectIdentity:{id:string;rootId:string}|undefined;universeIdentity:{id:string;rootId:string}|undefined}>();
 let projectInFlight = false;
 let universeInFlight = false;
@@ -161,13 +162,15 @@ else
         ipcMain.handle(PROJECT_CHANNEL, async (event, value: unknown): Promise<ProjectResult> => {
             if (!authorized(event) || !validProjectRequest(value) || draining)
                 throw new Error('Project request denied');
+            await workspaceReadCompletion;
+            if(draining)throw new Error('Project request denied');
             const request=value, base={protocolVersion:1 as const,requestId:request.requestId,command:request.command};
             if (projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight || hasBlockingOperations() || (pendingProjectCreation && !['project.open','project.current'].includes(request.command)))
                 return {...base,status:'error',code:'RECOVERY_REQUIRED',message:'Finish or reconcile the pending operation before changing projects.',outcome:pendingProjectCreation?'unknown':'not-committed',retry:'after-recovery'};
             projectInFlight=true;
             let sent=false;
             try {
-                await ensureApplicationHost(request.command==='project.current');
+                await ensureApplicationHost(request.command==='project.current'||request.command==='project.close');
                 let basePath: string | undefined, universePath: string | undefined;
                 if(request.command==='project.create' || request.command==='project.open') {
                     if(request.command==='project.create') {
@@ -208,15 +211,17 @@ else
             } finally {projectInFlight=false;}
         });
         ipcMain.handle(UNIVERSE_CHANNEL, async (event, value: unknown) => {
-            if (!authorized(event) || !validUniverseRequest(value) || draining || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight)
+            if (!authorized(event) || !validUniverseRequest(value) || draining)
                 throw new Error('Universe request denied');
+            await workspaceReadCompletion;
+            if(draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)throw new Error('Universe request denied');
             universeInFlight=true;
             try {
             const request = value;
             const reconcilesPending = request.command === 'universe.open' && request.reconcileOperationId && mutationLocations.has(request.reconcileOperationId);
             if ((pendingProjectCreation || hasBlockingOperations()) && request.command !== 'universe.current' && !reconcilesPending)
                 return { protocolVersion: 1, requestId: request.requestId, command: request.command, status: 'error', code: 'RECOVERY_REQUIRED', message: 'Reconcile the pending operation in its original folder before another operation or close.', outcome: 'unknown', retry: 'after-recovery' };
-            await ensureApplicationHost(request.command==='universe.current'||request.command==='universe.profile.save');
+            await ensureApplicationHost(request.command==='universe.current'||request.command==='universe.profile.save'||request.command==='universe.close');
             if (request.command === 'universe.create' || request.command === 'universe.open') {
                 const injected = diagnostic ? process.env.WRITINGTOOL_UNIVERSE_FOLDER : undefined;
                 let selection: {
@@ -259,6 +264,7 @@ else
             if (request.command === 'universe.profile.save' && activeLocation && activeSnapshot)
                 rememberMutation(request.input.operationId, activeLocation, { identity: { ownerId: activeSnapshot.ownerId, rootId: activeSnapshot.rootId }, mutation: { command: request.command, input: request.input } });
             let result = await universeClient!.request(request);
+            if(result.status==='ok'){activeSnapshot=result.snapshot;activeLocation=result.snapshot?.location;}
             if (diagnostic && diagnosticDelaySaveAck && request.command === 'universe.profile.save' && result.status === 'ok') {
                 diagnosticDelaySaveAck = false;
                 await new Promise<void>(resolve => {
@@ -354,6 +360,8 @@ else
             // Listing recent roots has no authority effects and must remain available during recovery.
             if(value.command==='protection.recents')return runProtection(value);
             if(value.command==='protection.reconcile'){
+                await workspaceReadCompletion;
+                if(draining)return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Wait for normal closing to finish.',outcome:'not-committed',operationId:null};
                 if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight)return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Wait for the active authority operation before reconciliation.',outcome:'not-committed',operationId:null};
                 protectionInFlight=true;
                 try{
@@ -434,7 +442,8 @@ else
             if(!authorized(event)||!validWorkspaceRequest(value)||draining||projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight)throw new Error('Workspace request denied');
             const request=value,base={protocolVersion:1 as const,requestId:request.requestId,command:request.command};
             if((hasBlockingOperations()||pendingProjectCreation)&&request.command!=='workspace.reconcile'&&request.command!=='settings.get'&&request.command!=='workspace.query')return{...base,status:'error',code:'RECOVERY_REQUIRED',message:'Reconcile the original pending operation before continuing.',outcome:'unknown',retry:'after-recovery',issues:[]};
-            workspaceInFlight=true;let sent=false;
+            workspaceInFlight=true;let sent=false,completeRead:(()=>void)|undefined;
+            if(request.command==='workspace.query'||request.command==='settings.get')workspaceReadCompletion=new Promise<void>(resolve=>{completeRead=resolve;});
             try{
                 await ensureApplicationHost();
                 if(request.command==='workspace.reconcile'&&!fault){
@@ -448,7 +457,7 @@ else
                         if(hostExited){launchApplicationHost();if(projectLocation){const reopened=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:projectLocation,...(universeLocation?{universePath:universeLocation}:{})});if(reopened.status!=='ok'||!reopened.snapshot||reopened.snapshot.ownerId!==pending.projectIdentity?.id||reopened.snapshot.rootId!==pending.projectIdentity?.rootId)throw new Error('Original project participants could not be reopened');}else if(universeLocation){const reopened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:universeLocation});if(reopened.status!=='ok'||!reopened.snapshot||reopened.snapshot.ownerId!==pending.universeIdentity?.id||reopened.snapshot.rootId!==pending.universeIdentity?.rootId)throw new Error('Original universe could not be reopened');}}
                     }else if(hostExited)throw new Error('Original operation locations are unavailable');
                 }
-                if(request.command==='workspace.reconcile'||request.command==='settings.get'||request.command==='workspace.query'){workspaceClient?.fail();workspaceClient=new WorkspaceHostClient(child);}
+                if(request.command==='workspace.reconcile'||request.command==='settings.get'||request.command==='workspace.query'){workspaceClient?.fail();workspaceClient=new WorkspaceHostClient(hostExited?undefined:child);}
                 let internal:WorkspaceHostRequest=request;
                 if(request.command==='workspace.asset.import'){
                     const frozen=pendingWorkspace.get(request.operationId);if(frozen)internal={...frozen.request,requestId:request.requestId};else{
@@ -478,7 +487,7 @@ else
                 if(result.status==='ok'&&activeLocation){const current=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.current'});if(current.status==='ok'){activeSnapshot=current.snapshot;activeLocation=current.snapshot?.location;}}
                 return result;
             }catch{return sent?workspaceUnavailable(request):{...base,status:'error',code:'IO_FAILURE',message:'The native workspace selection or file operation could not complete. Existing content was retained.',outcome:'not-committed',retry:'new-request',issues:[]};}
-            finally{workspaceInFlight=false;}
+            finally{workspaceInFlight=false;if(completeRead){workspaceReadCompletion=undefined;completeRead();}}
         });
         disposePresentation = registerPresentation(() => window, MAIN_WINDOW_WEBPACK_ENTRY, MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY);
         window = new BrowserWindow({ width: 960, height: 680, minWidth: 360, minHeight: 360, backgroundColor: '#292929', show: false, webPreferences: { preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY, sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false, additionalArguments: diagnostic ? ['--writingtool-smoke'] : [] } });
@@ -523,12 +532,21 @@ else
         if(!diagnostic&&fs.existsSync(path.join(fallbackRoot,fallbackRelative))){const bytes=readManaged(fallbackRoot,fallbackRelative),notice=decode(bytes);if(closed(notice,['schemaVersion','folder','createdAt','used','actualPath'])&&notice.schemaVersion===1&&notice.used===true&&typeof notice.folder==='string'&&typeof notice.actualPath==='string'){const answer=await dialog.showMessageBox(window,{type:'info',title:'Closing backup saved in another folder',message:'Your required closing backup was saved at:\n'+notice.actualPath,detail:'Choose a new backup destination for future backups.',buttons:['Choose backup folder…','Remind me next launch'],defaultId:0,cancelId:1});if(answer.response===0){const chosen=await dialog.showOpenDialog(window,{title:'Choose future backup folder',properties:['openDirectory','createDirectory']});if(!chosen.canceled&&chosen.filePaths[0]){const saved=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'settings.select-backup',nativeDestination:fs.realpathSync(chosen.filePaths[0])});if(saved.status==='ok')removeManagedBytes(fallbackRoot,fallbackRelative,hash(bytes));}}}}
 
         if (diagnostic)
-            void smoke();
+            void smoke().catch(error=>{console.error(error);console.log('WRITINGTOOL_SMOKE '+JSON.stringify({passed:false,fault:fault??'none',error:error instanceof Error?error.message:'Diagnostic execution failed.'}));app.exit(1);});
     }).catch(error => {
         console.error(error);
         app.exit(1);
     });
 async function smoke(): Promise<void> {
+    const waitForAuthorityIdle=async()=>{
+        let settled=0;
+        for(let attempt=0;attempt<250;attempt++){
+            settled=projectInFlight||universeInFlight||workspaceInFlight||protectionInFlight?0:settled+1;
+            if(settled===2)return;
+            await new Promise(resolve=>setTimeout(resolve,20));
+        }
+        throw new Error('Diagnostic authority did not finish its background work.');
+    };
     const deadline = Date.now() + 14000;
     let observed: Record<string, unknown> = {};
     while (Date.now() < deadline && window && !window.isDestroyed()) {
@@ -576,8 +594,11 @@ async function smoke(): Promise<void> {
             const staysOpen=document.querySelector('#profile-heading')?.textContent==='Universe profile';
             return {requiredName,pendingGuard,preservedDraft,failedSaveRetains,discarded,staysOpen};
         })()`);
+        await waitForAuthorityIdle();
         const created = await window!.webContents.executeJavaScript('window.writingTool.currentUniverse()');
+        if(created.status!=='ok'||!created.snapshot)throw new Error('Diagnostic universe creation was not acknowledged.');
         const mouseClick = async (selector: string) => {
+            await waitForAuthorityIdle();
             const point = await window!.webContents.executeJavaScript(`(() => {const rect=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:Math.round(rect.x+rect.width/2),y:Math.round(rect.y+rect.height/2)};})()`);
             window!.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...point });
             window!.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...point });
@@ -634,6 +655,7 @@ async function smoke(): Promise<void> {
         const departureSaveRetainsNewer = await delayedAck(true, 'Departure submitted draft', 'Even newer retained draft');
         await window!.webContents.executeJavaScript(`(async()=>{document.querySelector('[data-top-profile-close]').click();await new Promise(resolve=>setTimeout(resolve,70));Array.from(document.querySelectorAll('.blocking button')).find(button=>button.textContent==='Discard').click();})()`);
         const exactDescription = '  Exact\r\n Ω🌌 \t';
+        await waitForAuthorityIdle();
         const exactSaved = await window!.webContents.executeJavaScript(`(async()=>{const current=await window.writingTool.currentUniverse();const s=current.snapshot;return window.writingTool.saveUniverseProfile({operationId:crypto.randomUUID(),ownerId:s.ownerId,expectedUnitGeneration:s.generation,expectedRecordVersion:s.recordVersion,submittedEditorRevision:'999',data:{name:'Saved smoke universe',description:${JSON.stringify(exactDescription)}}});})()`);
         const exactDescriptionSaved = exactSaved.status === 'ok' && exactSaved.snapshot?.profile.description === exactDescription;
         diagnosticChooserCanceled = true;
@@ -726,12 +748,13 @@ async function requestNativeQuit(kind: 'window' | 'app'): Promise<void> {
             if (!approved)
                 return;
         }
+        await workspaceReadCompletion;
         if (hasBlockingOperations() || pendingProjectCreation || projectInFlight || universeInFlight || workspaceInFlight || protectionInFlight) {
             dialog.showErrorBox('Unable to close universe', 'Reconcile the unresolved operation before closing.');
             return;
         }
         draining = true;
-        if (!hostExited) {
+        if (!hostExited&&(activeProjectLocation||activeLocation)) {
             // Reuse the same process, never create replacement authority. A
             // failed readiness/transport client is not a shutdown acknowledgment.
             universeClient?.fail();

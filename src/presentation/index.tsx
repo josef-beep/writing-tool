@@ -131,7 +131,8 @@ function Shell() {
             const resolve=workspaceDeparture.current; workspaceDeparture.current=null; resolve?.(true);
             return;
         }
-        if (!await workspaceRef.current?.guard(action === 'quit') && workspaceRef.current) {
+        const emptyUnavailableQuit=action==='quit'&&state==='unavailable'&&!projectSnapshot&&!snapshot&&!utilityShown;
+        if (!emptyUnavailableQuit&&!await workspaceRef.current?.guard(action === 'quit') && workspaceRef.current) {
             if (action === 'quit') finishQuit(false);
             return;
         }
@@ -164,7 +165,7 @@ function Shell() {
             closingRef.current = true;
             setClosing(true);
             try {
-                if (workspaceRef.current && !await workspaceRef.current.closeProtection()) {
+                if (!emptyUnavailableQuit&&workspaceRef.current && !await workspaceRef.current.closeProtection()) {
                     closingRef.current = false;
                     setClosing(false);
                     finishQuit(false);
