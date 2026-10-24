@@ -1,0 +1,37 @@
+{
+  "scope": "Temporary synthetic stores; one story/chapter, empty historical text, three durable saves including response snapshot and native-context universe read",
+  "baselineRevision": "03687967ba70c0adf49e746b5fa3eddbce997421",
+  "baselineStorageSha256": "6dcaee6acc0a47dc3df726a5e263eedbe8eb6a7403d59a80a3bec37ef4e2e64c",
+  "results": [
+    {
+      "historyVersions": 0,
+      "beforeMedianMs": 138.18,
+      "afterMedianMs": 133.33,
+      "speedup": 1.04
+    },
+    {
+      "historyVersions": 100,
+      "beforeMedianMs": 210.93,
+      "afterMedianMs": 196.92,
+      "speedup": 1.07
+    },
+    {
+      "historyVersions": 500,
+      "beforeMedianMs": 792.31,
+      "afterMedianMs": 431.33,
+      "speedup": 1.84
+    },
+    {
+      "historyVersions": 1000,
+      "beforeMedianMs": 2030.14,
+      "afterMedianMs": 732.31,
+      "speedup": 2.77
+    }
+  ],
+  "limits": [
+    "Three runs per synthetic size, one live chapter and empty historical manuscript text",
+    "Includes durable mutation, response snapshot and native-context universe read; excludes UI paint and IPC transfer",
+    "Not representative release corpus or installed platform certification",
+    "Publication disk flushes and full historical validation preserved"
+  ]
+}

@@ -1,0 +1,124 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 10-22-2026 20:14
+last_updated: 10-22-2026 20:14
+project: WritingTool
+project_key: WritingTool
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: in-progress
+  1-1-set-up-initial-project-from-starter-template: done
+  1-2-create-and-reopen-a-universe-in-a-chosen-folder: done
+  1-3-create-and-reopen-a-project-linked-to-a-universe: review
+  1-4-create-name-and-manually-order-stories-in-a-project: review
+  1-5-organize-stories-into-optional-manually-ordered-volumes: review
+  1-6-build-and-save-a-universe-s-repeating-fictional-calendar: review
+  1-7-record-standalone-events-on-the-universe-timeline: review
+  1-8-manually-arrange-timeline-events-sharing-a-date: review
+  1-9-revise-a-populated-calendar-without-changing-elapsed-chronol: review
+  epic-1-retrospective: optional
+
+  epic-2: in-progress
+  2-1-create-and-organize-undated-chapters-within-a-story: review
+  2-2-write-format-and-save-chapter-manuscripts: review
+  2-3-set-independent-chapter-dates-and-view-chapters-chronologica: review
+  2-4-automatically-save-current-work-at-a-configurable-interval: review
+  2-5-choose-light-dark-or-system-application-appearance: review
+  2-6-configure-independent-saving-and-recovery-settings: review
+  2-7-export-and-import-application-settings-as-json: review
+  epic-2-retrospective: optional
+
+  epic-3: in-progress
+  3-1-create-and-filter-universe-characters-by-type: review
+  3-2-develop-character-profiles-with-guided-prompts-and-explicit: review
+  3-3-select-and-view-multiple-character-personality-labels: review
+  3-4-add-and-view-optional-character-images: review
+  3-5-record-character-birth-years-on-the-universe-timeline: review
+  3-6-record-character-background-events-on-the-shared-timeline: review
+  3-7-record-faction-profiles-and-track-completeness: review
+  3-8-record-optional-military-unit-types-in-faction-profiles: review
+  3-9-track-faction-affiliation-history-on-the-character-sheet: review
+  3-10-associate-chapter-characters-and-display-writing-targets: review
+  3-11-plan-linked-chapter-events-from-the-chapter-or-timeline: review
+  3-12-edit-flashback-historical-dates-independently-of-chapter-dat: review
+  3-13-open-the-event-editor-from-a-chapter-without-chapter-driven: review
+  3-14-inspect-chapter-chronology-and-characters-alongside-manuscri: review
+  epic-3-retrospective: optional
+
+  epic-4: in-progress
+  4-1-maintain-a-story-s-dated-and-undated-plot-sequence: review
+  4-2-record-established-decisions-on-the-universe-timeline: review
+  4-3-link-established-decisions-to-their-resulting-events: review
+  4-4-link-an-established-decision-to-a-decision-it-leads-to: review
+  4-5-inspect-established-decision-result-relationships-in-a-tree: review
+  4-6-find-unresolved-decisions-from-the-universe-timeline: review
+  4-7-inspect-established-decisions-in-character-story-arc-and-wri: review
+  epic-4-retrospective: optional
+
+  epic-5: in-progress
+  5-1-capture-and-inspect-complete-scheduled-revisions-of-current: review
+  5-2-restore-a-chapter-revision-while-preserving-replaced-work: review
+  5-3-restore-a-character-revision-against-the-authoritative-unive: review
+  5-4-restore-an-event-revision-without-changing-its-depicting-cha: review
+  5-5-create-independent-complete-project-and-universe-zip-backups: review
+  5-6-restore-a-whole-project-against-its-authoritative-universe: review
+  5-7-recover-a-project-or-standalone-universe-from-one-complete-z: review
+  5-8-create-complete-backups-on-an-independent-configurable-sched: review
+  5-9-finish-normal-close-and-allow-recovery-exit-after-errors: review
+  5-10-apply-time-based-retention-and-safe-manual-deletion: review
+  epic-5-retrospective: optional
+
+  epic-6: in-progress
+  6-1-export-a-whole-story-or-selected-chapters-as-docx-pdf-markdo: review
+  6-2-export-local-database-content-through-a-separate-consistent: review
+  epic-6-retrospective: optional
+
+# PLAN-06 reconciles completed coding with formal story acceptance.
+# Review means acceptance/review is pending; it is not release certification.
+planning_readiness:
+  verdict: PASS
+  scope: Recorded implementation plan
+  report: _bmad-output/planning-artifacts/implementation-readiness.md
+acceptance:
+  reconciliation: _bmad-output/implementation-artifacts/sprint-reconciliation.md
+  evidence: _bmad-output/planning-artifacts/plan-06-validation.json
+  code_baseline: 03687967ba70c0adf49e746b5fa3eddbce997421
+  next_story: 1-3-create-and-reopen-a-project-linked-to-a-universe
+  release_status: open
+  outstanding_gates:
+    - TECH-01 through TECH-13 conformance and required evidence
+    - DEC-10 Windows and Intel/Apple Silicon Mac test access unconfirmed
+    - BUILD-24/25 and VERIFY-09 installed platform/native/runtime evidence
+    - VERIFY-01 through VERIFY-08 full feature and failure-path evidence
+    - VERIFY-10 representative performance corpus and measurements
+    - VERIFY-11/12 story review closure and complete release scenario
+    - Rendered DOCX/PDF fidelity and runtime accessibility acceptance

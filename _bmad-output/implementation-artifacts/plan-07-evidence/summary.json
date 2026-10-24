@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "task": "PLAN-07",
+  "status": "complete",
+  "verifiedAt": "2026-10-22T20:33:12+02:00",
+  "sourceRevision": "03687967ba70c0adf49e746b5fa3eddbce997421",
+  "workingTree": "Includes current documentation/planning changes; no application source changes in PLAN-07",
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.19.0",
+    "npm": "11.17.0",
+    "scope": "Observed host, not minimum supported platform acceptance"
+  },
+  "commands": [
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "output": "typecheck.txt"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "output": "lint.txt"
+    },
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "output": "tests.txt",
+      "subprocessRestriction": "Ran with approved execution sandbox escalation; application security unchanged"
+    },
+    {
+      "command": "DISPLAY=\"${DISPLAY:-:1}\" npm run test:desktop -- writing menus error-quit",
+      "exitCode": 0,
+      "output": "desktop.txt",
+      "results": "desktop-results.json"
+    },
+    {
+      "command": "npm run build:native",
+      "exitCode": 0,
+      "output": "native.txt",
+      "scope": "Linux branch skips addon compilation"
+    }
+  ],
+  "nodeTestTotals": {
+    "tests": 98,
+    "pass": 98,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "desktopScenarios": [
+    {
+      "mode": "writing",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "menus",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "error-quit",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "recovery-notice",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    }
+  ],
+  "planningChecks": {
+    "traceability": {
+      "chunk_id": "4c495e",
+      "wall_time_seconds": 1.1087e-05,
+      "exit_code": 0,
+      "original_token_count": 50,
+      "output": "PLAN-05: 49 stories; 49 FRs; 10 NFRs; 18 architecture requirements; 22 UX responsibilities; 13 technical definitions; zero structural/traceability failures. Runtime/release acceptance remains open.\n"
+    },
+    "sprintValidation": {
+      "ok": true,
+      "action": "validate",
+      "status_file": "_bmad-output/implementation-artifacts/sprint-status.yaml",
+      "valid": true,
+      "problems": [],
+      "legacy_mapped": []
+    },
+    "sprintRefresh": {
+      "ok": true,
+      "action": "generate",
+      "status_file": "_bmad-output/implementation-artifacts/sprint-status.yaml",
+      "dry_run": true,
+      "fresh": false,
+      "epics": 6,
+      "stories": 49,
+      "counts": {
+        "in-progress": 6,
+        "done": 2,
+        "review": 47,
+        "optional": 6
+      },
+      "generated": "10-22-2026 20:14",
+      "last_updated": "10-22-2026 20:32",
+      "warnings": [
+        "unparsed Epic/Story-like heading at _bmad-output/planning-artifacts/epics.md:50: # WritingTool - Epic Breakdown",
+        "unparsed Epic/Story-like heading at _bmad-output/planning-artifacts/epics.md:429: ## Epic List",
+        "unparsed Epic/Story-like heading at _bmad-output/planning-artifacts/epics.md:3995: ### All-epic story-creation checkpoint"
+      ],
+      "new_entries": [],
+      "preserved": 61,
+      "changed": 0,
+      "upgraded_from_disk": [],
+      "dropped_orphans": [],
+      "legacy_mapped": [],
+      "illegal": [],
+      "in_sync": true,
+      "explicit_set": []
+    }
+  },
+  "contextChecks": {
+    "singleManagedBlock": true,
+    "allNamedFilePathsExist": true,
+    "rootInstructionsShownBeforeWrite": true,
+    "existingInstructionsReplaced": false,
+    "standingAuthorizationApplied": true
+  },
+  "webpackPreserved": {
+    "unchanged": true,
+    "sha256": {
+      ".webpack/main/index.cjs": "940a0c6d8a52f878da6bcfe5af806ce293f6b91c151d2d5e15f0e0826eac7190",
+      ".webpack/main/index.cjs.map": "7b3012f1279a6633bde13c6a5004e0378aada73d48b40bad9813cfbf2ae53545",
+      ".webpack/renderer/main_window/index.js": "27d164f2bf5471b68bddae4a2398309d1426d52e0069caf6b4ef4e3a1a152853",
+      ".webpack/renderer/main_window/index.js.map": "6b88e70274c9b9c119cabe1ec8b5f0583fc7b4dc1cf2ffbd4d91a78ce11fe711",
+      ".webpack/renderer/main_window/preload.cjs": "c5413ae8e2c10bbe30b47177298441a47e25194fdfb63124c534c88f142edbcf",
+      ".webpack/renderer/main_window/preload.cjs.map": "19a7089482f95604f010eea1f897a5f6d0522dbdb7469f2998a9241ebeed06aa"
+    }
+  },
+  "inputs": {
+    "AGENTS.md": "1d3aafce56098bb13500f2c5e7cd01d13cb739f68552cf57ba60c48b0a64bb6d",
+    "README.md": "a7d9923a4ecedcd8f485d315fbe62fcac52d59b43563a0dd4522233ff816695b",
+    "TODO.md": "3e90815efc5a09bcdb0bdacd791c8dd57f583ed86c1c84e5cf34c93b5a6ed21e",
+    "_bmad-output/RESUME.md": "7196ce98a8c7aae57e2dee1a59f207e925261fbef825322ab3289499a030add3",
+    "src/domain/README.md": "151a78dc274e9b1be2ce1166962a1fb72cfceaf62eca7dbee7f0c565cbfae9eb",
+    "src/infrastructure/README.md": "ed7d079635c8c4e6e609cc5ee2b24a86b2726c12c6a1ef933d2570e0bdd875c8",
+    "native/confined-fs/README.md": "84ae5861ddda446c5c0a47ed7410c7e181d45e3e745c6e6b449e6b6ac9ddbf7d",
+    "package.json": "e3f0acf5616bb518f62364c8604fd2ab3754596dd62fc2f8e5ac4b28c7901be1",
+    "package-lock.json": "a9d3acd753e768e277199897f1835dee5a25b78b753c486bdeed068ade82efca",
+    "tsconfig.json": "4f1e6b50af292293efa2475c0b3be92bf73f89a6bee4880ca0917f7904a9dd4b",
+    "forge.config.mts": "25e621736909cb915a9a5c586bc9abfbd05d846430dec4a2a162793fc18c1fe8",
+    "webpack.main.config.ts": "f6f6350702770ce20e21987fd6c2471e3f324d74773034eedac72cc31ebc5d41",
+    "webpack.renderer.config.ts": "73d5ca75af7e23c53421876b918f09618eae518ac1fab245f8cda7d109f3225e",
+    "scripts/verify-desktop.mjs": "7348fea691495e96e18adfd8124c6a0cecc08f252a4e7529977e7b6f1bc2f81f",
+    "scripts/smoke.mjs": "0a65757e4cb50504de784c2279ad06b4a2aeb3adc2f3c0c1fe6a98df17ba9784",
+    "scripts/setup-resources.mjs": "ede678b176277287f131f3619825b6970b4e169497407fe509b1ccb8ed972966",
+    "scripts/build-native.mjs": "7cc10963aeaea940d9063b628b95c89869493e5a54997ac2a62f45ed2d309d3f",
+    "_bmad-output/implementation-artifacts/plan-07-context.md": "06e06c22f07dd8aab04434f9c105ab53fd319375a2c28e21a2833b07a9e368e0",
+    "_bmad-output/planning-artifacts/plan-05-validation.json": "8f3676a8a631c9ece2ed587bcb345fd1cf27b14c7ed3edfc9b24e631b81e2cff",
+    "_bmad-output/planning-artifacts/plan-06-validation.json": "815d63ce312eef99e1273e01aeaa99802f273b8edfccf80e25a2e2b91c55b9ea",
+    "_bmad-output/specs/spec-WritingTool/planning-contract-index.md": "c5a4f42cb0fd22a358299fe08ae1d891e2426a24a9d5e53c63306241bdb7d3ff",
+    "_bmad-output/planning-artifacts/execution-approval.md": "5b84be488d8e32edd9fde20ff4b32e9cbdd69f5ae5cc5508f1580804e0e0ce92"
+  },
+  "outputs": {
+    "_bmad-output/implementation-artifacts/plan-07-evidence/desktop-results.json": "1824693b895e032f8fb346fc4c718fa37f1ddee0ffd066ed03d25cd5642699bc",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/desktop.txt": "aac9821cf8cbd942dd10b6ca844b0acfcf09e1918856fe697b116b96bdeed6da",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/error-quit.txt": "a3fc1c98b353ed839b5b649163b553dda79ce8bfa1af11f7dec216737cbc4a59",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/lint.txt": "b162004ed9f8e743f39ab763e8b22e3ef36002401e6f16274e28f3ebb5353e17",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/menus.txt": "6ea0768378381d7a9e39b648061fb3ccced7ea8e6aade430b05f6dd98efa234d",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/native.txt": "738e9615ba260dbb314a54ee273704980abbba6f57d54ccb259bd4e86c514c3f",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/recovery-notice.txt": "c9e2d039c6335615db1ef7e0a9d52b175e7477703bd6fac03959ecbe15589453",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/tests.txt": "2e8ef5b631ed95bb501c2125fbe04a003dd25129411565171b8c15b7b5213b4e",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/typecheck.txt": "89fbc758376c8b14e6059932e037178073205f606571b40c9a4cbf8d73bb7a25",
+    "_bmad-output/implementation-artifacts/plan-07-evidence/writing.txt": "e7c279b1740eb9cdbaa6660f3b3e0f8f363625477947f982c2292230b3d22721"
+  },
+  "limits": [
+    "No new story acceptance; two done and 47 in review remain unchanged",
+    "No dependency installation or resource replacement",
+    "No ordinary Forge start/smoke or current packaging/installer run",
+    "No macOS/Windows native compilation or installed durability acceptance",
+    "No full export-fidelity, accessibility or representative-corpus performance acceptance"
+  ],
+  "commitCreated": false
+}

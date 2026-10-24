@@ -1,0 +1,42 @@
+[
+  {
+    "mode": "writing",
+    "passed": true,
+    "failedQueries": 0,
+    "captureCount": 1,
+    "backupCount": 1,
+    "lostAck": false,
+    "conflicted": false,
+    "panelId": "timeline"
+  },
+  {
+    "mode": "menus",
+    "passed": true,
+    "failedQueries": 0,
+    "captureCount": 1,
+    "backupCount": 1,
+    "lostAck": false,
+    "conflicted": false,
+    "panelId": "timeline"
+  },
+  {
+    "mode": "error-quit",
+    "passed": true,
+    "failedQueries": 0,
+    "captureCount": 0,
+    "backupCount": 0,
+    "lostAck": false,
+    "conflicted": false,
+    "panelId": "timeline"
+  },
+  {
+    "mode": "recovery-notice",
+    "passed": true,
+    "failedQueries": 0,
+    "captureCount": 0,
+    "backupCount": 0,
+    "lostAck": false,
+    "conflicted": false,
+    "panelId": "timeline"
+  }
+]

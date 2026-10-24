@@ -1,0 +1,9 @@
+
+> writingtool@0.1.0 test:desktop
+> node --import tsx scripts/verify-desktop.mjs writing menus error-quit
+
+writing: passed
+menus: passed
+error-quit: passed
+recovery-notice: passed
+Desktop verification evidence: /tmp/writingtool-desktop-verification-kLPcC8

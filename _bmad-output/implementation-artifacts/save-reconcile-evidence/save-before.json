@@ -1,0 +1,162 @@
+{
+  "node": "v24.19.0",
+  "scope": "Temporary synthetic stores; one story/chapter, empty historical text, three durable saves including response snapshot and native-context universe read",
+  "results": [
+    {
+      "mode": "baseline",
+      "historyVersions": 0,
+      "samples": [
+        {
+          "saveMs": 135.4,
+          "mutateMs": 131.26,
+          "responseMs": 4.14,
+          "stages": {
+            "prepare": 15.4,
+            "publish": 68.61,
+            "apply": 27.03,
+            "finalize": 14
+          }
+        },
+        {
+          "saveMs": 138.18,
+          "mutateMs": 134.44,
+          "responseMs": 3.74,
+          "stages": {
+            "prepare": 18.65,
+            "publish": 68.93,
+            "apply": 27.01,
+            "finalize": 14.74
+          }
+        },
+        {
+          "saveMs": 140.53,
+          "mutateMs": 136.22,
+          "responseMs": 4.31,
+          "stages": {
+            "prepare": 20.31,
+            "publish": 68.05,
+            "apply": 28.05,
+            "finalize": 14.79
+          }
+        }
+      ]
+    },
+    {
+      "mode": "baseline",
+      "historyVersions": 100,
+      "samples": [
+        {
+          "saveMs": 216.32,
+          "mutateMs": 191.7,
+          "responseMs": 24.62,
+          "stages": {
+            "prepare": 33.46,
+            "publish": 73.52,
+            "apply": 28.78,
+            "finalize": 14.06
+          }
+        },
+        {
+          "saveMs": 210.93,
+          "mutateMs": 185.09,
+          "responseMs": 25.84,
+          "stages": {
+            "prepare": 35.38,
+            "publish": 69.14,
+            "apply": 28.22,
+            "finalize": 14.49
+          }
+        },
+        {
+          "saveMs": 206.92,
+          "mutateMs": 180.91,
+          "responseMs": 26.01,
+          "stages": {
+            "prepare": 33.99,
+            "publish": 67.62,
+            "apply": 27.62,
+            "finalize": 14.49
+          }
+        }
+      ]
+    },
+    {
+      "mode": "baseline",
+      "historyVersions": 500,
+      "samples": [
+        {
+          "saveMs": 792.31,
+          "mutateMs": 676.53,
+          "responseMs": 115.78,
+          "stages": {
+            "prepare": 371.06,
+            "publish": 73.92,
+            "apply": 30.87,
+            "finalize": 15.98
+          }
+        },
+        {
+          "saveMs": 795.81,
+          "mutateMs": 684.76,
+          "responseMs": 111.04,
+          "stages": {
+            "prepare": 385.7,
+            "publish": 73.28,
+            "apply": 37.31,
+            "finalize": 15.94
+          }
+        },
+        {
+          "saveMs": 767.76,
+          "mutateMs": 660.58,
+          "responseMs": 107.18,
+          "stages": {
+            "prepare": 374.33,
+            "publish": 73.93,
+            "apply": 31.35,
+            "finalize": 15.77
+          }
+        }
+      ]
+    },
+    {
+      "mode": "baseline",
+      "historyVersions": 1000,
+      "samples": [
+        {
+          "saveMs": 2024.59,
+          "mutateMs": 1812.59,
+          "responseMs": 212,
+          "stages": {
+            "prepare": 1375.2,
+            "publish": 68.17,
+            "apply": 35.9,
+            "finalize": 18.52
+          }
+        },
+        {
+          "saveMs": 2030.14,
+          "mutateMs": 1813.14,
+          "responseMs": 217,
+          "stages": {
+            "prepare": 1370.93,
+            "publish": 68.28,
+            "apply": 36.32,
+            "finalize": 18.18
+          }
+        },
+        {
+          "saveMs": 2129.4,
+          "mutateMs": 1887.8,
+          "responseMs": 241.6,
+          "stages": {
+            "prepare": 1431.99,
+            "publish": 67.5,
+            "apply": 40.72,
+            "finalize": 18.43
+          }
+        }
+      ]
+    }
+  ]
+}

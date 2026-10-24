@@ -1,0 +1,10 @@
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+PICKER Open project folder
+[135224:1022/202818.916999:ERROR:ui/gfx/x/atom_cache.cc:236] Add application/vnd.portal.filetransfer to kAtomsToCache
+[135224:1022/202818.917068:ERROR:ui/gfx/x/atom_cache.cc:236] Add application/vnd.portal.files to kAtomsToCache
+PICKER Open project folder
+MANUSCRIPT_WRITING chapter creation, text/keyboard input, bold, headings, durable save and reopening passed
+ERROR_EXIT_RECOVERY exact drafts and pending operation context retained before normal app shutdown
+WINDOW_CLOSED
+WRITINGTOOL_SMOKE {"mode":"error-quit","passed":true,"failedQueries":0,"captureCount":0,"backupCount":0,"lostAck":false,"conflicted":false,"panelId":"timeline"}
