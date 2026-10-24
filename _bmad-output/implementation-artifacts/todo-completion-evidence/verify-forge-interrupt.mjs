@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {spawn} from 'node:child_process';
+const profile=fs.mkdtempSync(path.join(os.tmpdir(),'writingtool-interrupt-')),log=new URL('./forge-interrupt.txt',import.meta.url);let output='',interrupted=false,scheduled=false;
+const preload=path.join(profile,'checker-probe.cjs');fs.writeFileSync(preload,`const Module=require('node:module'),load=Module._load;Module._load=function(request,parent,...args){const value=load.call(this,request,parent,...args);if(request==='typescript'&&parent?.filename?.includes('ts-loader'))process.stdout.write('WRITINGTOOL_CHECKER_COMPILING\\n');return value;};`);
+const child=spawn('npm',['start'],{detached:true,env:{...process.env,WRITINGTOOL_DIAGNOSTIC:'1',WRITINGTOOL_PROFILE:profile,DISPLAY:':1',NODE_OPTIONS:(process.env.NODE_OPTIONS??'')+' --require='+preload},stdio:['ignore','pipe','pipe']});
+const stop=()=>{if(interrupted)return;interrupted=true;process.kill(-child.pid,'SIGINT');};
+for(const stream of [child.stdout,child.stderr])stream.on('data',data=>{output+=data.toString();fs.appendFileSync(log,data);if(!scheduled&&/WRITINGTOOL_CHECKER_COMPILING/.test(output)){scheduled=true;setTimeout(stop,100);}});
+const timer=setTimeout(()=>{stop();},20000),result=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal}));});clearTimeout(timer);
+if(!interrupted||/EPIPE|fork-ts-checker-webpack-plugin/.test(output))throw new Error('Build interruption was not clean');
+fs.writeFileSync(new URL('./forge-interrupt.json',import.meta.url),JSON.stringify({profile,interrupted:true,...result,epipe:false},null,2)+'\n');console.log(JSON.stringify(result));

@@ -1,0 +1,46 @@
+{
+  "status": "implementation-slice-verified; workflow review and broader acceptance pending",
+  "node": {
+    "tests": 107,
+    "pass": 107,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "desktopScenarios": 24,
+  "desktopRestartContinuations": 3,
+  "developmentSmoke": 7,
+  "packagedSmoke": 7,
+  "debianMadeAndExtractedLaunch": true,
+  "realExportsWithSourceAndPackagedRuntimes": true,
+  "sourceHashes": {
+    "forge.config.mts": "81c32762139743ee74945751cc5e5f986a3da8fbdf5f1eff68fbc3d3e7df39e4",
+    "webpack.plugins.ts": "f17068937ccdb41aade2f957021a6492a50ca65842a8d019f4f23819db726227",
+    "webpack.rules.ts": "1a3e795b4057ac83c55c7bf41846bf2984fc7d5c635bab9db3fadf34154de518",
+    "src/desktop/main.ts": "885207f70640c600fcc12a5aec49892ca62a2cce91125cf33ebeda99a30f088e",
+    "src/presentation/index.tsx": "ddd84e3f9d8b2743b8e35be99db5fbc46deca95987c1150fbf72060aaff4e5c5",
+    "src/presentation/manuscript/ManuscriptEditor.tsx": "8db4bd8a20b7cee9102217dffe1bbdcad91eec84febb07eac4ce573c96c48e65",
+    "tests/fixtures/desktop-integration.cjs": "7b7746168112b55eb6e8a7974bcc7a2f4b3f5b8bb4588130e726086392ea58b9",
+    "tests/release-contracts.test.ts": "a41c27fdaa10c2febac94b34aa28e04d615ad5f4b5d2fbb317c9ba07591ee093",
+    "package.json": "9f67c134eb6d1f9767f83be9abab3276a6b0f462bd4c8a03a1a667bca3896dc8"
+  },
+  "report": "verification-slice.md",
+  "preservation": {
+    "initialWebpackArchive": "/tmp/writingtool-todo-preserve-a21418u3/webpack.tar",
+    "retainedNewBundles": "/tmp/writingtool-todo-generated-rwwi0lo1/webpack-new.tar",
+    "allInitialHashesMatch": true,
+    "restoredHashes": {
+      ".webpack/main/utility-host.cjs": "f0ba1f104e6d3a8d5db731b6f521286d5ac68ca193e2a24730392748de4f3e70",
+      ".webpack/main/utility-host.cjs.map": "50df5550b039eeea9350954be1098f4d6dd4b382ab6f41cd6ffce167b58d01c7",
+      ".webpack/main/index.cjs": "efd0cc68f43dd385f32e88045b72978fd32e5435464bf65308f769ecafd16bac",
+      ".webpack/main/index.cjs.map": "e97cdcfc908e296896c1352f95fe9896a82df3ca9e90bba1727950e233488da0"
+    }
+  },
+  "remaining": [
+    "DEC-11 corpus/instrumentation and measurements",
+    "additional contract/story acceptance",
+    "workflow reviews",
+    "matching-host installed/native and hardware/accessibility/export visual acceptance"
+  ]
+}

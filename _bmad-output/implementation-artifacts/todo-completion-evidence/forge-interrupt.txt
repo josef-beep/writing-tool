@@ -1,0 +1,9 @@
+
+> writingtool@0.1.0 start
+> electron-forge start
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+WRITINGTOOL_CHECKER_COMPILING

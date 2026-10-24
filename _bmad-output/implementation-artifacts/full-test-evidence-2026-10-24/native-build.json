@@ -1,0 +1,12 @@
+{
+  "name": "native-build",
+  "command": [
+    "npm",
+    "run",
+    "build:native"
+  ],
+  "started": "2026-10-24T18:24:38.673958+00:00",
+  "seconds": 0.14,
+  "exit_code": 0,
+  "log": "native-build.txt"
+}

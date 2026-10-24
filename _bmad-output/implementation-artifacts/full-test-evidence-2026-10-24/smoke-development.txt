@@ -1,0 +1,1560 @@
+
+> writingtool@0.1.0 smoke
+> node scripts/smoke.mjs
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+<i> [ForkTsCheckerWebpackPlugin] Type-checking in progress...
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   runtime modules 1.93 KiB 10 modules
+[Main Process]   cacheable modules 771 KiB
+[Main Process]     modules by path [1m./src/[39m[22m 662 KiB
+[Main Process]       modules by path [1m./src/infrastructure/*.ts[39m[22m 283 KiB 18 modules
+[Main Process]       modules by path [1m./src/application/[39m[22m 76.8 KiB 11 modules
+[Main Process]       modules by path [1m./src/domain/*.ts[39m[22m 148 KiB 11 modules
+[Main Process]       modules by path [1m./src/desktop/*.ts[39m[22m 154 KiB 10 modules
+[Main Process]     modules by path [1m./node_modules/[39m[22m 108 KiB
+[Main Process]       modules by path [1m./node_modules/electron-squirrel-startup/node_modules/[39m[22m 17.7 KiB
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/index.js[39m[22m 263 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/browser.js[39m[22m 4.62 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         + 3 modules
+[Main Process]       [1m./node_modules/electron-squirrel-startup/index.js[39m[22m 1 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]       [1m./node_modules/fflate/esm/index.mjs[39m[22m 89.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]   + 16 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 1704 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: []
+[Preload (web)]    Deleted files: []
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Renderer (web)]   Changed files: []
+[Renderer (web)]   Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Preload (web)]  webpack-dev-server - Project is running at:
+[Preload (web)]  webpack-dev-server - Loopback: http://127.0.0.1:3000/
+[Preload (web)]  webpack-dev-server - Content not from webpack is served from '/home/jo/Documents/writing-tool/.webpack/renderer' directory
+[Preload (web)]  webpack-dev-server - 404s will fallback to '/index.html'
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs.map"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs"
+[Preload (web)]  asset [1m[32mmain_window/preload.cjs[39m[22m 246 KiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Preload (web)]  runtime modules 883 bytes 5 modules
+[Preload (web)]  cacheable modules 203 KiB
+[Preload (web)]    modules by path [1m./src/domain/*.ts[39m[22m 144 KiB
+[Preload (web)]      [1m./src/domain/workspace.ts[39m[22m 22.5 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/domain/validation.ts[39m[22m 592 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 6 modules
+[Preload (web)]    modules by path [1m./src/application/contracts/*.ts[39m[22m 43.1 KiB
+[Preload (web)]      [1m./src/application/contracts/protection.ts[39m[22m 15.9 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/application/contracts/workspace.ts[39m[22m 11.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 4 modules
+[Preload (web)]    modules by path [1m./src/desktop/*.ts[39m[22m 16.2 KiB
+[Preload (web)]      [1m./src/desktop/preload.ts[39m[22m 8.7 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/desktop/workspace-host-client.ts[39m[22m 1.76 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 3 modules
+[Preload (web)]  [1mexternal "electron"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 6797 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Type-checking in progress...
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected file change /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aborting iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aggregating with previous files change, iteration 2.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 2.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map"
+[Renderer (web)] assets by path [1m[32m*.ttf[39m[22m 4.16 MiB
+[Renderer (web)]   asset [1m[32m36cc7ae44340a12d605e.ttf[39m[22m 406 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m511a67fd9b5f5e3acd7f.ttf[39m[22m 405 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m7797c9f089e5a172845a.ttf[39m[22m 401 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf25c1c862a5cbf56cb8d.ttf[39m[22m 399 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf65c85197d09a9032d45.ttf[39m[22m 384 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m1825a889a7dd3bd30189.ttf[39m[22m 368 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m72c9aa392482d99e94ca.ttf[39m[22m 367 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m26bfe1935313d7c88907.ttf[39m[22m 361 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m0ec3a5dfe334099be8d3.ttf[39m[22m 312 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mc4e06f0a859cf65c69f4.ttf[39m[22m 301 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   + 2 assets
+[Renderer (web)] assets by path [1m[32mmain_window/[39m[22m 3.43 MiB
+[Renderer (web)]   asset [1m[32mmain_window/index.js[39m[22m 3.43 MiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Renderer (web)]   asset [1m[32mmain_window/index.html[39m[22m 506 bytes [1m[32m[emitted][39m[22m
+[Renderer (web)] runtime modules 1.67 KiB 10 modules
+[Renderer (web)] orphan modules 278 bytes [1m[33m[orphan][39m[22m 1 module
+[Renderer (web)] javascript modules 3.18 MiB
+[Renderer (web)]   modules by path [1m./node_modules/[39m[22m 2.73 MiB 54 modules
+[Renderer (web)]   modules by path [1m./src/[39m[22m 455 KiB
+[Renderer (web)]     modules by path [1m./src/presentation/[39m[22m 273 KiB 24 modules
+[Renderer (web)]     modules by path [1m./src/domain/*.ts[39m[22m 144 KiB 8 modules
+[Renderer (web)]     modules by path [1m./src/application/contracts/*.ts[39m[22m 39.2 KiB 5 modules
+[Renderer (web)] asset modules 4.16 MiB (asset) 504 bytes (javascript)
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Regular.ttf[39m[22m 384 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Bold.ttf[39m[22m 361 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Italic.ttf[39m[22m 367 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-BoldItalic.ttf[39m[22m 368 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSans-Regular.ttf[39m[22m 401 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   + 7 modules
+[Renderer (web)] [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 9694 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 2.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  assets by status 246 KiB [1m[32m[cached][39m[22m 1 asset
+[Preload (web)]  cached modules 203 KiB (javascript) 883 bytes (runtime) [1m[32m[cached][39m[22m 25 modules
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 1723 ms
+[Preload (web)]  webpack-dev-middleware - Compilation finished
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Main Process]   ◌ building…
+[Preload (web)]  ✔ compiled in 1.7s
+[Renderer (web)] ✔ compiled in 9.7s
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   cached modules 771 KiB [1m[32m[cached][39m[22m 73 modules
+[Main Process]   runtime modules 1.72 KiB 8 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2803 ms
+[Main Process]   ✔ compiled in 2.8s
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+Error occurred in handler for 'writingtool:presentation:v1': Error: Presentation request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:1670:19
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:universe:v1': Error: Universe request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4713:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+WRITINGTOOL_SMOKE {"passed":true,"packaged":false,"fault":"","observed":{"state":"ready","text":"Application readyThe local application host responded successfully.","keys":["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"],"node":"undefined","process":"undefined"},"security":true,"senderDenied":true,"invalidRequestsRejected":true,"permissionsDenied":true,"permissionChecks":3,"permissionRequests":1,"hostErrors":0,"pending":0,"universeFlow":{"passed":true,"receipt":{"protocolVersion":1,"operationId":"b2f89e22-2575-41b4-b35f-38f792fbf8f4","owner":{"kind":"universe","id":"64c2299c-8c75-498a-8fd8-22c02a8f508b"},"unitGeneration":"2","recordId":"64c2299c-8c75-498a-8fd8-22c02a8f508b","recordVersion":"5745f9a1-00e1-46fe-83f5-277cb1643128","submittedEditorRevision":"6"},"nativeWindowCancel":true,"nativeAppCancel":true,"presentation":{"requiredName":true,"pendingGuard":true,"preservedDraft":true,"failedSaveRetains":true,"discarded":true,"staysOpen":true},"typingAfterSave":true,"departureSaveRetainsNewer":true,"exactDescriptionSaved":true,"topCommands":{"mouseCloseProfile":true,"mouseEditProfile":true,"mouseMenuUsable":true,"mouseSave":true,"mouseReconcile":true},"recovery":{"unknownRetained":true,"ordinaryDiscardBlocked":true,"mouseReconcile":true,"reconciled":true},"activeCancellation":true,"reopened":{"protocolVersion":1,"requestId":"7ae29ce3-9e2f-45c6-94bc-4217dbf74284","command":"universe.open","status":"ok","snapshot":{"ownerId":"64c2299c-8c75-498a-8fd8-22c02a8f508b","rootId":"e63a92e1-ead0-415e-9faf-0b99b9530b92","generation":"5","recordVersion":"a5b4169c-7ccf-41a2-b1b8-69c9fee9a896","profile":{"description":"  Exact\r\n Ω🌌 \t","name":"Saved smoke universe"},"location":"/tmp/writingtool-smoke-zXwvgK/universe"}},"nativePickerBoundary":"explicit diagnostic selection and cancellation","acknowledgmentBoundary":"explicit diagnostic loss after durable host reply"},"versions":{"node":"24.22.0","acorn":"8.18.0","ada":"4.0.0","amaro":"1.1.11","ares":"1.34.8","brotli":"1.2.0","cldr":"48.0","icu":"78.2","llhttp":"9.4.3","merve":"1.2.2","modules":"149","napi":"10","nbytes":"0.1.4","ncrypto":"0.0.1","nghttp2":"1.70.0","nghttp3":"","ngtcp2":"","openssl":"0.0.0","simdjson":"4.6.11","simdutf":"7.7.0","sqlite":"3.53.4","tz":"2026d","undici":"7.29.1","unicode":"17.0","uv":"1.52.1","uvwasi":"0.0.23","v8":"15.2.124.43-electron.0","zlib":"1.3.2.1-motley","zstd":"1.6.0","electron":"44.9.0","chrome":"152.0.7977.167"}}
+WRITINGTOOL_DRAIN {"kind":"app","hostAlreadyExited":false,"unresolved":0,"drained":true}
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+<i> [ForkTsCheckerWebpackPlugin] Type-checking in progress...
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   runtime modules 1.93 KiB 10 modules
+[Main Process]   cacheable modules 771 KiB
+[Main Process]     modules by path [1m./src/[39m[22m 662 KiB
+[Main Process]       modules by path [1m./src/infrastructure/*.ts[39m[22m 283 KiB 18 modules
+[Main Process]       modules by path [1m./src/application/[39m[22m 76.8 KiB 11 modules
+[Main Process]       modules by path [1m./src/domain/*.ts[39m[22m 148 KiB 11 modules
+[Main Process]       modules by path [1m./src/desktop/*.ts[39m[22m 154 KiB 10 modules
+[Main Process]     modules by path [1m./node_modules/[39m[22m 108 KiB
+[Main Process]       modules by path [1m./node_modules/electron-squirrel-startup/node_modules/[39m[22m 17.7 KiB
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/index.js[39m[22m 263 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/browser.js[39m[22m 4.62 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         + 3 modules
+[Main Process]       [1m./node_modules/electron-squirrel-startup/index.js[39m[22m 1 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]       [1m./node_modules/fflate/esm/index.mjs[39m[22m 89.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]   + 16 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2216 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: []
+[Preload (web)]    Deleted files: []
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Renderer (web)]   Changed files: []
+[Renderer (web)]   Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Preload (web)]  webpack-dev-server - Project is running at:
+[Preload (web)]  webpack-dev-server - Loopback: http://127.0.0.1:3000/
+[Preload (web)]  webpack-dev-server - Content not from webpack is served from '/home/jo/Documents/writing-tool/.webpack/renderer' directory
+[Preload (web)]  webpack-dev-server - 404s will fallback to '/index.html'
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs.map"
+[Preload (web)]  asset [1m[32mmain_window/preload.cjs[39m[22m 246 KiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Preload (web)]  runtime modules 883 bytes 5 modules
+[Preload (web)]  cacheable modules 203 KiB
+[Preload (web)]    modules by path [1m./src/domain/*.ts[39m[22m 144 KiB
+[Preload (web)]      [1m./src/domain/workspace.ts[39m[22m 22.5 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/domain/validation.ts[39m[22m 592 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 6 modules
+[Preload (web)]    modules by path [1m./src/application/contracts/*.ts[39m[22m 43.1 KiB
+[Preload (web)]      [1m./src/application/contracts/protection.ts[39m[22m 15.9 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/application/contracts/workspace.ts[39m[22m 11.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 4 modules
+[Preload (web)]    modules by path [1m./src/desktop/*.ts[39m[22m 16.2 KiB
+[Preload (web)]      [1m./src/desktop/preload.ts[39m[22m 8.7 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/desktop/workspace-host-client.ts[39m[22m 1.76 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 3 modules
+[Preload (web)]  [1mexternal "electron"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 7633 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Type-checking in progress...
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected file change /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map"
+[Renderer (web)] assets by path [1m[32m*.ttf[39m[22m 4.16 MiB
+[Renderer (web)]   asset [1m[32m36cc7ae44340a12d605e.ttf[39m[22m 406 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m511a67fd9b5f5e3acd7f.ttf[39m[22m 405 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m7797c9f089e5a172845a.ttf[39m[22m 401 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf25c1c862a5cbf56cb8d.ttf[39m[22m 399 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf65c85197d09a9032d45.ttf[39m[22m 384 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m1825a889a7dd3bd30189.ttf[39m[22m 368 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m72c9aa392482d99e94ca.ttf[39m[22m 367 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m26bfe1935313d7c88907.ttf[39m[22m 361 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m0ec3a5dfe334099be8d3.ttf[39m[22m 312 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mc4e06f0a859cf65c69f4.ttf[39m[22m 301 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   + 2 assets
+[Renderer (web)] assets by path [1m[32mmain_window/[39m[22m 3.43 MiB
+[Renderer (web)]   asset [1m[32mmain_window/index.js[39m[22m 3.43 MiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Renderer (web)]   asset [1m[32mmain_window/index.html[39m[22m 506 bytes [1m[32m[emitted][39m[22m
+[Renderer (web)] runtime modules 1.67 KiB 10 modules
+[Renderer (web)] orphan modules 278 bytes [1m[33m[orphan][39m[22m 1 module
+[Renderer (web)] javascript modules 3.18 MiB
+[Renderer (web)]   modules by path [1m./node_modules/[39m[22m 2.73 MiB 54 modules
+[Renderer (web)]   modules by path [1m./src/[39m[22m 455 KiB
+[Renderer (web)]     modules by path [1m./src/presentation/[39m[22m 273 KiB 24 modules
+[Renderer (web)]     modules by path [1m./src/domain/*.ts[39m[22m 144 KiB 8 modules
+[Renderer (web)]     modules by path [1m./src/application/contracts/*.ts[39m[22m 39.2 KiB 5 modules
+[Renderer (web)] asset modules 4.16 MiB (asset) 504 bytes (javascript)
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Regular.ttf[39m[22m 384 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Bold.ttf[39m[22m 361 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Italic.ttf[39m[22m 367 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-BoldItalic.ttf[39m[22m 368 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSans-Regular.ttf[39m[22m 401 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   + 7 modules
+[Renderer (web)] [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 9635 ms
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  assets by status 246 KiB [1m[32m[cached][39m[22m 1 asset
+[Preload (web)]  cached modules 203 KiB (javascript) 883 bytes (runtime) [1m[32m[cached][39m[22m 25 modules
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 1501 ms
+[Preload (web)]  webpack-dev-middleware - Compilation finished
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Main Process]   ◌ building…
+[Preload (web)]  ✔ compiled in 1.5s
+[Renderer (web)] ✔ compiled in 9.6s
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   cached modules 771 KiB [1m[32m[cached][39m[22m 73 modules
+[Main Process]   runtime modules 1.72 KiB 8 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2254 ms
+[Main Process]   ✔ compiled in 2.3s
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+Error occurred in handler for 'writingtool:presentation:v1': Error: Presentation request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:1670:19
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:universe:v1': Error: Universe request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4713:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+WRITINGTOOL_SMOKE {"passed":true,"packaged":false,"fault":"start","observed":{"state":"unavailable","text":"Application unavailableHost connection failed (HOST_START_FAILED).","keys":["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"],"node":"undefined","process":"undefined"},"security":true,"senderDenied":true,"invalidRequestsRejected":true,"permissionsDenied":true,"permissionChecks":3,"permissionRequests":1,"hostErrors":0,"pending":0,"versions":{"node":"24.22.0","acorn":"8.18.0","ada":"4.0.0","amaro":"1.1.11","ares":"1.34.8","brotli":"1.2.0","cldr":"48.0","icu":"78.2","llhttp":"9.4.3","merve":"1.2.2","modules":"149","napi":"10","nbytes":"0.1.4","ncrypto":"0.0.1","nghttp2":"1.70.0","nghttp3":"","ngtcp2":"","openssl":"0.0.0","simdjson":"4.6.11","simdutf":"7.7.0","sqlite":"3.53.4","tz":"2026d","undici":"7.29.1","unicode":"17.0","uv":"1.52.1","uvwasi":"0.0.23","v8":"15.2.124.43-electron.0","zlib":"1.3.2.1-motley","zstd":"1.6.0","electron":"44.9.0","chrome":"152.0.7977.167"}}
+WRITINGTOOL_DRAIN {"kind":"app","hostAlreadyExited":true,"unresolved":0,"drained":true}
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+<i> [ForkTsCheckerWebpackPlugin] Type-checking in progress...
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   runtime modules 1.93 KiB 10 modules
+[Main Process]   cacheable modules 771 KiB
+[Main Process]     modules by path [1m./src/[39m[22m 662 KiB
+[Main Process]       modules by path [1m./src/infrastructure/*.ts[39m[22m 283 KiB 18 modules
+[Main Process]       modules by path [1m./src/application/[39m[22m 76.8 KiB 11 modules
+[Main Process]       modules by path [1m./src/domain/*.ts[39m[22m 148 KiB 11 modules
+[Main Process]       modules by path [1m./src/desktop/*.ts[39m[22m 154 KiB 10 modules
+[Main Process]     modules by path [1m./node_modules/[39m[22m 108 KiB
+[Main Process]       modules by path [1m./node_modules/electron-squirrel-startup/node_modules/[39m[22m 17.7 KiB
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/index.js[39m[22m 263 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/browser.js[39m[22m 4.62 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         + 3 modules
+[Main Process]       [1m./node_modules/electron-squirrel-startup/index.js[39m[22m 1 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]       [1m./node_modules/fflate/esm/index.mjs[39m[22m 89.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]   + 16 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2072 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: []
+[Preload (web)]    Deleted files: []
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Renderer (web)]   Changed files: []
+[Renderer (web)]   Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Preload (web)]  webpack-dev-server - Project is running at:
+[Preload (web)]  webpack-dev-server - Loopback: http://127.0.0.1:3000/
+[Preload (web)]  webpack-dev-server - Content not from webpack is served from '/home/jo/Documents/writing-tool/.webpack/renderer' directory
+[Preload (web)]  webpack-dev-server - 404s will fallback to '/index.html'
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs.map"
+[Preload (web)]  asset [1m[32mmain_window/preload.cjs[39m[22m 246 KiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Preload (web)]  runtime modules 883 bytes 5 modules
+[Preload (web)]  cacheable modules 203 KiB
+[Preload (web)]    modules by path [1m./src/domain/*.ts[39m[22m 144 KiB
+[Preload (web)]      [1m./src/domain/workspace.ts[39m[22m 22.5 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/domain/validation.ts[39m[22m 592 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 6 modules
+[Preload (web)]    modules by path [1m./src/application/contracts/*.ts[39m[22m 43.1 KiB
+[Preload (web)]      [1m./src/application/contracts/protection.ts[39m[22m 15.9 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/application/contracts/workspace.ts[39m[22m 11.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 4 modules
+[Preload (web)]    modules by path [1m./src/desktop/*.ts[39m[22m 16.2 KiB
+[Preload (web)]      [1m./src/desktop/preload.ts[39m[22m 8.7 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/desktop/workspace-host-client.ts[39m[22m 1.76 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 3 modules
+[Preload (web)]  [1mexternal "electron"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 6923 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Type-checking in progress...
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected file change /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aborting iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aggregating with previous files change, iteration 2.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf"
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map"
+[Renderer (web)] assets by path [1m[32m*.ttf[39m[22m 4.16 MiB
+[Renderer (web)]   asset [1m[32m36cc7ae44340a12d605e.ttf[39m[22m 406 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m511a67fd9b5f5e3acd7f.ttf[39m[22m 405 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m7797c9f089e5a172845a.ttf[39m[22m 401 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf25c1c862a5cbf56cb8d.ttf[39m[22m 399 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf65c85197d09a9032d45.ttf[39m[22m 384 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m1825a889a7dd3bd30189.ttf[39m[22m 368 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m72c9aa392482d99e94ca.ttf[39m[22m 367 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m26bfe1935313d7c88907.ttf[39m[22m 361 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m0ec3a5dfe334099be8d3.ttf[39m[22m 312 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mc4e06f0a859cf65c69f4.ttf[39m[22m 301 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   + 2 assets
+[Renderer (web)] assets by path [1m[32mmain_window/[39m[22m 3.43 MiB
+[Renderer (web)]   asset [1m[32mmain_window/index.js[39m[22m 3.43 MiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Renderer (web)]   asset [1m[32mmain_window/index.html[39m[22m 506 bytes [1m[32m[emitted][39m[22m
+[Renderer (web)] runtime modules 1.67 KiB 10 modules
+[Renderer (web)] orphan modules 278 bytes [1m[33m[orphan][39m[22m 1 module
+[Renderer (web)] javascript modules 3.18 MiB
+[Renderer (web)]   modules by path [1m./node_modules/[39m[22m 2.73 MiB 54 modules
+[Renderer (web)]   modules by path [1m./src/[39m[22m 455 KiB
+[Renderer (web)]     modules by path [1m./src/presentation/[39m[22m 273 KiB 24 modules
+[Renderer (web)]     modules by path [1m./src/domain/*.ts[39m[22m 144 KiB 8 modules
+[Renderer (web)]     modules by path [1m./src/application/contracts/*.ts[39m[22m 39.2 KiB 5 modules
+[Renderer (web)] asset modules 4.16 MiB (asset) 504 bytes (javascript)
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Regular.ttf[39m[22m 384 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Bold.ttf[39m[22m 361 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Italic.ttf[39m[22m 367 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-BoldItalic.ttf[39m[22m 368 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSans-Regular.ttf[39m[22m 401 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   + 7 modules
+[Renderer (web)] [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 8512 ms
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  assets by status 246 KiB [1m[32m[cached][39m[22m 1 asset
+[Preload (web)]  cached modules 203 KiB (javascript) 883 bytes (runtime) [1m[32m[cached][39m[22m 25 modules
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 1313 ms
+[Preload (web)]  webpack-dev-middleware - Compilation finished
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Main Process]   ◌ building…
+[Preload (web)]  ✔ compiled in 1.3s
+[Renderer (web)] ✔ compiled in 8.5s
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   cached modules 771 KiB [1m[32m[cached][39m[22m 73 modules
+[Main Process]   runtime modules 1.72 KiB 8 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2023 ms
+[Main Process]   ✔ compiled in 2.0s
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+Error occurred in handler for 'writingtool:presentation:v1': Error: Presentation request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:1670:19
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:universe:v1': Error: Universe request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4713:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+WRITINGTOOL_SMOKE {"passed":true,"packaged":false,"fault":"exit","observed":{"state":"unavailable","text":"Application unavailableHost connection failed (HOST_EXITED).","keys":["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"],"node":"undefined","process":"undefined"},"security":true,"senderDenied":true,"invalidRequestsRejected":true,"permissionsDenied":true,"permissionChecks":3,"permissionRequests":1,"hostErrors":0,"pending":0,"versions":{"node":"24.22.0","acorn":"8.18.0","ada":"4.0.0","amaro":"1.1.11","ares":"1.34.8","brotli":"1.2.0","cldr":"48.0","icu":"78.2","llhttp":"9.4.3","merve":"1.2.2","modules":"149","napi":"10","nbytes":"0.1.4","ncrypto":"0.0.1","nghttp2":"1.70.0","nghttp3":"","ngtcp2":"","openssl":"0.0.0","simdjson":"4.6.11","simdutf":"7.7.0","sqlite":"3.53.4","tz":"2026d","undici":"7.29.1","unicode":"17.0","uv":"1.52.1","uvwasi":"0.0.23","v8":"15.2.124.43-electron.0","zlib":"1.3.2.1-motley","zstd":"1.6.0","electron":"44.9.0","chrome":"152.0.7977.167"}}
+WRITINGTOOL_DRAIN {"kind":"app","hostAlreadyExited":true,"unresolved":0,"drained":true}
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+<i> [ForkTsCheckerWebpackPlugin] Type-checking in progress...
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   runtime modules 1.93 KiB 10 modules
+[Main Process]   cacheable modules 771 KiB
+[Main Process]     modules by path [1m./src/[39m[22m 662 KiB
+[Main Process]       modules by path [1m./src/infrastructure/*.ts[39m[22m 283 KiB 18 modules
+[Main Process]       modules by path [1m./src/application/[39m[22m 76.8 KiB 11 modules
+[Main Process]       modules by path [1m./src/domain/*.ts[39m[22m 148 KiB 11 modules
+[Main Process]       modules by path [1m./src/desktop/*.ts[39m[22m 154 KiB 10 modules
+[Main Process]     modules by path [1m./node_modules/[39m[22m 108 KiB
+[Main Process]       modules by path [1m./node_modules/electron-squirrel-startup/node_modules/[39m[22m 17.7 KiB
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/index.js[39m[22m 263 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/browser.js[39m[22m 4.62 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         + 3 modules
+[Main Process]       [1m./node_modules/electron-squirrel-startup/index.js[39m[22m 1 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]       [1m./node_modules/fflate/esm/index.mjs[39m[22m 89.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]   + 16 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 1843 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: []
+[Preload (web)]    Deleted files: []
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Renderer (web)]   Changed files: []
+[Renderer (web)]   Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Preload (web)]  webpack-dev-server - Project is running at:
+[Preload (web)]  webpack-dev-server - Loopback: http://127.0.0.1:3000/
+[Preload (web)]  webpack-dev-server - Content not from webpack is served from '/home/jo/Documents/writing-tool/.webpack/renderer' directory
+[Preload (web)]  webpack-dev-server - 404s will fallback to '/index.html'
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs.map"
+[Preload (web)]  asset [1m[32mmain_window/preload.cjs[39m[22m 246 KiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Preload (web)]  runtime modules 883 bytes 5 modules
+[Preload (web)]  cacheable modules 203 KiB
+[Preload (web)]    modules by path [1m./src/domain/*.ts[39m[22m 144 KiB
+[Preload (web)]      [1m./src/domain/workspace.ts[39m[22m 22.5 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/domain/validation.ts[39m[22m 592 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 6 modules
+[Preload (web)]    modules by path [1m./src/application/contracts/*.ts[39m[22m 43.1 KiB
+[Preload (web)]      [1m./src/application/contracts/protection.ts[39m[22m 15.9 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/application/contracts/workspace.ts[39m[22m 11.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 4 modules
+[Preload (web)]    modules by path [1m./src/desktop/*.ts[39m[22m 16.2 KiB
+[Preload (web)]      [1m./src/desktop/preload.ts[39m[22m 8.7 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/desktop/workspace-host-client.ts[39m[22m 1.76 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 3 modules
+[Preload (web)]  [1mexternal "electron"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 7618 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Type-checking in progress...
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected file change /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aborting iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aggregating with previous files change, iteration 2.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map"
+[Renderer (web)] assets by path [1m[32m*.ttf[39m[22m 4.16 MiB
+[Renderer (web)]   asset [1m[32m36cc7ae44340a12d605e.ttf[39m[22m 406 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m511a67fd9b5f5e3acd7f.ttf[39m[22m 405 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m7797c9f089e5a172845a.ttf[39m[22m 401 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf25c1c862a5cbf56cb8d.ttf[39m[22m 399 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf65c85197d09a9032d45.ttf[39m[22m 384 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m1825a889a7dd3bd30189.ttf[39m[22m 368 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m72c9aa392482d99e94ca.ttf[39m[22m 367 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m26bfe1935313d7c88907.ttf[39m[22m 361 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m0ec3a5dfe334099be8d3.ttf[39m[22m 312 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mc4e06f0a859cf65c69f4.ttf[39m[22m 301 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   + 2 assets
+[Renderer (web)] assets by path [1m[32mmain_window/[39m[22m 3.43 MiB
+[Renderer (web)]   asset [1m[32mmain_window/index.js[39m[22m 3.43 MiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Renderer (web)]   asset [1m[32mmain_window/index.html[39m[22m 506 bytes [1m[32m[emitted][39m[22m
+[Renderer (web)] runtime modules 1.67 KiB 10 modules
+[Renderer (web)] orphan modules 278 bytes [1m[33m[orphan][39m[22m 1 module
+[Renderer (web)] javascript modules 3.18 MiB
+[Renderer (web)]   modules by path [1m./node_modules/[39m[22m 2.73 MiB 54 modules
+[Renderer (web)]   modules by path [1m./src/[39m[22m 455 KiB
+[Renderer (web)]     modules by path [1m./src/presentation/[39m[22m 273 KiB 24 modules
+[Renderer (web)]     modules by path [1m./src/domain/*.ts[39m[22m 144 KiB 8 modules
+[Renderer (web)]     modules by path [1m./src/application/contracts/*.ts[39m[22m 39.2 KiB 5 modules
+[Renderer (web)] asset modules 4.16 MiB (asset) 504 bytes (javascript)
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Regular.ttf[39m[22m 384 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Bold.ttf[39m[22m 361 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Italic.ttf[39m[22m 367 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-BoldItalic.ttf[39m[22m 368 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSans-Regular.ttf[39m[22m 401 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   + 7 modules
+[Renderer (web)] [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 9555 ms
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  assets by status 246 KiB [1m[32m[cached][39m[22m 1 asset
+[Preload (web)]  cached modules 203 KiB (javascript) 883 bytes (runtime) [1m[32m[cached][39m[22m 25 modules
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 1385 ms
+[Preload (web)]  webpack-dev-middleware - Compilation finished
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Main Process]   ◌ building…
+[Preload (web)]  ✔ compiled in 1.4s
+[Renderer (web)] ✔ compiled in 9.6s
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   cached modules 771 KiB [1m[32m[cached][39m[22m 73 modules
+[Main Process]   runtime modules 1.72 KiB 8 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2103 ms
+[Main Process]   ✔ compiled in 2.1s
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+Error occurred in handler for 'writingtool:presentation:v1': Error: Presentation request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:1670:19
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:universe:v1': Error: Universe request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4713:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+WRITINGTOOL_SMOKE {"passed":true,"packaged":false,"fault":"invalid","observed":{"state":"unavailable","text":"Application unavailableHost connection failed (INVALID_RESPONSE).","keys":["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"],"node":"undefined","process":"undefined"},"security":true,"senderDenied":true,"invalidRequestsRejected":true,"permissionsDenied":true,"permissionChecks":3,"permissionRequests":1,"hostErrors":0,"pending":0,"versions":{"node":"24.22.0","acorn":"8.18.0","ada":"4.0.0","amaro":"1.1.11","ares":"1.34.8","brotli":"1.2.0","cldr":"48.0","icu":"78.2","llhttp":"9.4.3","merve":"1.2.2","modules":"149","napi":"10","nbytes":"0.1.4","ncrypto":"0.0.1","nghttp2":"1.70.0","nghttp3":"","ngtcp2":"","openssl":"0.0.0","simdjson":"4.6.11","simdutf":"7.7.0","sqlite":"3.53.4","tz":"2026d","undici":"7.29.1","unicode":"17.0","uv":"1.52.1","uvwasi":"0.0.23","v8":"15.2.124.43-electron.0","zlib":"1.3.2.1-motley","zstd":"1.6.0","electron":"44.9.0","chrome":"152.0.7977.167"}}
+WRITINGTOOL_DRAIN {"kind":"app","hostAlreadyExited":false,"unresolved":0,"drained":true}
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+<i> [ForkTsCheckerWebpackPlugin] Type-checking in progress...
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   runtime modules 1.93 KiB 10 modules
+[Main Process]   cacheable modules 771 KiB
+[Main Process]     modules by path [1m./src/[39m[22m 662 KiB
+[Main Process]       modules by path [1m./src/infrastructure/*.ts[39m[22m 283 KiB 18 modules
+[Main Process]       modules by path [1m./src/application/[39m[22m 76.8 KiB 11 modules
+[Main Process]       modules by path [1m./src/domain/*.ts[39m[22m 148 KiB 11 modules
+[Main Process]       modules by path [1m./src/desktop/*.ts[39m[22m 154 KiB 10 modules
+[Main Process]     modules by path [1m./node_modules/[39m[22m 108 KiB
+[Main Process]       modules by path [1m./node_modules/electron-squirrel-startup/node_modules/[39m[22m 17.7 KiB
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/index.js[39m[22m 263 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/browser.js[39m[22m 4.62 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         + 3 modules
+[Main Process]       [1m./node_modules/electron-squirrel-startup/index.js[39m[22m 1 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]       [1m./node_modules/fflate/esm/index.mjs[39m[22m 89.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]   + 16 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 1702 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: []
+[Preload (web)]    Deleted files: []
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Renderer (web)]   Changed files: []
+[Renderer (web)]   Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Preload (web)]  webpack-dev-server - Project is running at:
+[Preload (web)]  webpack-dev-server - Loopback: http://127.0.0.1:3000/
+[Preload (web)]  webpack-dev-server - Content not from webpack is served from '/home/jo/Documents/writing-tool/.webpack/renderer' directory
+[Preload (web)]  webpack-dev-server - 404s will fallback to '/index.html'
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs.map"
+[Preload (web)]  asset [1m[32mmain_window/preload.cjs[39m[22m 246 KiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Preload (web)]  runtime modules 883 bytes 5 modules
+[Preload (web)]  cacheable modules 203 KiB
+[Preload (web)]    modules by path [1m./src/domain/*.ts[39m[22m 144 KiB
+[Preload (web)]      [1m./src/domain/workspace.ts[39m[22m 22.5 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/domain/validation.ts[39m[22m 592 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 6 modules
+[Preload (web)]    modules by path [1m./src/application/contracts/*.ts[39m[22m 43.1 KiB
+[Preload (web)]      [1m./src/application/contracts/protection.ts[39m[22m 15.9 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/application/contracts/workspace.ts[39m[22m 11.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 4 modules
+[Preload (web)]    modules by path [1m./src/desktop/*.ts[39m[22m 16.2 KiB
+[Preload (web)]      [1m./src/desktop/preload.ts[39m[22m 8.7 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/desktop/workspace-host-client.ts[39m[22m 1.76 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 3 modules
+[Preload (web)]  [1mexternal "electron"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 6629 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Type-checking in progress...
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected file change /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"
+[Renderer (web)] assets by path [1m[32m*.ttf[39m[22m 4.16 MiB
+[Renderer (web)]   asset [1m[32m36cc7ae44340a12d605e.ttf[39m[22m 406 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m511a67fd9b5f5e3acd7f.ttf[39m[22m 405 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m7797c9f089e5a172845a.ttf[39m[22m 401 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf25c1c862a5cbf56cb8d.ttf[39m[22m 399 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf65c85197d09a9032d45.ttf[39m[22m 384 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m1825a889a7dd3bd30189.ttf[39m[22m 368 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m72c9aa392482d99e94ca.ttf[39m[22m 367 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m26bfe1935313d7c88907.ttf[39m[22m 361 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m0ec3a5dfe334099be8d3.ttf[39m[22m 312 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mc4e06f0a859cf65c69f4.ttf[39m[22m 301 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   + 2 assets
+[Renderer (web)] assets by path [1m[32mmain_window/[39m[22m 3.43 MiB
+[Renderer (web)]   asset [1m[32mmain_window/index.js[39m[22m 3.43 MiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Renderer (web)]   asset [1m[32mmain_window/index.html[39m[22m 506 bytes [1m[32m[emitted][39m[22m
+[Renderer (web)] runtime modules 1.67 KiB 10 modules
+[Renderer (web)] orphan modules 278 bytes [1m[33m[orphan][39m[22m 1 module
+[Renderer (web)] javascript modules 3.18 MiB
+[Renderer (web)]   modules by path [1m./node_modules/[39m[22m 2.73 MiB 54 modules
+[Renderer (web)]   modules by path [1m./src/[39m[22m 455 KiB
+[Renderer (web)]     modules by path [1m./src/presentation/[39m[22m 273 KiB 24 modules
+[Renderer (web)]     modules by path [1m./src/domain/*.ts[39m[22m 144 KiB 8 modules
+[Renderer (web)]     modules by path [1m./src/application/contracts/*.ts[39m[22m 39.2 KiB 5 modules
+[Renderer (web)] asset modules 4.16 MiB (asset) 504 bytes (javascript)
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Regular.ttf[39m[22m 384 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Bold.ttf[39m[22m 361 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Italic.ttf[39m[22m 367 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-BoldItalic.ttf[39m[22m 368 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSans-Regular.ttf[39m[22m 401 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   + 7 modules
+[Renderer (web)] [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 8355 ms
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  assets by status 246 KiB [1m[32m[cached][39m[22m 1 asset
+[Preload (web)]  cached modules 203 KiB (javascript) 883 bytes (runtime) [1m[32m[cached][39m[22m 25 modules
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 1207 ms
+[Preload (web)]  webpack-dev-middleware - Compilation finished
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Main Process]   ◌ building…
+[Preload (web)]  ✔ compiled in 1.2s
+[Renderer (web)] ✔ compiled in 8.4s
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.log
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.py
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.log
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.py
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   cached modules 771 KiB [1m[32m[cached][39m[22m 73 modules
+[Main Process]   runtime modules 1.72 KiB 8 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 1930 ms
+[Main Process]   ✔ compiled in 1.9s
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.json
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.json
+Error occurred in handler for 'writingtool:presentation:v1': Error: Presentation request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:1670:19
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:universe:v1': Error: Universe request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4713:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+WRITINGTOOL_SMOKE {"passed":true,"packaged":false,"fault":"timeout","observed":{"state":"unavailable","text":"Application unavailableHost connection failed (TIMEOUT).","keys":["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"],"node":"undefined","process":"undefined"},"security":true,"senderDenied":true,"invalidRequestsRejected":true,"permissionsDenied":true,"permissionChecks":3,"permissionRequests":1,"hostErrors":0,"pending":0,"versions":{"node":"24.22.0","acorn":"8.18.0","ada":"4.0.0","amaro":"1.1.11","ares":"1.34.8","brotli":"1.2.0","cldr":"48.0","icu":"78.2","llhttp":"9.4.3","merve":"1.2.2","modules":"149","napi":"10","nbytes":"0.1.4","ncrypto":"0.0.1","nghttp2":"1.70.0","nghttp3":"","ngtcp2":"","openssl":"0.0.0","simdjson":"4.6.11","simdutf":"7.7.0","sqlite":"3.53.4","tz":"2026d","undici":"7.29.1","unicode":"17.0","uv":"1.52.1","uvwasi":"0.0.23","v8":"15.2.124.43-electron.0","zlib":"1.3.2.1-motley","zstd":"1.6.0","electron":"44.9.0","chrome":"152.0.7977.167"}}
+WRITINGTOOL_DRAIN {"kind":"app","hostAlreadyExited":false,"unresolved":0,"drained":true}
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+<i> [ForkTsCheckerWebpackPlugin] Type-checking in progress...
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   runtime modules 1.93 KiB 10 modules
+[Main Process]   cacheable modules 771 KiB
+[Main Process]     modules by path [1m./src/[39m[22m 662 KiB
+[Main Process]       modules by path [1m./src/infrastructure/*.ts[39m[22m 283 KiB 18 modules
+[Main Process]       modules by path [1m./src/application/[39m[22m 76.8 KiB 11 modules
+[Main Process]       modules by path [1m./src/domain/*.ts[39m[22m 148 KiB 11 modules
+[Main Process]       modules by path [1m./src/desktop/*.ts[39m[22m 154 KiB 10 modules
+[Main Process]     modules by path [1m./node_modules/[39m[22m 108 KiB
+[Main Process]       modules by path [1m./node_modules/electron-squirrel-startup/node_modules/[39m[22m 17.7 KiB
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/index.js[39m[22m 263 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/browser.js[39m[22m 4.62 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         + 3 modules
+[Main Process]       [1m./node_modules/electron-squirrel-startup/index.js[39m[22m 1 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]       [1m./node_modules/fflate/esm/index.mjs[39m[22m 89.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]   + 16 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 1730 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: []
+[Preload (web)]    Deleted files: []
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Renderer (web)]   Changed files: []
+[Renderer (web)]   Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Preload (web)]  webpack-dev-server - Project is running at:
+[Preload (web)]  webpack-dev-server - Loopback: http://127.0.0.1:3000/
+[Preload (web)]  webpack-dev-server - Content not from webpack is served from '/home/jo/Documents/writing-tool/.webpack/renderer' directory
+[Preload (web)]  webpack-dev-server - 404s will fallback to '/index.html'
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs.map"
+[Preload (web)]  asset [1m[32mmain_window/preload.cjs[39m[22m 246 KiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Preload (web)]  runtime modules 883 bytes 5 modules
+[Preload (web)]  cacheable modules 203 KiB
+[Preload (web)]    modules by path [1m./src/domain/*.ts[39m[22m 144 KiB
+[Preload (web)]      [1m./src/domain/workspace.ts[39m[22m 22.5 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/domain/validation.ts[39m[22m 592 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 6 modules
+[Preload (web)]    modules by path [1m./src/application/contracts/*.ts[39m[22m 43.1 KiB
+[Preload (web)]      [1m./src/application/contracts/protection.ts[39m[22m 15.9 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/application/contracts/workspace.ts[39m[22m 11.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 4 modules
+[Preload (web)]    modules by path [1m./src/desktop/*.ts[39m[22m 16.2 KiB
+[Preload (web)]      [1m./src/desktop/preload.ts[39m[22m 8.7 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/desktop/workspace-host-client.ts[39m[22m 1.76 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 3 modules
+[Preload (web)]  [1mexternal "electron"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 5645 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Type-checking in progress...
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected file change /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aborting iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Aggregating with previous files change, iteration 2.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf"
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map"
+[Renderer (web)] assets by path [1m[32m*.ttf[39m[22m 4.16 MiB
+[Renderer (web)]   asset [1m[32m36cc7ae44340a12d605e.ttf[39m[22m 406 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m511a67fd9b5f5e3acd7f.ttf[39m[22m 405 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m7797c9f089e5a172845a.ttf[39m[22m 401 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf25c1c862a5cbf56cb8d.ttf[39m[22m 399 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf65c85197d09a9032d45.ttf[39m[22m 384 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m1825a889a7dd3bd30189.ttf[39m[22m 368 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m72c9aa392482d99e94ca.ttf[39m[22m 367 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m26bfe1935313d7c88907.ttf[39m[22m 361 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m0ec3a5dfe334099be8d3.ttf[39m[22m 312 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mc4e06f0a859cf65c69f4.ttf[39m[22m 301 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   + 2 assets
+[Renderer (web)] assets by path [1m[32mmain_window/[39m[22m 3.43 MiB
+[Renderer (web)]   asset [1m[32mmain_window/index.js[39m[22m 3.43 MiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Renderer (web)]   asset [1m[32mmain_window/index.html[39m[22m 506 bytes [1m[32m[emitted][39m[22m
+[Renderer (web)] runtime modules 1.67 KiB 10 modules
+[Renderer (web)] orphan modules 278 bytes [1m[33m[orphan][39m[22m 1 module
+[Renderer (web)] javascript modules 3.18 MiB
+[Renderer (web)]   modules by path [1m./node_modules/[39m[22m 2.73 MiB 54 modules
+[Renderer (web)]   modules by path [1m./src/[39m[22m 455 KiB
+[Renderer (web)]     modules by path [1m./src/presentation/[39m[22m 273 KiB 24 modules
+[Renderer (web)]     modules by path [1m./src/domain/*.ts[39m[22m 144 KiB 8 modules
+[Renderer (web)]     modules by path [1m./src/application/contracts/*.ts[39m[22m 39.2 KiB 5 modules
+[Renderer (web)] asset modules 4.16 MiB (asset) 504 bytes (javascript)
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Regular.ttf[39m[22m 384 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Bold.ttf[39m[22m 361 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Italic.ttf[39m[22m 367 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-BoldItalic.ttf[39m[22m 368 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSans-Regular.ttf[39m[22m 401 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   + 7 modules
+[Renderer (web)] [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 7118 ms
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  assets by status 246 KiB [1m[32m[cached][39m[22m 1 asset
+[Preload (web)]  cached modules 203 KiB (javascript) 883 bytes (runtime) [1m[32m[cached][39m[22m 25 modules
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 1626 ms
+[Preload (web)]  webpack-dev-middleware - Compilation finished
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Main Process]   ◌ building…
+[Preload (web)]  ✔ compiled in 1.6s
+[Renderer (web)] ✔ compiled in 7.1s
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/desktop-remaining-host.json
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/desktop-remaining-host.json
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   cached modules 771 KiB [1m[32m[cached][39m[22m 73 modules
+[Main Process]   runtime modules 1.72 KiB 8 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2681 ms
+[Main Process]   ✔ compiled in 2.7s
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+Error occurred in handler for 'writingtool:presentation:v1': Error: Presentation request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:1670:19
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:universe:v1': Error: Universe request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4713:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+WRITINGTOOL_SMOKE {"passed":true,"packaged":false,"fault":"exit-after-ready","observed":{"state":"unavailable","text":"Application unavailableHost connection failed (HOST_EXITED).","keys":["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"],"node":"undefined","process":"undefined"},"security":true,"senderDenied":true,"invalidRequestsRejected":true,"permissionsDenied":true,"permissionChecks":3,"permissionRequests":1,"hostErrors":0,"pending":0,"versions":{"node":"24.22.0","acorn":"8.18.0","ada":"4.0.0","amaro":"1.1.11","ares":"1.34.8","brotli":"1.2.0","cldr":"48.0","icu":"78.2","llhttp":"9.4.3","merve":"1.2.2","modules":"149","napi":"10","nbytes":"0.1.4","ncrypto":"0.0.1","nghttp2":"1.70.0","nghttp3":"","ngtcp2":"","openssl":"0.0.0","simdjson":"4.6.11","simdutf":"7.7.0","sqlite":"3.53.4","tz":"2026d","undici":"7.29.1","unicode":"17.0","uv":"1.52.1","uvwasi":"0.0.23","v8":"15.2.124.43-electron.0","zlib":"1.3.2.1-motley","zstd":"1.6.0","electron":"44.9.0","chrome":"152.0.7977.167"}}
+WRITINGTOOL_DRAIN {"kind":"app","hostAlreadyExited":true,"unresolved":0,"drained":true}
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+<i> [ForkTsCheckerWebpackPlugin] Type-checking in progress...
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   runtime modules 1.93 KiB 10 modules
+[Main Process]   cacheable modules 771 KiB
+[Main Process]     modules by path [1m./src/[39m[22m 662 KiB
+[Main Process]       modules by path [1m./src/infrastructure/*.ts[39m[22m 283 KiB 18 modules
+[Main Process]       modules by path [1m./src/application/[39m[22m 76.8 KiB 11 modules
+[Main Process]       modules by path [1m./src/domain/*.ts[39m[22m 148 KiB 11 modules
+[Main Process]       modules by path [1m./src/desktop/*.ts[39m[22m 154 KiB 10 modules
+[Main Process]     modules by path [1m./node_modules/[39m[22m 108 KiB
+[Main Process]       modules by path [1m./node_modules/electron-squirrel-startup/node_modules/[39m[22m 17.7 KiB
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/index.js[39m[22m 263 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         [1m./node_modules/electron-squirrel-startup/node_modules/debug/src/browser.js[39m[22m 4.62 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]         + 3 modules
+[Main Process]       [1m./node_modules/electron-squirrel-startup/index.js[39m[22m 1 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]       [1m./node_modules/fflate/esm/index.mjs[39m[22m 89.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Main Process]   + 16 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 1535 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Overwriting webpack's watch file system.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: []
+[Preload (web)]    Deleted files: []
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Initializing plugin for watch run (async).
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Renderer (web)]   Changed files: []
+[Renderer (web)]   Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 1.
+[Preload (web)]  webpack-dev-server - Project is running at:
+[Preload (web)]  webpack-dev-server - Loopback: http://127.0.0.1:3000/
+[Preload (web)]  webpack-dev-server - Content not from webpack is served from '/home/jo/Documents/writing-tool/.webpack/renderer' directory
+[Preload (web)]  webpack-dev-server - 404s will fallback to '/index.html'
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/preload.cjs.map"
+[Preload (web)]  asset [1m[32mmain_window/preload.cjs[39m[22m 246 KiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Preload (web)]  runtime modules 883 bytes 5 modules
+[Preload (web)]  cacheable modules 203 KiB
+[Preload (web)]    modules by path [1m./src/domain/*.ts[39m[22m 144 KiB
+[Preload (web)]      [1m./src/domain/workspace.ts[39m[22m 22.5 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/domain/validation.ts[39m[22m 592 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 6 modules
+[Preload (web)]    modules by path [1m./src/application/contracts/*.ts[39m[22m 43.1 KiB
+[Preload (web)]      [1m./src/application/contracts/protection.ts[39m[22m 15.9 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/application/contracts/workspace.ts[39m[22m 11.6 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 4 modules
+[Preload (web)]    modules by path [1m./src/desktop/*.ts[39m[22m 16.2 KiB
+[Preload (web)]      [1m./src/desktop/preload.ts[39m[22m 8.7 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      [1m./src/desktop/workspace-host-client.ts[39m[22m 1.76 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]      + 3 modules
+[Preload (web)]  [1mexternal "electron"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 6320 ms
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Type-checking in progress...
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected file change /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Detected new file add but extension is not supported /home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map
+[Renderer (web)] ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 1.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Calling reporter service for incremental check.
+[Preload (web)]    Changed files: ["/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"]
+[Preload (web)]    Deleted files: []
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getDependenciesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getDependenciesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Submitting the getIssuesWorker to the pool, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Running the getIssuesWorker, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getDependenciesWorker finished its job, iteration 2.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - The getIssuesWorker finished its job, iteration 2.
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/0ec3a5dfe334099be8d3.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/511a67fd9b5f5e3acd7f.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/c4e06f0a859cf65c69f4.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ac4a8164ee1c00304495.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f25c1c862a5cbf56cb8d.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/ea40d372c5366a02a48c.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/26bfe1935313d7c88907.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/36cc7ae44340a12d605e.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/1825a889a7dd3bd30189.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/7797c9f089e5a172845a.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/72c9aa392482d99e94ca.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/f65c85197d09a9032d45.ttf"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.html"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js"
+[Preload (web)]  webpack-dev-middleware - Child "group_0": Asset written to disk: "/home/jo/Documents/writing-tool/.webpack/renderer/main_window/index.js.map"
+[Renderer (web)] assets by path [1m[32m*.ttf[39m[22m 4.16 MiB
+[Renderer (web)]   asset [1m[32m36cc7ae44340a12d605e.ttf[39m[22m 406 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m511a67fd9b5f5e3acd7f.ttf[39m[22m 405 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m7797c9f089e5a172845a.ttf[39m[22m 401 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf25c1c862a5cbf56cb8d.ttf[39m[22m 399 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSans-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mf65c85197d09a9032d45.ttf[39m[22m 384 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m1825a889a7dd3bd30189.ttf[39m[22m 368 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-BoldItalic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m72c9aa392482d99e94ca.ttf[39m[22m 367 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Italic.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m26bfe1935313d7c88907.ttf[39m[22m 361 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationSerif-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32m0ec3a5dfe334099be8d3.ttf[39m[22m 312 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Regular.ttf] (auxiliary name: main_window)
+[Renderer (web)]   asset [1m[32mc4e06f0a859cf65c69f4.ttf[39m[22m 301 KiB [1m[32m[emitted][39m[22m [1m[32m[immutable][39m[22m [from: resources/fonts/LiberationMono-Bold.ttf] (auxiliary name: main_window)
+[Renderer (web)]   + 2 assets
+[Renderer (web)] assets by path [1m[32mmain_window/[39m[22m 3.43 MiB
+[Renderer (web)]   asset [1m[32mmain_window/index.js[39m[22m 3.43 MiB [1m[32m[emitted][39m[22m (name: main_window) 1 related asset
+[Renderer (web)]   asset [1m[32mmain_window/index.html[39m[22m 506 bytes [1m[32m[emitted][39m[22m
+[Renderer (web)] runtime modules 1.67 KiB 10 modules
+[Renderer (web)] orphan modules 278 bytes [1m[33m[orphan][39m[22m 1 module
+[Renderer (web)] javascript modules 3.18 MiB
+[Renderer (web)]   modules by path [1m./node_modules/[39m[22m 2.73 MiB 54 modules
+[Renderer (web)]   modules by path [1m./src/[39m[22m 455 KiB
+[Renderer (web)]     modules by path [1m./src/presentation/[39m[22m 273 KiB 24 modules
+[Renderer (web)]     modules by path [1m./src/domain/*.ts[39m[22m 144 KiB 8 modules
+[Renderer (web)]     modules by path [1m./src/application/contracts/*.ts[39m[22m 39.2 KiB 5 modules
+[Renderer (web)] asset modules 4.16 MiB (asset) 504 bytes (javascript)
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Regular.ttf[39m[22m 384 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Bold.ttf[39m[22m 361 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-Italic.ttf[39m[22m 367 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSerif-BoldItalic.ttf[39m[22m 368 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   [1m./resources/fonts/LiberationSans-Regular.ttf[39m[22m 401 KiB (asset) 42 bytes (javascript) [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[Renderer (web)]   + 7 modules
+[Renderer (web)] [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 8254 ms
+[Renderer (web)] ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Renderer (web)] ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got dependencies from the getDependenciesWorker. [object Object]
+[Preload (web)]  assets by status 246 KiB [1m[32m[cached][39m[22m 1 asset
+[Preload (web)]  cached modules 203 KiB (javascript) 883 bytes (runtime) [1m[32m[cached][39m[22m 25 modules
+[Preload (web)]  [1mgroup_0[39m[22m (webpack 5.112.0) compiled [1m[32msuccessfully[39m[22m in 1657 ms
+[Preload (web)]  webpack-dev-middleware - Compilation finished
+[Preload (web)]  ForkTsCheckerWebpackPlugin - Got 0 issues from getIssuesWorker.
+[Preload (web)]  ForkTsCheckerWebpackPlugin - No typescript errors found.
+[Main Process]   ◌ building…
+[Preload (web)]  ✔ compiled in 1.7s
+[Renderer (web)] ✔ compiled in 8.3s
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+[Main Process]   asset [1m[32mutility-host.cjs[39m[22m 751 KiB [1m[32m[emitted][39m[22m (name: utility-host) 1 related asset
+[Main Process]   asset [1m[32mindex.cjs[39m[22m 471 KiB [1m[32m[emitted][39m[22m (name: index) 1 related asset
+[Main Process]   cached modules 771 KiB [1m[32m[cached][39m[22m 73 modules
+[Main Process]   runtime modules 1.72 KiB 8 modules
+[Main Process]   webpack 5.112.0 compiled [1m[32msuccessfully[39m[22m in 2412 ms
+[Main Process]   ✔ compiled in 2.4s
+<i> [ForkTsCheckerWebpackPlugin] No typescript errors found.
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+Error occurred in handler for 'writingtool:presentation:v1': Error: Presentation request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:1670:19
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:readiness:v1': Error: Readiness request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4623:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:universe:v1': Error: Universe request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4713:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:workspace:v1': Error: Workspace request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:5103:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+Error occurred in handler for 'writingtool:protection:v1': Error: Protection request denied
+    at /home/jo/Documents/writing-tool/.webpack/main/index.cjs:4892:23
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119048)
+    at Session.emit (node:events:514:28)
+WRITINGTOOL_SMOKE {"passed":true,"packaged":false,"fault":"fatal-error","observed":{"state":"unavailable","text":"Application unavailableHost connection failed (HOST_EXITED).","keys":["protection","workspace","createProject","openProject","currentProject","closeProject","createUniverse","openUniverse","currentUniverse","saveUniverseProfile","closeUniverse","readiness"],"node":"undefined","process":"undefined"},"security":true,"senderDenied":true,"invalidRequestsRejected":true,"permissionsDenied":true,"permissionChecks":3,"permissionRequests":1,"hostErrors":1,"pending":0,"versions":{"node":"24.22.0","acorn":"8.18.0","ada":"4.0.0","amaro":"1.1.11","ares":"1.34.8","brotli":"1.2.0","cldr":"48.0","icu":"78.2","llhttp":"9.4.3","merve":"1.2.2","modules":"149","napi":"10","nbytes":"0.1.4","ncrypto":"0.0.1","nghttp2":"1.70.0","nghttp3":"","ngtcp2":"","openssl":"0.0.0","simdjson":"4.6.11","simdutf":"7.7.0","sqlite":"3.53.4","tz":"2026d","undici":"7.29.1","unicode":"17.0","uv":"1.52.1","uvwasi":"0.0.23","v8":"15.2.124.43-electron.0","zlib":"1.3.2.1-motley","zstd":"1.6.0","electron":"44.9.0","chrome":"152.0.7977.167"}}
+WRITINGTOOL_DRAIN {"kind":"app","hostAlreadyExited":false,"unresolved":0,"drained":true}

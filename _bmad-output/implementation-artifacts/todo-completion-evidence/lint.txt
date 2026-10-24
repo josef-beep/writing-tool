@@ -1,0 +1,4 @@
+
+> writingtool@0.1.0 lint
+> oxlint --deny-warnings src tests scripts
+

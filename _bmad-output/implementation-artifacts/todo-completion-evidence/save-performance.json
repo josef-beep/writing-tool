@@ -1,0 +1,251 @@
+{
+  "scope": "Byte-identical synthetic stores restored at the same path for each version; three durable saves with response snapshots; immutable history and reopened pairs verified",
+  "baselineRevision": "03687967ba70c0adf49e746b5fa3eddbce997421",
+  "baselineStorageSha256": "6dcaee6acc0a47dc3df726a5e263eedbe8eb6a7403d59a80a3bec37ef4e2e64c",
+  "currentRevision": "4281f787f03b4b5cee3c377342f6e3634f2f60c2",
+  "currentStorageSha256": "fdc20a8d938f59c98e37318e0439aab60b1b0a03b69df86d4d8533f0f3ad513c",
+  "environment": {
+    "node": "v24.19.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpus": "12th Gen Intel(R) Core(TM) i7-1280P",
+    "cpuCount": 20,
+    "memoryBytes": 33336754176,
+    "kernel": "7.0.0-38-generic"
+  },
+  "fixtureRoot": "/tmp/writingtool-matched-benchmark-XA5RPv",
+  "results": [
+    {
+      "mode": "baseline",
+      "historyVersions": 0,
+      "fixtureHash": "33022073d2bbf3a1da30247fca13271e67c67c55e5522cae037b38c0419d2e65",
+      "historyHash": "fee3fd8ce21e2b22ead335c93fd1137b83e76e14cead671cf5b223c3906f7dba",
+      "historyFiles": 3,
+      "samples": [
+        {
+          "saveMs": 165.60341900000003,
+          "operationId": "c8a846a6-5b7c-48e8-be2c-a2cefc8de172",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 140.82609000000002,
+          "operationId": "058712d7-f5d8-4fb5-be82-5b768e12f08f",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 164.69844700000021,
+          "operationId": "79ab9825-e25e-4e16-a4c1-0e2223b1fc12",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    },
+    {
+      "mode": "current",
+      "historyVersions": 0,
+      "fixtureHash": "33022073d2bbf3a1da30247fca13271e67c67c55e5522cae037b38c0419d2e65",
+      "historyHash": "fee3fd8ce21e2b22ead335c93fd1137b83e76e14cead671cf5b223c3906f7dba",
+      "historyFiles": 3,
+      "samples": [
+        {
+          "saveMs": 142.45353799999975,
+          "operationId": "c8a846a6-5b7c-48e8-be2c-a2cefc8de172",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 175.30399499999976,
+          "operationId": "058712d7-f5d8-4fb5-be82-5b768e12f08f",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 177.51820999999973,
+          "operationId": "79ab9825-e25e-4e16-a4c1-0e2223b1fc12",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    },
+    {
+      "mode": "baseline",
+      "historyVersions": 100,
+      "fixtureHash": "cdfb26efd493d6077879b9a634bf1305c23ae76fcb0dabd4d47056a1299d655b",
+      "historyHash": "76c4323167130256b4a2145560a7ca4f80122970fdb25fecdaed9c3542fe5a83",
+      "historyFiles": 203,
+      "samples": [
+        {
+          "saveMs": 221.29716000000008,
+          "operationId": "d3806144-654b-4db0-b5d9-dd2e44f19294",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 238.93353500000012,
+          "operationId": "69bcaa2a-8827-47a6-891e-a9a7dc2e0934",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 202.45194300000003,
+          "operationId": "9affdeae-c7cc-4377-b996-63c1d6c10982",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    },
+    {
+      "mode": "current",
+      "historyVersions": 100,
+      "fixtureHash": "cdfb26efd493d6077879b9a634bf1305c23ae76fcb0dabd4d47056a1299d655b",
+      "historyHash": "76c4323167130256b4a2145560a7ca4f80122970fdb25fecdaed9c3542fe5a83",
+      "historyFiles": 203,
+      "samples": [
+        {
+          "saveMs": 234.51714100000027,
+          "operationId": "d3806144-654b-4db0-b5d9-dd2e44f19294",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 227.98208299999988,
+          "operationId": "69bcaa2a-8827-47a6-891e-a9a7dc2e0934",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 222.13058300000012,
+          "operationId": "9affdeae-c7cc-4377-b996-63c1d6c10982",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    },
+    {
+      "mode": "baseline",
+      "historyVersions": 500,
+      "fixtureHash": "b2a0b175a0f4def4c73d5dc54dc805e8efe10237ab5ad2464f97b9bd95f89117",
+      "historyHash": "10334c9ecbfd58210867790ba68c5ddee823d8b976529b9b53149796f468bfe4",
+      "historyFiles": 1003,
+      "samples": [
+        {
+          "saveMs": 883.5410310000007,
+          "operationId": "df83392d-8805-40a3-8d62-2bc110a00b11",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 871.0931240000009,
+          "operationId": "d2959af9-4ac1-4122-b689-7c07b1017658",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 810.7788510000009,
+          "operationId": "5709ca72-9725-47d2-a051-3b86634671b5",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    },
+    {
+      "mode": "current",
+      "historyVersions": 500,
+      "fixtureHash": "b2a0b175a0f4def4c73d5dc54dc805e8efe10237ab5ad2464f97b9bd95f89117",
+      "historyHash": "10334c9ecbfd58210867790ba68c5ddee823d8b976529b9b53149796f468bfe4",
+      "historyFiles": 1003,
+      "samples": [
+        {
+          "saveMs": 429.63065599999936,
+          "operationId": "df83392d-8805-40a3-8d62-2bc110a00b11",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 480.0444609999995,
+          "operationId": "d2959af9-4ac1-4122-b689-7c07b1017658",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 410.97372299999915,
+          "operationId": "5709ca72-9725-47d2-a051-3b86634671b5",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    },
+    {
+      "mode": "baseline",
+      "historyVersions": 1000,
+      "fixtureHash": "2ec9c131b5ce077e095b7379bbc3a1a129780a2a8a69d78ae3e7fc7f10c9ddb6",
+      "historyHash": "0bbc3dc3ff79580f52fe5fdd7cdafa5eb72c46cb263d55a819028bca7996a00d",
+      "historyFiles": 2003,
+      "samples": [
+        {
+          "saveMs": 2325.8591970000016,
+          "operationId": "77357266-0643-44b4-a6f0-5e5deaff9329",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 2350.2954279999976,
+          "operationId": "658c06c6-71e9-430e-a842-f2b887b16c1b",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 2262.2365910000008,
+          "operationId": "2466373a-3f2b-48ed-8e95-231a0dbfe5b4",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    },
+    {
+      "mode": "current",
+      "historyVersions": 1000,
+      "fixtureHash": "2ec9c131b5ce077e095b7379bbc3a1a129780a2a8a69d78ae3e7fc7f10c9ddb6",
+      "historyHash": "0bbc3dc3ff79580f52fe5fdd7cdafa5eb72c46cb263d55a819028bca7996a00d",
+      "historyFiles": 2003,
+      "samples": [
+        {
+          "saveMs": 657.5792099999999,
+          "operationId": "77357266-0643-44b4-a6f0-5e5deaff9329",
+          "textHash": "3a765345c9dff4db5853688614f80e4c0215859d47aa3051fbe688c8c5df30f4",
+          "generation": "3"
+        },
+        {
+          "saveMs": 768.3526620000011,
+          "operationId": "658c06c6-71e9-430e-a842-f2b887b16c1b",
+          "textHash": "6d57d8caf0cf6cacd4993c38c018672a77b5fd9cd56c0e8c7241d43143fd3b77",
+          "generation": "4"
+        },
+        {
+          "saveMs": 708.4435259999991,
+          "operationId": "2466373a-3f2b-48ed-8e95-231a0dbfe5b4",
+          "textHash": "04dd862ae11a464ce5828c70990396f5f233a23a3142b251d48d434a115342c8",
+          "generation": "5"
+        }
+      ],
+      "reopenVerified": true,
+      "historyVerified": true
+    }
+  ]
+}

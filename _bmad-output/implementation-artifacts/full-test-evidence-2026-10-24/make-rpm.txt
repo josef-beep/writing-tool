@@ -1,0 +1,19 @@
+
+> writingtool@0.1.0 make
+> electron-forge make --from-package --targets @electron-forge/maker-rpm
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@11.17.0
+✔ Checking your system
+❯ Loading configuration
+✔ Loading configuration
+❯ Resolving make targets
+✖ Resolving make targets [FAILED: Cannot make for rpm, the following external binaries need to be installed: rpmbuild]
+
+An unhandled rejection has occurred inside Forge:
+Error: Cannot make for rpm, the following external binaries need to be installed: rpmbuild
+at MakerRpm.ensureExternalBinariesExist (file:///home/jo/Documents/writing-tool/node_modules/@electron-forge/maker-base/dist/Maker.js:103:19)
+    at file:///home/jo/Documents/writing-tool/node_modules/@electron-forge/core/dist/api/make.js:108:27
+    at async Task.taskFn (file:///home/jo/Documents/writing-tool/node_modules/@electron-forge/tracer/dist/index.js:32:20)
+    at async Task.run (file:///home/jo/Documents/writing-tool/node_modules/listr2/dist/index.mjs:2012:5)

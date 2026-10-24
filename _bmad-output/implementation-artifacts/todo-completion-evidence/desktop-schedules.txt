@@ -1,0 +1,12 @@
+
+> writingtool@0.1.0 test:desktop
+> node --import tsx scripts/verify-desktop.mjs schedules
+
+/home/jo/Documents/writing-tool/scripts/verify-desktop.mjs:105
+   if(saved.autosaveMinutes!=='10'||saved.revisionMinutes!=='10'||saved.backupMinutes!=='10')throw new Error('Incorrect default protection intervals');
+                                                                                                   ^
+
+Error: Incorrect default protection intervals
+    at <anonymous> (/home/jo/Documents/writing-tool/scripts/verify-desktop.mjs:105:100)
+
+Node.js v24.19.0

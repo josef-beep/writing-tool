@@ -1,0 +1,32 @@
+
+> writingtool@0.1.0 test:desktop
+> node --import tsx scripts/verify-desktop.mjs
+
+panels: passed
+error-quit: passed
+recovery-notice: passed
+combined-error-quit: passed
+error-profile-quit: passed
+error-quit-timeout: passed
+error-quit-copy-keep: passed
+close-stalled: passed
+close-drain-cancel: passed
+close-backup-error: passed
+error-quit-copy-failure: passed
+close-pending: passed
+read-queue: passed
+read-failure: passed
+layout-retry: passed
+partial-layout: passed
+context: passed
+menus: passed
+timeline: passed
+intervals: passed
+factions: passed
+writing: passed
+reconcile-defer: passed
+reconcile-defer-restart: passed
+reconcile-background: passed
+busy-inventory: passed
+busy-inventory-restart: passed
+Desktop verification evidence: /tmp/writingtool-desktop-verification-CXvX9Q

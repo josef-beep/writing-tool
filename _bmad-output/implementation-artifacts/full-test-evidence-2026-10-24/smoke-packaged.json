@@ -1,0 +1,12 @@
+{
+  "name": "smoke-packaged",
+  "command": [
+    "npm",
+    "run",
+    "smoke:packaged"
+  ],
+  "started": "2026-10-24T18:31:12.848364+00:00",
+  "seconds": 18.8,
+  "exit_code": 0,
+  "log": "smoke-packaged.txt"
+}

@@ -1,0 +1,27 @@
+{
+  "name": "sprint-dry-run",
+  "command": [
+    "env",
+    "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+    "uv",
+    "run",
+    "--offline",
+    ".agents/skills/bmad-sprint-planning/scripts/sprint_plan.py",
+    "generate",
+    "--epic-file",
+    "_bmad-output/planning-artifacts/epics.md",
+    "--status-file",
+    "_bmad-output/implementation-artifacts/sprint-status.yaml",
+    "--stories-dir",
+    "_bmad-output/implementation-artifacts",
+    "--project",
+    "WritingTool",
+    "--date",
+    "10-24-2026 20:24",
+    "--dry-run"
+  ],
+  "started": "2026-10-24T18:24:38.492853+00:00",
+  "seconds": 0.08,
+  "exit_code": 0,
+  "log": "sprint-dry-run.txt"
+}

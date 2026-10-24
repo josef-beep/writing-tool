@@ -366,13 +366,14 @@ class FileUniverseStore implements UniverseStore {
         });
         this.session = token;
     }
-    snapshot(): UniverseSnapshot {
+    snapshot(): UniverseSnapshot {return this.readSnapshot().identity;}
+    readSnapshot(): ReturnType<UniverseStore['readSnapshot']> {
         if (this.released)
             throw new UniverseFailure('RECOVERY_REQUIRED', 'Reopen the relocated universe to reacquire its verified authority.', 'unknown');
         if (this.failed)
             throw new UniverseFailure('RECOVERY_REQUIRED', 'Reopen this universe to reconcile the interrupted operation.', 'unknown');
         this.health();
-        this.workspace.snapshot();
+        const workspace=this.workspace.snapshot();
         const m = this.meta(), r = this.record();
         requireValid(r.id === m.ownerId && r.rootId === m.rootId);
         const bytes = readManaged(this.location, r.relativePath), p = decode(bytes);
@@ -383,7 +384,7 @@ class FileUniverseStore implements UniverseStore {
         requireValid(operations.every((op, index) => op.generation === (BigInt(index) + 1n).toString()) && operations.at(-1)?.generation === m.generation, 'The catalog generation has no complete decision history.');
         const profileReceipts = operations.map(op => decode(Buffer.from(op.receiptData))).filter(validReceipt);
         requireValid(profileReceipts.at(-1)?.recordVersion === r.recordVersion, 'The current profile version has no matching receipt.');
-        return { ownerId: m.ownerId, rootId: m.rootId, generation: m.generation, recordVersion: r.recordVersion, profile: (p as ProfileEnvelope).data, location: this.location };
+        return {workspace,identity:{ ownerId: m.ownerId, rootId: m.rootId, generation: m.generation, recordVersion: r.recordVersion, profile: (p as ProfileEnvelope).data, location: this.location }};
     }
     checkBinding(): void {
         const m = this.meta();

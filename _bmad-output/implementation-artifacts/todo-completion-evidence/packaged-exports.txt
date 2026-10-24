@@ -1,0 +1,6 @@
+txt: passed
+md: passed
+docx: passed
+pdf: passed
+sqlite: passed
+All export/catalog/ZIP probes passed. Temporary artifacts: /tmp/writingtool-export-probe-9226bR

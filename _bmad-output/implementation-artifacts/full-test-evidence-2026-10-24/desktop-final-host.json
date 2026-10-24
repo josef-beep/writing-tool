@@ -1,0 +1,17 @@
+{
+  "name": "desktop-final-host",
+  "command": [
+    "npm",
+    "run",
+    "test:desktop",
+    "--",
+    "writing",
+    "reconcile-defer",
+    "reconcile-background",
+    "busy-inventory"
+  ],
+  "started": "2026-10-24T18:28:38.734435+00:00",
+  "seconds": 47.21,
+  "exit_code": 1,
+  "log": "desktop-final-host.txt"
+}

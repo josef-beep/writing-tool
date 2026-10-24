@@ -1,0 +1,11 @@
+{
+  "name": "planning-host",
+  "command": [
+    "node",
+    "scripts/validate-plan.mjs"
+  ],
+  "started": "2026-10-24T18:23:48.188342+00:00",
+  "seconds": 0.1,
+  "exit_code": 0,
+  "log": "planning-host.txt"
+}

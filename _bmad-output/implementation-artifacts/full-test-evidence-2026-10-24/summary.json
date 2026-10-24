@@ -1,0 +1,701 @@
+{
+  "testedSourceRevision": "4281f787f03b4b5cee3c377342f6e3634f2f60c2",
+  "date": "2026-10-24",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "node": "v24.19.0",
+  "applicationSourceChanged": false,
+  "outcome": "local verification completed with unresolved failures; release acceptance remains open",
+  "unit": {
+    "tests": 100,
+    "passed": 100,
+    "failed": 0
+  },
+  "desktop": {
+    "registered": 24,
+    "passed": 23,
+    "failed": [
+      "reconcile-defer"
+    ],
+    "scenarioResults": {
+      "panels": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "error-quit": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "combined-error-quit": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "error-profile-quit": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "error-quit-timeout": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "error-quit-copy-keep": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "close-stalled": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "close-drain-cancel": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "close-backup-error": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "error-quit-copy-failure": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "close-pending": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "read-queue": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "read-failure": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "layout-retry": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-all-host.txt"
+        ]
+      },
+      "partial-layout": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-remaining-host.txt"
+        ]
+      },
+      "context": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-remaining-host.txt"
+        ]
+      },
+      "menus": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-remaining-host.txt"
+        ]
+      },
+      "timeline": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-remaining-host.txt"
+        ]
+      },
+      "intervals": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-remaining-host.txt"
+        ]
+      },
+      "factions": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-remaining-host.txt"
+        ]
+      },
+      "writing": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-final-host.txt"
+        ]
+      },
+      "reconcile-defer": {
+        "status": "failed",
+        "successfulLogs": []
+      },
+      "reconcile-background": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-reconciliation-host.txt"
+        ]
+      },
+      "busy-inventory": {
+        "status": "passed",
+        "successfulLogs": [
+          "desktop-reconciliation-host.txt"
+        ]
+      }
+    },
+    "additionalPassed": [
+      "recovery-notice",
+      "busy-inventory-restart"
+    ],
+    "cleanAllModesRun": false,
+    "deferredRestartCheck": "not reached because original reconcile-defer scenario failed"
+  },
+  "smoke": {
+    "smoke-development": {
+      "passed": 7,
+      "faults": [
+        "none",
+        "start",
+        "exit",
+        "invalid",
+        "timeout",
+        "exit-after-ready",
+        "fatal-error"
+      ],
+      "securityChecksPassed": true,
+      "allExitsDrained": true
+    },
+    "smoke-packaged": {
+      "passed": 7,
+      "faults": [
+        "none",
+        "start",
+        "exit",
+        "invalid",
+        "timeout",
+        "exit-after-ready",
+        "fatal-error"
+      ],
+      "securityChecksPassed": true,
+      "allExitsDrained": true
+    }
+  },
+  "exports": {
+    "sourceRuntime": {
+      "root": "/tmp/writingtool-export-probe-DzGW6M",
+      "results": [
+        {
+          "format": "txt",
+          "bytes": 130,
+          "ms": 1882
+        },
+        {
+          "format": "md",
+          "bytes": 145,
+          "ms": 2015
+        },
+        {
+          "format": "docx",
+          "bytes": 5893,
+          "ms": 4440
+        },
+        {
+          "format": "pdf",
+          "bytes": 27136,
+          "ms": 3926
+        },
+        {
+          "format": "sqlite",
+          "bytes": 135168,
+          "ms": 1855
+        },
+        {
+          "format": "standalone-universe catalog",
+          "passed": true
+        },
+        {
+          "format": "project ZIP",
+          "originalRootsUnavailable": true,
+          "payloads": 11
+        },
+        {
+          "format": "universe ZIP",
+          "originalRootsUnavailable": true,
+          "payloads": 3
+        }
+      ],
+      "limits": "PDF checks extracted text and structure; visual layout and full recovery activation remain unverified."
+    },
+    "packagedRuntime": {
+      "root": "/tmp/writingtool-export-probe-Aeu2gc",
+      "results": [
+        {
+          "format": "txt",
+          "bytes": 130,
+          "ms": 1224
+        },
+        {
+          "format": "md",
+          "bytes": 145,
+          "ms": 1325
+        },
+        {
+          "format": "docx",
+          "bytes": 5893,
+          "ms": 3607
+        },
+        {
+          "format": "pdf",
+          "bytes": 27136,
+          "ms": 3235
+        },
+        {
+          "format": "sqlite",
+          "bytes": 135168,
+          "ms": 1303
+        },
+        {
+          "format": "standalone-universe catalog",
+          "passed": true
+        },
+        {
+          "format": "project ZIP",
+          "originalRootsUnavailable": true,
+          "payloads": 11
+        },
+        {
+          "format": "universe ZIP",
+          "originalRootsUnavailable": true,
+          "payloads": 3
+        }
+      ],
+      "limits": "PDF checks extracted text and structure; visual layout and full recovery activation remain unverified."
+    }
+  },
+  "schemas": {
+    "metaSchemas": 8,
+    "schemaAssertions": 47,
+    "allPassed": true,
+    "limits": "Schema validation does not establish semantic ownership, storage durability or installed runtime acceptance."
+  },
+  "packaging": {
+    "application": "passed",
+    "debian": "failed: expects lowercase writingtool; packaged executable is WritingTool",
+    "rpm": "blocked: rpmbuild unavailable",
+    "executable": "out/WritingTool-linux-x64/WritingTool",
+    "executableSha256": "74730fc2c27f471b9d5a0e77398a4ae6aa6c403730cbacc6a40af367f7ec603f",
+    "asarSha256": "f8f14635c2aac04decf413d469902615543770981d8c0c3b188d4ce06d974bea"
+  },
+  "preservation": {
+    "initialWebpackFiles": 21,
+    "restoredHashesMatch": true,
+    "newGeneratedBundlesPreservedAt": "/tmp/writingtool-full-test-generated-aa8hst4p/.webpack",
+    "previousPackage": "/tmp/writingtool-previous-package-4ygbr8fl/WritingTool-linux-x64",
+    "realWritingRootsUsed": false
+  },
+  "limitations": [
+    "Windows/Intel Mac/Apple silicon native and installed acceptance",
+    "Hardware power loss, real disk full and removed-drive testing",
+    "Approved baseline and ten-times-content performance workloads and reference hardware budgets",
+    "Visual export fidelity, full recovery activation and comprehensive accessibility/manual acceptance",
+    "Formal acceptance of remaining 47 stories and complete FR/NFR/TECH gates",
+    "Intermittent calendar input and writing-focus failures; reconcile-defer remains failing"
+  ],
+  "commands": [
+    {
+      "name": "unit-suite",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "started": "2026-10-24T18:22:22.988822+00:00",
+      "seconds": 119.94,
+      "exit_code": 1,
+      "log": "unit-suite.txt"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "started": "2026-10-24T18:22:22.993660+00:00",
+      "seconds": 0.18,
+      "exit_code": 0,
+      "log": "lint.txt"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "started": "2026-10-24T18:22:22.993708+00:00",
+      "seconds": 4.88,
+      "exit_code": 0,
+      "log": "typecheck.txt"
+    },
+    {
+      "name": "desktop-all",
+      "command": [
+        "npm",
+        "run",
+        "test:desktop"
+      ],
+      "started": "2026-10-24T18:22:39.654117+00:00",
+      "seconds": 17.53,
+      "exit_code": 1,
+      "log": "desktop-all.txt"
+    },
+    {
+      "name": "planning",
+      "command": [
+        "node",
+        "scripts/validate-plan.mjs"
+      ],
+      "started": "2026-10-24T18:22:49.817465+00:00",
+      "seconds": 0.06,
+      "exit_code": 1,
+      "log": "planning.txt"
+    },
+    {
+      "name": "sprint-validation",
+      "command": [
+        "env",
+        "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+        "uv",
+        "run",
+        ".agents/skills/bmad-sprint-planning/scripts/sprint_plan.py",
+        "validate",
+        "--status-file",
+        "_bmad-output/implementation-artifacts/sprint-status.yaml"
+      ],
+      "started": "2026-10-24T18:22:49.979874+00:00",
+      "seconds": 4.85,
+      "exit_code": 2,
+      "log": "sprint-validation.txt"
+    },
+    {
+      "name": "desktop-all-host",
+      "command": [
+        "npm",
+        "run",
+        "test:desktop"
+      ],
+      "started": "2026-10-24T18:23:36.176074+00:00",
+      "seconds": 124.27,
+      "exit_code": 1,
+      "log": "desktop-all-host.txt"
+    },
+    {
+      "name": "planning-host",
+      "command": [
+        "node",
+        "scripts/validate-plan.mjs"
+      ],
+      "started": "2026-10-24T18:23:48.188342+00:00",
+      "seconds": 0.1,
+      "exit_code": 0,
+      "log": "planning-host.txt"
+    },
+    {
+      "name": "sprint-validation-host",
+      "command": [
+        "env",
+        "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+        "uv",
+        "run",
+        ".agents/skills/bmad-sprint-planning/scripts/sprint_plan.py",
+        "validate",
+        "--status-file",
+        "_bmad-output/implementation-artifacts/sprint-status.yaml"
+      ],
+      "started": "2026-10-24T18:23:50.909086+00:00",
+      "seconds": 2.48,
+      "exit_code": 0,
+      "log": "sprint-validation-host.txt"
+    },
+    {
+      "name": "unit-suite-host",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "started": "2026-10-24T18:24:28.298164+00:00",
+      "seconds": 139.72,
+      "exit_code": 0,
+      "log": "unit-suite-host.txt"
+    },
+    {
+      "name": "sprint-dry-run",
+      "command": [
+        "env",
+        "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+        "uv",
+        "run",
+        "--offline",
+        ".agents/skills/bmad-sprint-planning/scripts/sprint_plan.py",
+        "generate",
+        "--epic-file",
+        "_bmad-output/planning-artifacts/epics.md",
+        "--status-file",
+        "_bmad-output/implementation-artifacts/sprint-status.yaml",
+        "--stories-dir",
+        "_bmad-output/implementation-artifacts",
+        "--project",
+        "WritingTool",
+        "--date",
+        "10-24-2026 20:24",
+        "--dry-run"
+      ],
+      "started": "2026-10-24T18:24:38.492853+00:00",
+      "seconds": 0.08,
+      "exit_code": 0,
+      "log": "sprint-dry-run.txt"
+    },
+    {
+      "name": "native-build",
+      "command": [
+        "npm",
+        "run",
+        "build:native"
+      ],
+      "started": "2026-10-24T18:24:38.673958+00:00",
+      "seconds": 0.14,
+      "exit_code": 0,
+      "log": "native-build.txt"
+    },
+    {
+      "name": "export-probe",
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/export-probe.mts"
+      ],
+      "started": "2026-10-24T18:25:16.751529+00:00",
+      "seconds": 21.67,
+      "exit_code": 0,
+      "log": "export-probe.txt"
+    },
+    {
+      "name": "desktop-remaining-host",
+      "command": [
+        "npm",
+        "run",
+        "test:desktop",
+        "--",
+        "partial-layout",
+        "context",
+        "menus",
+        "timeline",
+        "intervals",
+        "factions",
+        "writing",
+        "reconcile-defer",
+        "reconcile-background",
+        "busy-inventory"
+      ],
+      "started": "2026-10-24T18:26:05.877231+00:00",
+      "seconds": 125.3,
+      "exit_code": 1,
+      "log": "desktop-remaining-host.txt"
+    },
+    {
+      "name": "smoke-development",
+      "command": [
+        "npm",
+        "run",
+        "smoke"
+      ],
+      "started": "2026-10-24T18:26:23.202177+00:00",
+      "seconds": 129.9,
+      "exit_code": 0,
+      "log": "smoke-development.txt"
+    },
+    {
+      "name": "dependencies",
+      "command": [
+        "npm",
+        "ls",
+        "--depth=0"
+      ],
+      "started": "2026-10-24T18:26:45.001060+00:00",
+      "seconds": 0.54,
+      "exit_code": 0,
+      "log": "dependencies.txt"
+    },
+    {
+      "name": "schema-probe",
+      "command": [
+        "env",
+        "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+        "uv",
+        "run",
+        "--with",
+        "jsonschema",
+        "python",
+        "_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.py"
+      ],
+      "started": "2026-10-24T18:27:51.729426+00:00",
+      "seconds": 4.88,
+      "exit_code": 1,
+      "log": "schema-probe.txt"
+    },
+    {
+      "name": "schema-probe-corrected",
+      "command": [
+        "env",
+        "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+        "uv",
+        "run",
+        "--offline",
+        "--with",
+        "jsonschema",
+        "python",
+        "_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.py"
+      ],
+      "started": "2026-10-24T18:28:33.337189+00:00",
+      "seconds": 0.34,
+      "exit_code": 0,
+      "log": "schema-probe-corrected.txt"
+    },
+    {
+      "name": "desktop-final-host",
+      "command": [
+        "npm",
+        "run",
+        "test:desktop",
+        "--",
+        "writing",
+        "reconcile-defer",
+        "reconcile-background",
+        "busy-inventory"
+      ],
+      "started": "2026-10-24T18:28:38.734435+00:00",
+      "seconds": 47.21,
+      "exit_code": 1,
+      "log": "desktop-final-host.txt"
+    },
+    {
+      "name": "package-linux",
+      "command": [
+        "npm",
+        "run",
+        "package"
+      ],
+      "started": "2026-10-24T18:28:56.634962+00:00",
+      "seconds": 29.89,
+      "exit_code": 0,
+      "log": "package-linux.txt"
+    },
+    {
+      "name": "desktop-reconciliation-host",
+      "command": [
+        "npm",
+        "run",
+        "test:desktop",
+        "--",
+        "reconcile-background",
+        "busy-inventory"
+      ],
+      "started": "2026-10-24T18:29:32.860982+00:00",
+      "seconds": 46.76,
+      "exit_code": 0,
+      "log": "desktop-reconciliation-host.txt"
+    },
+    {
+      "name": "make-debian",
+      "command": [
+        "npm",
+        "run",
+        "make",
+        "--",
+        "--from-package",
+        "--targets",
+        "@electron-forge/maker-deb"
+      ],
+      "started": "2026-10-24T18:29:54.323698+00:00",
+      "seconds": 0.95,
+      "exit_code": 1,
+      "log": "make-debian.txt"
+    },
+    {
+      "name": "make-rpm",
+      "command": [
+        "npm",
+        "run",
+        "make",
+        "--",
+        "--from-package",
+        "--targets",
+        "@electron-forge/maker-rpm"
+      ],
+      "started": "2026-10-24T18:30:05.610559+00:00",
+      "seconds": 0.76,
+      "exit_code": 1,
+      "log": "make-rpm.txt"
+    },
+    {
+      "name": "desktop-defer-reproduction",
+      "command": [
+        "npm",
+        "run",
+        "test:desktop",
+        "--",
+        "reconcile-defer"
+      ],
+      "started": "2026-10-24T18:30:27.190774+00:00",
+      "seconds": 39.22,
+      "exit_code": 1,
+      "log": "desktop-defer-reproduction.txt"
+    },
+    {
+      "name": "smoke-packaged",
+      "command": [
+        "npm",
+        "run",
+        "smoke:packaged"
+      ],
+      "started": "2026-10-24T18:31:12.848364+00:00",
+      "seconds": 18.8,
+      "exit_code": 0,
+      "log": "smoke-packaged.txt"
+    },
+    {
+      "name": "packaged-export-probe",
+      "command": [
+        "env",
+        "WRITINGTOOL_PROBE_RUNTIME=out/WritingTool-linux-x64/resources/libreoffice/program/soffice",
+        "WRITINGTOOL_PROBE_RESULT=./packaged-export-probe-results.json",
+        "node",
+        "--import",
+        "tsx",
+        "_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/export-probe.mts"
+      ],
+      "started": "2026-10-24T18:31:39.662113+00:00",
+      "seconds": 16.39,
+      "exit_code": 0,
+      "log": "packaged-export-probe.txt"
+    }
+  ]
+}

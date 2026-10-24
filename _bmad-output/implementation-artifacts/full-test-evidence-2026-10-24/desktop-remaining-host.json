@@ -1,0 +1,23 @@
+{
+  "name": "desktop-remaining-host",
+  "command": [
+    "npm",
+    "run",
+    "test:desktop",
+    "--",
+    "partial-layout",
+    "context",
+    "menus",
+    "timeline",
+    "intervals",
+    "factions",
+    "writing",
+    "reconcile-defer",
+    "reconcile-background",
+    "busy-inventory"
+  ],
+  "started": "2026-10-24T18:26:05.877231+00:00",
+  "seconds": 125.3,
+  "exit_code": 1,
+  "log": "desktop-remaining-host.txt"
+}

@@ -1,0 +1,3 @@
+invalid compile: TS2322 reported
+valid compile: passed
+watch: valid -> TS2322 -> valid -> clean close passed

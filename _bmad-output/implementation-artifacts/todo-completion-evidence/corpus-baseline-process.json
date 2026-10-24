@@ -1,0 +1,17 @@
+{
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "scripts/measure-performance-corpus.mts",
+    "--root=/tmp/writingtool-dec11-ZNsuyc/corpus",
+    "--output=/home/jo/Documents/writing-tool/_bmad-output/implementation-artifacts/todo-completion-evidence/corpus-baseline-measurements.json",
+    "--runs=3"
+  ],
+  "exitCode": -15,
+  "durationSeconds": 453.87,
+  "peakRssBytes": 1315704832,
+  "probeRssCeilingBytes": 12884901888,
+  "interrupted": null,
+  "corpus": "/tmp/writingtool-dec11-ZNsuyc/corpus"
+}

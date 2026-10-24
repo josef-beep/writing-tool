@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import {execFileSync} from 'node:child_process';
+import {runSmokeProcess} from '../../../scripts/smoke.mjs';
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'writingtool-debian-')),deb=fs.readdirSync('out/make',{recursive:true}).find(p=>p.endsWith('.deb'));if(!deb)throw new Error('Debian output missing');
+const file=path.resolve('out/make',deb),extracted=path.join(root,'extracted');fs.mkdirSync(extracted);execFileSync('dpkg-deb',['--extract',file,extracted]);const applications=path.join(extracted,'usr/share/applications'),desktop=fs.readdirSync(applications).find(p=>p.endsWith('.desktop'));if(!desktop)throw new Error('Desktop integration missing');const entry=fs.readFileSync(path.join(applications,desktop),'utf8'),execLine=entry.match(/^Exec=(.*)$/m)?.[1];if(!execLine)throw new Error('Desktop Exec missing');const shipped=execLine.replace(/\s+%[a-zA-Z]/g,'').trim().replace(/^"|"$/g,''),binary=fs.realpathSync(path.join(extracted,path.isAbsolute(shipped)?shipped:path.join('usr/bin',shipped)));if(path.basename(binary)!=='WritingTool'||!fs.statSync(binary).isFile())throw new Error('Desktop entry does not target shipped executable: '+execLine);fs.accessSync(binary,fs.constants.X_OK);
+const profile=path.join(root,'profile'),universe=path.join(root,'universe');fs.mkdirSync(profile);fs.mkdirSync(universe);const log=new URL('./debian-launch.txt',import.meta.url);
+const result=await runSmokeProcess(binary,[],{fault:'none',env:{...process.env,PATH:path.dirname(binary),DISPLAY:':1',WRITINGTOOL_DIAGNOSTIC:'1',WRITINGTOOL_PROFILE:profile,WRITINGTOOL_UNIVERSE_FOLDER:universe},write:bytes=>fs.appendFileSync(log,bytes)});
+fs.writeFileSync(new URL('./debian-results.json',import.meta.url),JSON.stringify({deb:file,root,desktopEntry:entry,executable:binary,result,systemInstallation:false},null,2)+'\n');console.log('Extracted Debian launch passed: '+binary);

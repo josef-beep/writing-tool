@@ -1,10 +1,5 @@
-import type IForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
+import type {Configuration} from 'webpack';
 
-// oxlint-disable-next-line @typescript-eslint/no-require-imports
-const ForkTsCheckerWebpackPlugin: typeof IForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
-
-export const plugins = [
-  new ForkTsCheckerWebpackPlugin({
-    logger: 'webpack-infrastructure',
-  }),
-];
+// ts-loader checks each compiler in process. A shared forked checker can outlive
+// Forge's compiler and write to a closed worker pipe during shutdown.
+export const plugins: Configuration['plugins'] = [];

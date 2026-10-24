@@ -1,0 +1,16 @@
+{
+  "name": "make-debian",
+  "command": [
+    "npm",
+    "run",
+    "make",
+    "--",
+    "--from-package",
+    "--targets",
+    "@electron-forge/maker-deb"
+  ],
+  "started": "2026-10-24T18:29:54.323698+00:00",
+  "seconds": 0.95,
+  "exit_code": 1,
+  "log": "make-debian.txt"
+}

@@ -41,6 +41,8 @@ function Shell() {
     const [pending, setPending] = useState<CreateInput | SaveInput>();
     const [status, setStatus] = useState('Open a project or choose a universe to begin.');
     const workspaceRef = useRef<WorkspaceHandle>(null);
+    // Recovery reads must not replace a context selected by a later command.
+    const contextRefresh = useRef(0);
     const workspaceDeparture = useRef<((approved:boolean)=>void)|null>(null);
     const revision = useRef(0n);
     const quitToken = useRef<string | undefined>(undefined);
@@ -92,6 +94,7 @@ function Shell() {
             setError(response.message);
             return false;
         }
+        contextRefresh.current++;
         setSnapshot(response.snapshot);
         return true;
     }
@@ -143,6 +146,7 @@ function Shell() {
         }
         if (busy || pending || (projectUncertain && action !== 'project-open'))
             return;
+        contextRefresh.current++;
         setPendingDeparture(undefined);
         if (action === 'project-new' || action === 'project-open' || action === 'project-close') {
             setBusy(true);
@@ -302,19 +306,27 @@ function Shell() {
             event.returnValue = false;
         };
         window.addEventListener('beforeunload', preventUnapprovedUnload);
-        const recovered=()=>{void (async()=>{
+        const recovered=()=>{const sequence=++contextRefresh.current;void (async()=>{
             const pendingOperations=await window.writingTool.protection({command:'protection.pending'});
             // Keep the recovery panel in place until every pending operation is resolved.
-            if(pendingOperations.status==='ok'&&pendingOperations.value.pending?.some(id=>!pendingOperations.value.deferrable?.includes(id)))return;
-            // Authority requests are exclusive in main; await each before sending the next.
-            const project=await window.writingTool.currentProject();
-            const universe=await window.writingTool.currentUniverse();
-            if(project.status!=='ok'||universe.status!=='ok')throw new Error('The active roots could not be refreshed. Reopen the saved owning roots before editing.');
-            setProjectSnapshot(project.snapshot);setSnapshot(universe.snapshot);
-        })().catch(()=>{setProjectSnapshot(null);setSnapshot(null);setEditor(null);setError('The active roots could not be refreshed. Reopen the saved owning roots before editing.');});};
+            if(sequence!==contextRefresh.current||pendingOperations.status!=='ok'||pendingOperations.value.pending?.some(id=>!pendingOperations.value.deferrable?.includes(id)))return;
+            for(let attempt=0;attempt<40&&sequence===contextRefresh.current;attempt++){
+                // Only retry known-unsent reads. An uncertain write keeps its original evidence.
+                const project=await window.writingTool.currentProject();
+                if(sequence!==contextRefresh.current)return;
+                if(project.status==='error'&&project.code==='RECOVERY_REQUIRED'&&project.outcome==='not-committed'){await new Promise(resolve=>setTimeout(resolve,50));continue;}
+                const universe=await window.writingTool.currentUniverse();
+                if(sequence!==contextRefresh.current)return;
+                if(universe.status==='error'&&universe.code==='RECOVERY_REQUIRED'&&universe.outcome==='not-committed'){await new Promise(resolve=>setTimeout(resolve,50));continue;}
+                if(project.status!=='ok'||universe.status!=='ok'||project.snapshot&&(!universe.snapshot||project.snapshot.universe.ownerId!==universe.snapshot.ownerId||project.snapshot.universe.rootId!==universe.snapshot.rootId))throw new Error('The active roots could not be refreshed. Reopen the saved owning roots before editing.');
+                setProjectSnapshot(project.snapshot);setSnapshot(universe.snapshot);return;
+            }
+            if(sequence===contextRefresh.current)throw new Error('The active roots are still busy. Retry recovery when the active operation finishes.');
+        })().catch(error=>{if(sequence===contextRefresh.current)setError(error instanceof Error?error.message:'The active roots could not be refreshed. Reopen the saved owning roots before editing.');});};
         const closeAborted = async (event:Event) => {
             try {
                 if ((event as CustomEvent<{refresh:boolean}>).detail?.refresh) {
+                    contextRefresh.current++;
                     const project = await window.writingTool.currentProject();
                     const universe = await window.writingTool.currentUniverse();
                     if (project.status !== 'ok' || universe.status !== 'ok')

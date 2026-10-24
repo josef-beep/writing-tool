@@ -1,0 +1,20 @@
+{"event":"start","operation":"open","root":"/tmp/writingtool-dec11-4cmmkR/corpus"}
+{"event":"measured","operation":"open","samplesMs":[12388.170517],"p95Ms":12388.170517,"medianMs":12388.170517,"scope":"Authority open plus fully validated project/universe snapshot; excludes renderer/IPC readiness.","rss":472363008}
+{"event":"start","operation":"snapshot","run":0}
+{"event":"start","operation":"durable-save","run":0}
+{"event":"start","operation":"snapshot","run":1}
+{"event":"start","operation":"durable-save","run":1}
+{"event":"start","operation":"snapshot","run":2}
+{"event":"start","operation":"durable-save","run":2}
+{"event":"measured","operation":"snapshot","samplesMs":[2859.3998470000006,2918.250486000001,3562.096497999999],"p95Ms":3562.096497999999,"medianMs":2918.250486000001,"scope":"Complete backend snapshot with all stored hashes and immutable history validation.","rss":542150656}
+{"event":"measured","operation":"chapter-and-filter-computation","samplesMs":[2.2577499999988504,1.8465429999996559,1.4878459999963525],"p95Ms":2.2577499999988504,"medianMs":1.8465429999996559,"scope":"Pure ordering/filter computation on loaded records; excludes DOM rendering.","rss":542150656}
+{"event":"measured","operation":"durable-save","samplesMs":[7388.285637000001,8003.264986000002,7799.967958000001],"p95Ms":8003.264986000002,"medianMs":7799.967958000001,"scope":"Durable chapter mutation and validated response snapshot; excludes IPC and UI.","rss":542150656}
+{"event":"start","operation":"revision"}
+{"event":"measured","operation":"revision","samplesMs":[480710.30180300004],"p95Ms":480710.30180300004,"medianMs":480710.30180300004,"scope":"Single production backend/converter sample; repeated reference-machine and installed acceptance remain required.","rss":771588096}
+{"event":"start","operation":"backup"}
+{"event":"measured","operation":"backup","samplesMs":[219970.88942300004],"p95Ms":219970.88942300004,"medianMs":219970.88942300004,"scope":"Single production backend/converter sample; repeated reference-machine and installed acceptance remain required.","rss":820658176}
+{"event":"start","operation":"txt"}
+{"event":"measured","operation":"txt","samplesMs":[399149.975157],"p95Ms":399149.975157,"medianMs":399149.975157,"scope":"Single production backend/converter sample; repeated reference-machine and installed acceptance remain required.","rss":795246592}
+{"event":"start","operation":"md"}
+{"event":"measured","operation":"md","samplesMs":[407301.38170999987],"p95Ms":407301.38170999987,"medianMs":407301.38170999987,"scope":"Single production backend/converter sample; repeated reference-machine and installed acceptance remain required.","rss":795099136}
+{"event":"start","operation":"docx"}

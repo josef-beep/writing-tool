@@ -4385,6 +4385,10 @@ module.exports = require("util");
 /******/ 		Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 	};
 /******/ 	
+/******/ 	/* webpack/runtime/compat */
+/******/ 	
+/******/ 	if (typeof __webpack_require__ !== 'undefined') __webpack_require__.ab = __dirname + "/native_modules/";
+/******/ 	
 /************************************************************************/
 let __webpack_exports__ = {};
 // This entry needs to be wrapped in an IIFE because it needs to be in strict mode.
@@ -4813,6 +4817,15 @@ else
                 throw new Error('The original owning identity is required. The protection operation remains pending.');
             return resolved;
         };
+        let recoveredContextPending = false;
+        const notifyRecoveredContext = () => { if (protectionInFlight)
+            recoveredContextPending = true;
+        else
+            window?.webContents.send('writingtool:recovered-context:v1'); };
+        const releaseProtectionAdmission = () => { protectionInFlight = false; notifyPendingProtection(); if (recoveredContextPending) {
+            recoveredContextPending = false;
+            notifyRecoveredContext();
+        } };
         const synchronizeProtectionContext = async (notify = true) => {
             const [project, universe] = await Promise.all([
                 projectClient.request({ protocolVersion: 1, requestId: (0,node_crypto__WEBPACK_IMPORTED_MODULE_12__.randomUUID)(), command: 'project.current' }),
@@ -4820,7 +4833,7 @@ else
             ]);
             if (project.status !== 'ok' || universe.status !== 'ok') {
                 if (notify)
-                    window?.webContents.send('writingtool:recovered-context:v1');
+                    notifyRecoveredContext();
                 throw new Error('The active recovery participants could not be confirmed. Reopen the saved owning roots.');
             }
             if (project.snapshot && (!universe.snapshot || project.snapshot.universe.ownerId !== universe.snapshot.ownerId || project.snapshot.universe.rootId !== universe.snapshot.rootId))
@@ -4831,7 +4844,7 @@ else
             activeSnapshot = universe.snapshot;
             authorityRestorePending = false;
             if (notify)
-                window?.webContents.send('writingtool:recovered-context:v1');
+                notifyRecoveredContext();
         };
         const runProtection = (0,_protection__WEBPACK_IMPORTED_MODULE_3__.nativeProtection)({ openRoot: async (owner, location) => { try {
                 if (owner.kind === 'project') {
@@ -4930,15 +4943,14 @@ else
                     unresolvedOperations.delete(value.operationId);
                     notifyPendingProtection();
                     if (!hasBlockingOperations() && !pendingProjectCreation)
-                        window?.webContents.send('writingtool:recovered-context:v1');
+                        notifyRecoveredContext();
                     return { ...base, status: 'ok', value: { ...pendingProtectionState(), warnings: ['The unfinished operation is retained for later reconciliation. It has not been marked complete.'] } };
                 }
                 catch (error) {
                     return { ...base, status: 'error', message: error instanceof Error ? error.message : 'The operation could not be set aside. Retry or reconcile it.', outcome: 'unknown', operationId: value.operationId };
                 }
                 finally {
-                    protectionInFlight = false;
-                    notifyPendingProtection();
+                    releaseProtectionAdmission();
                 }
             }
             // Listing recent roots has no authority effects and must remain available during recovery.
@@ -4963,7 +4975,7 @@ else
                         protectionClient?.fail();
                         protectionClient = new _protection_host_client__WEBPACK_IMPORTED_MODULE_5__.ProtectionHostClient(child);
                         forgetPendingProtection(value.operationId);
-                        window?.webContents.send('writingtool:recovered-context:v1');
+                        notifyRecoveredContext();
                         return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'ok', value: { reconciliation: { operationId: value.operationId, outcome: 'not-committed' } } };
                     }
                     let moved = false;
@@ -5061,12 +5073,11 @@ else
                     if (pendingProtection.has(value.operationId) && !(0,_application_contracts_protection__WEBPACK_IMPORTED_MODULE_4__.canDeferProtection)(pendingProtection.get(value.operationId).request.command))
                         unresolvedOperations.add(value.operationId);
                     else if (!hasBlockingOperations())
-                        window?.webContents.send('writingtool:recovered-context:v1');
+                        notifyRecoveredContext();
                     return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: error instanceof Error ? error.message : 'Protection reconciliation remains unconfirmed.', outcome: 'unknown', operationId: value.operationId };
                 }
                 finally {
-                    protectionInFlight = false;
-                    notifyPendingProtection();
+                    releaseProtectionAdmission();
                 }
             }
             if (protectionInFlight || workspaceInFlight || projectInFlight || universeInFlight || hasBlockingOperations())
@@ -5090,8 +5101,7 @@ else
                 return { protocolVersion: 1, requestId: value.requestId, command: value.command, status: 'error', message: error instanceof Error ? error.message : 'The native protection result could not be confirmed.', outcome: uncertain ? 'unknown' : 'not-committed', operationId: uncertain ? value.requestId : null };
             }
             finally {
-                protectionInFlight = false;
-                notifyPendingProtection();
+                releaseProtectionAdmission();
             }
         });
         electron__WEBPACK_IMPORTED_MODULE_15__.ipcMain.handle(_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_7__.WORKSPACE_CHANNEL, async (event, value) => {

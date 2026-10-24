@@ -1,0 +1,16 @@
+{
+  "name": "packaged-export-probe",
+  "command": [
+    "env",
+    "WRITINGTOOL_PROBE_RUNTIME=out/WritingTool-linux-x64/resources/libreoffice/program/soffice",
+    "WRITINGTOOL_PROBE_RESULT=./packaged-export-probe-results.json",
+    "node",
+    "--import",
+    "tsx",
+    "_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/export-probe.mts"
+  ],
+  "started": "2026-10-24T18:31:39.662113+00:00",
+  "seconds": 16.39,
+  "exit_code": 0,
+  "log": "packaged-export-probe.txt"
+}

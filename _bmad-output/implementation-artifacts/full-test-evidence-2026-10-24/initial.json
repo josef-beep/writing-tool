@@ -1,0 +1,29 @@
+{
+  "revision": "4281f787f03b4b5cee3c377342f6e3634f2f60c2",
+  "status": "",
+  "node": "v24.19.0",
+  "webpack": {
+    ".webpack/renderer/f65c85197d09a9032d45.ttf": "058ea80864aef09a23f45cbec2bb5400bc3dfbdea01c3f10538a21fcb497fb74",
+    ".webpack/renderer/1825a889a7dd3bd30189.ttf": "f17db8af71e24d2066b587546021d4f0b296be389512b658dec3c09affeb11a7",
+    ".webpack/renderer/511a67fd9b5f5e3acd7f.ttf": "788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173",
+    ".webpack/renderer/36cc7ae44340a12d605e.ttf": "e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0",
+    ".webpack/renderer/26bfe1935313d7c88907.ttf": "d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce",
+    ".webpack/renderer/7797c9f089e5a172845a.ttf": "76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8",
+    ".webpack/renderer/ea40d372c5366a02a48c.ttf": "79451f3c09fe25116098853b7a2ca6e2436220ccc11af022979adbcf195be130",
+    ".webpack/renderer/72c9aa392482d99e94ca.ttf": "0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e",
+    ".webpack/renderer/f25c1c862a5cbf56cb8d.ttf": "698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee",
+    ".webpack/renderer/ac4a8164ee1c00304495.ttf": "605c01c711b44480a7508d349dfbf3264e81fa43d69e61cfa7d10b86e764c4d1",
+    ".webpack/renderer/0ec3a5dfe334099be8d3.ttf": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1",
+    ".webpack/renderer/c4e06f0a859cf65c69f4.ttf": "bd62a0672d0b9b6710b01df434c80ad54fa5f0835207eb7b17b7a761463067bb",
+    ".webpack/main/utility-host.cjs": "1eea8ed62343e52efaa70d7d30df9d6529e37db3923c41fa4ab89f467d81db7c",
+    ".webpack/main/utility-host.cjs.map": "b2f50a05aed717b86ab60463b3a442ce93e30aaf65858e8a0a609ee28be48684",
+    ".webpack/main/index.cjs": "117e2b0a618924b1c23c243b630ce6c1819a660f125743042d7bc1b2e8d35d62",
+    ".webpack/main/index.cjs.map": "fc899a252cfb3dd6a741b684e1328439717c7eaee20c35ba65531cb6d8370717",
+    ".webpack/renderer/main_window/index.html": "383181c2ac55161fdfc780fde856eb248671f40494c6b06dc5f5b09b567e02d0",
+    ".webpack/renderer/main_window/index.js": "6f88920411f5e5dd1d5e5c85544dcc1564e5330967a0c27828ef2d27c4fb8823",
+    ".webpack/renderer/main_window/preload.cjs": "7eac740625dedd2a5c858b9e455a7ef9e529263a8e17bacbd0226ee9b01ae696",
+    ".webpack/renderer/main_window/index.js.map": "91a24db568bca67cdc78885662ee34179552c73e074446a3e983b10e0e9c91ef",
+    ".webpack/renderer/main_window/preload.cjs.map": "b160994d2c3203a3e6147d457a5df42c59c9dcfb90a7518af5303991e1dd135c"
+  },
+  "webpack_backup": "/tmp/writingtool-full-test-preserve-6fnefqob/webpack.tar"
+}

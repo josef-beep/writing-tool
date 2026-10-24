@@ -1,0 +1,45 @@
+{
+  "root": "/tmp/writingtool-export-probe-jIElsn",
+  "results": [
+    {
+      "format": "txt",
+      "bytes": 130,
+      "ms": 1165
+    },
+    {
+      "format": "md",
+      "bytes": 145,
+      "ms": 1101
+    },
+    {
+      "format": "docx",
+      "bytes": 5893,
+      "ms": 3011
+    },
+    {
+      "format": "pdf",
+      "bytes": 27136,
+      "ms": 2893
+    },
+    {
+      "format": "sqlite",
+      "bytes": 135168,
+      "ms": 1208
+    },
+    {
+      "format": "standalone-universe catalog",
+      "passed": true
+    },
+    {
+      "format": "project ZIP",
+      "originalRootsUnavailable": true,
+      "payloads": 11
+    },
+    {
+      "format": "universe ZIP",
+      "originalRootsUnavailable": true,
+      "payloads": 3
+    }
+  ],
+  "limits": "PDF checks extracted text and structure; visual layout and full recovery activation remain unverified."
+}

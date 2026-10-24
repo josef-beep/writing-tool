@@ -1,0 +1,12 @@
+{
+  "name": "desktop-all",
+  "command": [
+    "npm",
+    "run",
+    "test:desktop"
+  ],
+  "started": "2026-10-24T18:22:39.654117+00:00",
+  "seconds": 17.53,
+  "exit_code": 1,
+  "log": "desktop-all.txt"
+}

@@ -24,7 +24,8 @@ export const rules: Required<ModuleOptions>['rules'] = [
     use: {
       loader: 'ts-loader',
       options: {
-        transpileOnly: true,
+        transpileOnly: false,
+        onlyCompileBundledFiles: true,
       },
     },
   },

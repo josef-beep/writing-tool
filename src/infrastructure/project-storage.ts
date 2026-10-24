@@ -120,9 +120,10 @@ export class FileProjectStore {
         ensure(identity?.ownerId===this.d.id && identity?.rootId===this.d.rootId && identity?.schemaVersion===1,'Project ownership identity changed.');
         if(this.session)ensure(this.db.prepare('SELECT sessionToken FROM unit_meta WHERE singleton=1').get()?.sessionToken===this.session,'Project writer fencing token is stale.');
     }
-    snapshot(): ProjectIdentity {
+    snapshot(): ProjectIdentity {return this.readSnapshot().identity;}
+    readSnapshot() {
         this.health();
-        this.workspace.snapshot();
+        const workspace=this.workspace.snapshot();
         const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(r=>r.name);
         ensure(canonical(tables)===canonical(['committed_operations','records','root_locations','unit_meta','universe_locations',...(this.workspace.featureInstalled()?WORKSPACE_TABLES:[])].sort()));
         const rows=this.db.prepare('SELECT * FROM unit_meta').all(), m=rows[0];
@@ -140,7 +141,7 @@ export class FileProjectStore {
         ensure(closed(op,['operationId','requestDigest','generation','resultDigest','receiptData']) && op.operationId===m.creationOperationId && op.generation==='1' && op.requestDigest===m.creationDigest && op.requestDigest===hash(canonical({protocolVersion:1,command:'project.create',payload:{universeId:m.universeId}})) && typeof op.receiptData==='string' && hash(op.receiptData)===op.resultDigest);
         const receipt=decode(Buffer.from(String(op.receiptData)));
         ensure(validProjectReceipt(receipt) && receipt.operationId===m.creationOperationId && receipt.owner.id===m.ownerId && receipt.recordVersion===r.recordVersion);
-        return {ownerId:String(m.ownerId),rootId:String(m.rootId),universeId:String(m.universeId),generation:String(m.generation),recordVersion:String(r.recordVersion),location:this.location,universeLocation:String(u.basePath),creationOperationId:String(m.creationOperationId)};
+        return {workspace,identity:{ownerId:String(m.ownerId),rootId:String(m.rootId),universeId:String(m.universeId),generation:String(m.generation),recordVersion:String(r.recordVersion),location:this.location,universeLocation:String(u.basePath),creationOperationId:String(m.creationOperationId)}};
     }
     private binding() {
         const rows=this.db.prepare('SELECT * FROM root_locations').all(), b=rows[0];

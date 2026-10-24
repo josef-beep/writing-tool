@@ -1,0 +1,17 @@
+{
+  "name": "sprint-validation-host",
+  "command": [
+    "env",
+    "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+    "uv",
+    "run",
+    ".agents/skills/bmad-sprint-planning/scripts/sprint_plan.py",
+    "validate",
+    "--status-file",
+    "_bmad-output/implementation-artifacts/sprint-status.yaml"
+  ],
+  "started": "2026-10-24T18:23:50.909086+00:00",
+  "seconds": 2.48,
+  "exit_code": 0,
+  "log": "sprint-validation-host.txt"
+}

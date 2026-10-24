@@ -594,6 +594,7 @@ class ProjectApplication {
         this.universes = universes;
     }
     workspaceAuthority() { return this.active?.workspace; }
+    readWorkspace() { return this.active?.readSnapshot() ?? null; }
     associatedUniverseId() { return this.active?.snapshot().universeId; }
     current() {
         if (!this.active)
@@ -773,6 +774,9 @@ class UniverseApplication {
         this.storage = storage;
     }
     workspaceAuthority() { return this.active?.workspace; }
+    readWorkspace() {
+        return this.active?.readSnapshot() ?? null;
+    }
     current() {
         return this.active?.snapshot() ?? null;
     }
@@ -922,11 +926,19 @@ class WorkspaceApplication {
         this.recoveryProject = undefined;
     } }
     units() { return [this.recoveryProject?.port ?? this.projects.workspaceAuthority(), this.universes.workspaceAuthority()].filter((p) => !!p); }
-    unit(owner) { const found = this.units().find(u => ownerKey(u.snapshot().owner) === ownerKey(owner)); if (!found)
+    unit(owner) { const found = this.units().find(u => ownerKey(u.identity().owner) === ownerKey(owner)); if (!found)
         throw new _universe__WEBPACK_IMPORTED_MODULE_0__.UniverseFailure('VALIDATION', 'Open the owning project or universe before editing.'); return found; }
-    snapshot() { this.universes.current(); this.projects.current(); const project = (this.recoveryProject?.port ?? this.projects.workspaceAuthority())?.snapshot() ?? null, universe = this.universes.workspaceAuthority()?.snapshot() ?? null; if (project && (!universe || project.universeId !== universe.owner.id))
-        throw new _universe__WEBPACK_IMPORTED_MODULE_0__.UniverseFailure('INTEGRITY_MISMATCH', 'The project universe authority is unavailable.'); if (!this.recoveryProject)
-        (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.assertWorkspaceState)([...(project?.records ?? []), ...(universe?.records ?? [])]); return { project, universe }; }
+    snapshot() {
+        // Each bundle retains the metadata/receipt checks and its fully validated content.
+        // No snapshots survive this call, so subsequent operations re-read saved bytes.
+        const universeRead = this.universes.readWorkspace(), projectRead = this.projects.readWorkspace();
+        const project = this.recoveryProject?.port.snapshot() ?? projectRead?.workspace ?? null, universe = universeRead?.workspace ?? null;
+        if (project && (!universe || project.universeId !== universe.owner.id || projectRead && projectRead.identity.universeId !== universeRead?.identity.ownerId))
+            throw new _universe__WEBPACK_IMPORTED_MODULE_0__.UniverseFailure('INTEGRITY_MISMATCH', 'The project universe authority is unavailable.');
+        if (!this.recoveryProject)
+            (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.assertWorkspaceState)([...(project?.records ?? []), ...(universe?.records ?? [])]);
+        return { project, universe };
+    }
     reconcile(operationId) { this.publication.recover(operationId); for (const u of this.units())
         u.recover(); return this.publication.receipt(operationId) ?? this.units().map(u => u.receipt(operationId)).find(Boolean); }
     mutate(input) { try {
@@ -945,7 +957,7 @@ class WorkspaceApplication {
         const prior = this.publication.receipt(input.operationId, digest) ?? this.units().map(u => u.receipt(input.operationId, digest)).find(Boolean);
         if (prior)
             return prior;
-        const before = this.snapshot(), snapshots = [before.project, before.universe].filter((s) => !!s), beforeRecords = snapshots.flatMap(s => s.records), candidate = new Map(beforeRecords.map(r => [r.id, structuredClone(r)])), texts = Object.assign({}, ...snapshots.map(s => s.manuscripts));
+        const before = this.snapshot(), snapshots = [before.project, before.universe].filter((s) => !!s), beforeRecords = snapshots.flatMap(s => s.records), beforeById = new Map(beforeRecords.map(r => [r.id, r])), candidate = new Map(beforeRecords.map(r => [r.id, structuredClone(r)])), texts = Object.assign({}, ...snapshots.map(s => s.manuscripts));
         const changed = new Set(), explicit = new Set(), touched = new Set(), counters = new Map(snapshots.map(s => [ownerKey(s.owner), { ...s.counters }]));
         for (const unit of input.units) {
             const s = snapshots.find(s => ownerKey(s.owner) === ownerKey(unit.owner));
@@ -1017,7 +1029,7 @@ class WorkspaceApplication {
             }
         }
         for (const [id, r] of candidate) {
-            const old = beforeRecords.find(x => x.id === id);
+            const old = beforeById.get(id);
             if (r.recordType === 'story' || r.recordType === 'chapter') {
                 if (old && (old.recordType === 'story' || old.recordType === 'chapter'))
                     r.data.creationSequence = old.data.creationSequence;
@@ -1043,11 +1055,12 @@ class WorkspaceApplication {
                 throw new _universe__WEBPACK_IMPORTED_MODULE_0__.UniverseFailure('VALIDATION', 'Universe Events is a reserved category name.');
         }
         // Birth identity and both displayed years are published in the same owning-universe generation.
+        const backgroundCharacters = new Set([...candidate.values()].flatMap(r => r.recordType === 'event' && r.data.kind === 'background' ? [r.data.characterId] : []));
         for (const [id, r] of candidate) {
             if (r.recordType !== 'character')
                 continue;
-            const old = beforeRecords.find((x) => x.id === id && x.recordType === 'character');
-            r.data = (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.normalizeCharacter)(r.data, [...candidate.values()].some(x => x.recordType === 'event' && x.data.kind === 'background' && x.data.characterId === id));
+            const previous = beforeById.get(id), old = previous?.recordType === 'character' ? previous : undefined;
+            r.data = (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.normalizeCharacter)(r.data, backgroundCharacters.has(id));
             if (!r.data.birth) {
                 if (old?.data.birthEventId) {
                     candidate.delete(old.data.birthEventId);
@@ -1082,7 +1095,7 @@ class WorkspaceApplication {
             }
         const dated = (r) => ['event', 'decision', 'plot', 'affiliation'].includes(r.recordType);
         const dateEqual = (a, b) => a === null || b === null ? a === b : calendar ? (0,_domain_calendar__WEBPACK_IMPORTED_MODULE_3__.compareDates)(a, b, calendar.data) === 0 : this.identity.digest(a) === this.identity.digest(b);
-        const moved = new Set([...candidate.values()].filter(dated).filter(r => { const old = beforeRecords.find(x => x.id === r.id); return !old || !dated(old) || !dateEqual(old.data.date, r.data.date); }).map(r => r.id));
+        const moved = new Set([...candidate.values()].filter(dated).filter(r => { const old = beforeById.get(r.id); return !old || !dated(old) || !dateEqual(old.data.date, r.data.date); }).map(r => r.id));
         const processed = new Set();
         for (const r of candidate.values())
             if (dated(r) && moved.has(r.id)) {
@@ -1095,7 +1108,7 @@ class WorkspaceApplication {
             }
         // Issue versions after all derived changes, then bind formatting to exactly those versions and bytes.
         for (const [id, r] of candidate) {
-            const old = beforeRecords.find(x => x.id === id);
+            const old = beforeById.get(id);
             if (!old || this.identity.digest(r) !== this.identity.digest(old) || changed.has(id)) {
                 r.recordVersion = uuid();
                 changed.add(id);
@@ -1122,15 +1135,15 @@ class WorkspaceApplication {
         (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.assertWorkspaceState)(final);
         if (before.universe)
             this.publication.assertUnreferenced(before.universe.owner.id, beforeRecords.filter(r => r.owner.kind === 'universe' && !candidate.has(r.id)).map(r => r.id), before.project ? [before.project.owner.id] : []);
-        const allAssets = snapshots.flatMap(s => s.assets);
+        const allAssets = new Map(snapshots.flatMap(s => s.assets).map(a => [a.id, a]));
         for (const r of final) {
             const assets = r.recordType === 'character' ? [r.data.image] : r.recordType === 'faction' ? [r.data.image, r.data.leaderImage] : [];
             for (const a of assets)
-                if (a && !allAssets.some(x => x.id === a.id && x.sha256 === a.sha256 && x.mediaType === a.mediaType))
+                if (a && !(allAssets.get(a.id)?.sha256 === a.sha256 && allAssets.get(a.id)?.mediaType === a.mediaType))
                     throw new _universe__WEBPACK_IMPORTED_MODULE_0__.UniverseFailure('VALIDATION', 'Import the image into this universe before using it.');
         }
-        const plans = snapshots.filter(s => touched.has(ownerKey(s.owner))).map(s => ({ owner: s.owner, plan: { expectedGeneration: s.generation, records: final.filter(r => ownerKey(r.owner) === ownerKey(s.owner)), manuscripts: Object.fromEntries(Object.entries(texts).filter(([id]) => final.some(r => r.id === id && ownerKey(r.owner) === ownerKey(s.owner)))), counters: counters.get(ownerKey(s.owner)), assets: [] } }));
-        const receipt = { protocolVersion: 1, operationId: input.operationId, submittedEditorRevision: input.submittedEditorRevision, units: plans.map(p => ({ owner: p.owner, unitGeneration: (BigInt(p.plan.expectedGeneration) + 1n).toString(), records: [...changed].flatMap(id => { const r = candidate.get(id), old = beforeRecords.find(r => r.id === id); if (ownerKey((r ?? old).owner) !== ownerKey(p.owner))
+        const plans = snapshots.filter(s => touched.has(ownerKey(s.owner))).map(s => ({ owner: s.owner, plan: { expectedGeneration: s.generation, records: final.filter(r => ownerKey(r.owner) === ownerKey(s.owner)), manuscripts: Object.fromEntries(Object.entries(texts).filter(([id]) => candidate.has(id) && ownerKey(candidate.get(id).owner) === ownerKey(s.owner))), counters: counters.get(ownerKey(s.owner)), assets: [] } }));
+        const receipt = { protocolVersion: 1, operationId: input.operationId, submittedEditorRevision: input.submittedEditorRevision, units: plans.map(p => ({ owner: p.owner, unitGeneration: (BigInt(p.plan.expectedGeneration) + 1n).toString(), records: [...changed].flatMap(id => { const r = candidate.get(id), old = beforeById.get(id); if (ownerKey((r ?? old).owner) !== ownerKey(p.owner))
                     return []; return [{ id, recordVersion: r?.recordVersion ?? uuid(), deleted: !r }]; }) })) };
         return plans.length === 1 ? this.unit(plans[0].owner).commit(input.operationId, digest, plans[0].plan, receipt, request) : this.publication.commit(input.operationId, digest, plans, receipt, request);
     }
@@ -1145,9 +1158,11 @@ class WorkspaceApplication {
         if (s?.ownerId === owner.id)
             return s.profile.name;
     } return owner.kind; }
-    location(owner) { if (owner.kind === 'project' && this.recoveryProject?.port.snapshot().owner.id === owner.id)
-        return this.recoveryProject.location; const s = owner.kind === 'project' ? this.projects.current() : this.universes.current(); if (!s || s.ownerId !== owner.id)
-        throw new _universe__WEBPACK_IMPORTED_MODULE_0__.UniverseFailure('VALIDATION', 'Open the owning unit first.'); return s.location; }
+    location(owner) {
+        // Root resolution checks the held authority's health and identity. Content is
+        // validated by the operation taking a snapshot, not for every immutable file.
+        return this.unit(owner).location;
+    }
     /** Trusted complete candidate path for protection. Ordinary edits cannot resurrect tombstones. */
     restore(operationId, expected, candidates) {
         const before = this.recoveryProject ? { project: this.recoveryProject.port.snapshot(), universe: this.universes.workspaceAuthority()?.snapshot() ?? null } : this.snapshot(), live = [before.project, before.universe].filter((s) => !!s), records = live.flatMap(s => candidates.find(c => ownerKey(c.snapshot.owner) === ownerKey(s.owner))?.snapshot.records ?? s.records);
@@ -2459,31 +2474,47 @@ function validCapturedState(value) {
     const primary = value.units.find(u => u.snapshot.owner.kind === value.owner.kind && u.snapshot.owner.id === value.owner.id);
     return !!primary && (value.owner.kind === 'universe' || value.units.some(u => u.snapshot.owner.kind === 'universe' && u.snapshot.owner.id === primary.snapshot.universeId));
 }
-function resolveCapturedState(state, object) { return state.units.map(unit => { const { recordIds, ...identity } = unit.snapshot, files = new Map(unit.files.map(f => [f.relativePath, f.object])), records = recordIds.map(id => { const file = unit.files.find(f => f.relativePath.endsWith('/' + id + '.json') && !f.relativePath.startsWith('history/')); if (!file)
-    throw new Error('Missing current record payload.'); return (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.decode)(object(state.owner, file.object)); }), manuscripts = {}; for (const r of records)
-    if (r.recordType === 'chapter') {
-        const ref = files.get(r.data.formatting.text.relativePath);
-        if (!ref)
-            throw new Error('Missing chapter manuscript.');
-        manuscripts[r.id] = new TextDecoder('utf-8', { fatal: true }).decode(object(state.owner, ref));
-    } return { ...identity, records, manuscripts }; }); }
+function resolveCapturedState(state, object) {
+    return state.units.map(unit => {
+        const { recordIds, ...identity } = unit.snapshot, files = new Map(unit.files.map(f => [f.relativePath, f.object])), current = new Map();
+        for (const file of unit.files) {
+            if (!file.relativePath.startsWith('history/') && file.relativePath.endsWith('.json')) {
+                const id = file.relativePath.slice(file.relativePath.lastIndexOf('/') + 1, -5);
+                if (current.has(id))
+                    throw new Error('Ambiguous current record payload.');
+                current.set(id, file.object);
+            }
+        }
+        const records = recordIds.map(id => { const ref = current.get(id); if (!ref)
+            throw new Error('Missing current record payload.'); return (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.decode)(object(state.owner, ref)); }), manuscripts = {};
+        for (const r of records)
+            if (r.recordType === 'chapter') {
+                const ref = files.get(r.data.formatting.text.relativePath);
+                if (!ref)
+                    throw new Error('Missing chapter manuscript.');
+                manuscripts[r.id] = new TextDecoder('utf-8', { fatal: true }).decode(object(state.owner, ref));
+            }
+        return { ...identity, records, manuscripts };
+    });
+}
 function validateCapturedState(state, object) {
     if (!validCapturedState(state))
         throw new Error('Invalid complete captured state.');
     const units = resolveCapturedState(state, object);
     (0,_domain_workspace__WEBPACK_IMPORTED_MODULE_2__.assertWorkspaceState)(units.flatMap(u => u.records));
     for (let i = 0; i < state.units.length; i++) {
-        const unit = state.units[i], snapshot = units[i], files = new Map(unit.files.map(f => [f.relativePath, object(state.owner, f.object)]));
+        // Keep references, not every image's bytes, while checking the complete capture.
+        const unit = state.units[i], snapshot = units[i], files = new Map(unit.files.map(f => [f.relativePath, f.object]));
         if (!files.has('writingtool.json') || !files.has('database/catalog.sqlite'))
             throw new Error('The complete capture lacks discovery or catalog.');
         if (!(0,_application_contracts_workspace__WEBPACK_IMPORTED_MODULE_1__.validWorkspaceUnit)(snapshot))
             throw new Error('Invalid resolved unit.');
         for (const r of snapshot.records) {
-            const bytes = files.get(`${recordCategory(r.recordType)}/${r.id}.json`);
+            const ref = files.get(`${recordCategory(r.recordType)}/${r.id}.json`), bytes = ref && object(state.owner, ref);
             if (!bytes || (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.canonical)((0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.decode)(bytes)) !== (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.canonical)(r))
                 throw new Error('Captured record bytes do not match the saved state.');
             if (r.recordType === 'chapter') {
-                const text = files.get(r.data.formatting.text.relativePath);
+                const ref = files.get(r.data.formatting.text.relativePath), text = ref && object(state.owner, ref);
                 if (!text || (0,_universe_files__WEBPACK_IMPORTED_MODULE_3__.hash)(text) !== r.data.formatting.text.sha256 || text.toString('utf8') !== snapshot.manuscripts[r.id])
                     throw new Error('Captured manuscript and formatting do not match.');
             }
@@ -3489,9 +3520,10 @@ class FileProjectStore {
         if (this.session)
             ensure(this.db.prepare('SELECT sessionToken FROM unit_meta WHERE singleton=1').get()?.sessionToken === this.session, 'Project writer fencing token is stale.');
     }
-    snapshot() {
+    snapshot() { return this.readSnapshot().identity; }
+    readSnapshot() {
         this.health();
-        this.workspace.snapshot();
+        const workspace = this.workspace.snapshot();
         const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(r => r.name);
         ensure((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)(tables) === (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)(['committed_operations', 'records', 'root_locations', 'unit_meta', 'universe_locations', ...(this.workspace.featureInstalled() ? _workspace_storage__WEBPACK_IMPORTED_MODULE_0__.WORKSPACE_TABLES : [])].sort()));
         const rows = this.db.prepare('SELECT * FROM unit_meta').all(), m = rows[0];
@@ -3509,7 +3541,7 @@ class FileProjectStore {
         ensure((0,_domain_validation__WEBPACK_IMPORTED_MODULE_6__.closed)(op, ['operationId', 'requestDigest', 'generation', 'resultDigest', 'receiptData']) && op.operationId === m.creationOperationId && op.generation === '1' && op.requestDigest === m.creationDigest && op.requestDigest === (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)((0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.canonical)({ protocolVersion: 1, command: 'project.create', payload: { universeId: m.universeId } })) && typeof op.receiptData === 'string' && (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.hash)(op.receiptData) === op.resultDigest);
         const receipt = (0,_universe_files__WEBPACK_IMPORTED_MODULE_9__.decode)(Buffer.from(String(op.receiptData)));
         ensure((0,_application_contracts_project__WEBPACK_IMPORTED_MODULE_8__.validProjectReceipt)(receipt) && receipt.operationId === m.creationOperationId && receipt.owner.id === m.ownerId && receipt.recordVersion === r.recordVersion);
-        return { ownerId: String(m.ownerId), rootId: String(m.rootId), universeId: String(m.universeId), generation: String(m.generation), recordVersion: String(r.recordVersion), location: this.location, universeLocation: String(u.basePath), creationOperationId: String(m.creationOperationId) };
+        return { workspace, identity: { ownerId: String(m.ownerId), rootId: String(m.rootId), universeId: String(m.universeId), generation: String(m.generation), recordVersion: String(r.recordVersion), location: this.location, universeLocation: String(u.basePath), creationOperationId: String(m.creationOperationId) } };
     }
     binding() {
         const rows = this.db.prepare('SELECT * FROM root_locations').all(), b = rows[0];
@@ -5774,13 +5806,14 @@ class FileUniverseStore {
         });
         this.session = token;
     }
-    snapshot() {
+    snapshot() { return this.readSnapshot().identity; }
+    readSnapshot() {
         if (this.released)
             throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'Reopen the relocated universe to reacquire its verified authority.', 'unknown');
         if (this.failed)
             throw new _application_universe__WEBPACK_IMPORTED_MODULE_7__.UniverseFailure('RECOVERY_REQUIRED', 'Reopen this universe to reconcile the interrupted operation.', 'unknown');
         this.health();
-        this.workspace.snapshot();
+        const workspace = this.workspace.snapshot();
         const m = this.meta(), r = this.record();
         requireValid(r.id === m.ownerId && r.rootId === m.rootId);
         const bytes = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.readManaged)(this.location, r.relativePath), p = (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(bytes);
@@ -5791,7 +5824,7 @@ class FileUniverseStore {
         requireValid(operations.every((op, index) => op.generation === (BigInt(index) + 1n).toString()) && operations.at(-1)?.generation === m.generation, 'The catalog generation has no complete decision history.');
         const profileReceipts = operations.map(op => (0,_universe_files__WEBPACK_IMPORTED_MODULE_10__.decode)(Buffer.from(op.receiptData))).filter(_application_contracts_universe__WEBPACK_IMPORTED_MODULE_6__.validReceipt);
         requireValid(profileReceipts.at(-1)?.recordVersion === r.recordVersion, 'The current profile version has no matching receipt.');
-        return { ownerId: m.ownerId, rootId: m.rootId, generation: m.generation, recordVersion: r.recordVersion, profile: p.data, location: this.location };
+        return { workspace, identity: { ownerId: m.ownerId, rootId: m.rootId, generation: m.generation, recordVersion: r.recordVersion, profile: p.data, location: this.location } };
     }
     checkBinding() {
         const m = this.meta();
@@ -9960,6 +9993,10 @@ function unzipSync(data, opts) {
 /******/ 		Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 		Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 	};
+/******/ 	
+/******/ 	/* webpack/runtime/compat */
+/******/ 	
+/******/ 	if (typeof __webpack_require__ !== 'undefined') __webpack_require__.ab = __dirname + "/native_modules/";
 /******/ 	
 /************************************************************************/
 let __webpack_exports__ = {};

@@ -1,0 +1,20 @@
+
+> writingtool@0.1.0 test:desktop
+> node --import tsx scripts/verify-desktop.mjs partial-layout context menus timeline intervals factions writing reconcile-defer reconcile-background busy-inventory
+
+partial-layout: passed
+context: passed
+menus: passed
+timeline: passed
+intervals: passed
+factions: passed
+file:///home/jo/Documents/writing-tool/scripts/smoke.mjs:17
+  if (lines.length !== 1) throw new Error(`Smoke failed (${fault}): expected one result, received ${lines.length}`);
+                                ^
+
+Error: Smoke failed (writing): expected one result, received 0
+    at parseSmoke (file:///home/jo/Documents/writing-tool/scripts/smoke.mjs:17:33)
+    at runSmokeProcess (file:///home/jo/Documents/writing-tool/scripts/smoke.mjs:103:10)
+    at async <anonymous> (/home/jo/Documents/writing-tool/scripts/verify-desktop.mjs:109:15)
+
+Node.js v24.19.0

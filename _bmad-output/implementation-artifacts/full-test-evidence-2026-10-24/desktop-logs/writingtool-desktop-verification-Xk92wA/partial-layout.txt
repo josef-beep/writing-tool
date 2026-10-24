@@ -1,0 +1,155 @@
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+PICKER Open project folder
+Error: Timed out: saved calendar
+WritingTool
+Project
+Universe
+Writing
+View
+Revisions
+Backup & Recovery
+Export
+Settings
+Writing navigation
+−
+Move
+×
+New story
+New volume
+New chapter
+
+Create a story to begin organizing chapters.
+
+Ungrouped stories
+Universe timeline
+−
+Move
+×
+Visibility — show all
+Zoom in
+Zoom out
+Chapter period
+
+Universe: Desktop verification fixture
+
+Unresolved decisions only
+
+Configure the universe calendar to plan dated records.
+
+Calendar: Calendar
+Back to writing
+
+Year numbers may be negative, zero or positive. Saving a revision preserves elapsed positions and earlier calendar configurations.
+
+Year number
+Target days per year
+Use ordered months and standalone days
+Days per year
+
+Actual: 365 days. Target differs; Save sets target to the actual total.
+
+Year names (optional)
+Add year name
+Save Ctrl+S
+Unsaved changes
+Writing context
+−
+Move
+×
+characters
+factions
+plots
+decisions
+Classification
+all
+main
+major
+minor
+Extras
+New character
+Save needs attention — edits retained.
+Unable to complete operation
+
+Calendar day totals must be positive integers.
+
+Retry Save
+Return to editor
+Quit application…
+    at waitFor (/home/jo/Documents/writing-tool/tests/fixtures/desktop-integration.cjs:118:166)
+    at async drive (/home/jo/Documents/writing-tool/tests/fixtures/desktop-integration.cjs:930:3)
+BODY WritingTool
+Project
+Universe
+Writing
+View
+Revisions
+Backup & Recovery
+Export
+Settings
+Writing navigation
+−
+Move
+×
+New story
+New volume
+New chapter
+
+Create a story to begin organizing chapters.
+
+Ungrouped stories
+Universe timeline
+−
+Move
+×
+Visibility — show all
+Zoom in
+Zoom out
+Chapter period
+
+Universe: Desktop verification fixture
+
+Unresolved decisions only
+
+Configure the universe calendar to plan dated records.
+
+Calendar: Calendar
+Back to writing
+
+Year numbers may be negative, zero or positive. Saving a revision preserves elapsed positions and earlier calendar configurations.
+
+Year number
+Target days per year
+Use ordered months and standalone days
+Days per year
+
+Actual: 365 days. Target differs; Save sets target to the actual total.
+
+Year names (optional)
+Add year name
+Save Ctrl+S
+Unsaved changes
+Writing context
+−
+Move
+×
+characters
+factions
+plots
+decisions
+Classification
+all
+main
+major
+minor
+Extras
+New character
+Save needs attention — edits retained.
+Unable to complete operation
+
+Calendar day totals must be positive integers.
+
+Retry Save
+Return to editor
+Quit application…
+WINDOW_CLOSED

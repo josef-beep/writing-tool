@@ -1,0 +1,6 @@
+{
+  "metaSchemas": 8,
+  "schemaAssertions": 47,
+  "allPassed": true,
+  "limits": "Schema validation does not establish semantic ownership, storage durability or installed runtime acceptance."
+}

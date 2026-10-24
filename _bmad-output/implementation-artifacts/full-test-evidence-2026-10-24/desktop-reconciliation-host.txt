@@ -1,0 +1,8 @@
+
+> writingtool@0.1.0 test:desktop
+> node --import tsx scripts/verify-desktop.mjs reconcile-background busy-inventory
+
+reconcile-background: passed
+busy-inventory: passed
+busy-inventory-restart: passed
+Desktop verification evidence: /tmp/writingtool-desktop-verification-Kky07B

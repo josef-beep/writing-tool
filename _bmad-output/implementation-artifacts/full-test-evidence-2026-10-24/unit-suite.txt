@@ -1,0 +1,198 @@
+
+> writingtool@0.1.0 test
+> node --import tsx tests/readiness.test.ts && node --import tsx tests/universe.test.ts && node --import tsx tests/project.test.ts && node --import tsx tests/workspace-coordinator.test.ts && node --import tsx tests/workspace-domain.test.ts && node --import tsx tests/recovery-activation.test.ts && node --import tsx tests/protection-deferral.test.ts && node --import tsx tests/presentation-integration.test.tsx && node --import tsx tests/converter-process.test.ts && node tests/smoke.test.mjs
+
+✔ closed requests reject malformed input before application execution (2.204025ms)
+✔ non-mutating query preserves input and returns a closed correlated result (1.052016ms)
+✔ result validation rejects unknown fields, mismatched correlation and invalid errors (0.375825ms)
+✔ host round trip routes actual application query and cleans its pending entry (0.760157ms)
+✔ host startup, exit, invalid shape/correlation and timeout never report ready (12.805969ms)
+✔ pending requests are bounded, duplicate correlation cannot replace entries, destruction cleans all (0.50539ms)
+✔ sender authorization requires owned webContents, exact local URL, and main frame (0.40898ms)
+✔ inner application/domain layers import no frameworks or infrastructure (2.508302ms)
+✔ timeout followed by a valid late reply leaves the next query healthy (10.678069ms)
+✔ invalid late replies still fail and exit preserves the first terminal cause (11.045186ms)
+✔ throwing postMessage settles every pending request and clears their timers (1.096319ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 50.475478
+✔ persist profile JSON, catalog, exact receipts and reopen without a calendar (582.40081ms)
+✔ validation, unrelated content, invalid candidate preserve previous activation and bytes (406.312928ms)
+✔ duplicate JSON keys, malformed unicode, BOM and invalid UTF8 are rejected before decoding (0.368334ms)
+✔ folder relocation updates only root binding, rejects a copied live original (452.458649ms)
+✔ unsupported catalog and profile corruption do not initialize replacement authority (491.255755ms)
+✔ actual competing process cannot acquire the authoritative process lease (1130.660351ms)
+✔ creation process death at creation-reserved never activates partial authority (141.354184ms)
+✔ creation process death at creation-schema never activates partial authority (507.836236ms)
+✔ creation process death at creation-files never activates partial authority (475.803779ms)
+✔ creation process death at creation-commit never activates partial authority (557.874729ms)
+✔ save process death at journal yields verified old/new and supports idempotent retry (898.512708ms)
+✔ save process death at file yields verified old/new and supports idempotent retry (849.477605ms)
+✔ save process death at commit yields verified old/new and supports idempotent retry (879.200594ms)
+✔ save process death at finalized yields verified old/new and supports idempotent retry (875.498384ms)
+✔ unknown live bytes or missing staged journal preserve bytes and block activation (600.335509ms)
+✔ lost lease inode and stale session fence stop writes before profile replacement (918.82716ms)
+✔ closed universe transport rejects path authority, wrong correlations and unknown keys (0.479679ms)
+✔ mutation timeout is unknown and late valid response does not poison later requests (7.121602ms)
+✔ interrupted undo repeats from immutable evidence (829.565174ms)
+✔ interrupted redo repeats from immutable evidence (872.770896ms)
+✔ missing journal, symbolic paths and hardlink aliases block activation preserving evidence (1491.195172ms)
+✔ permission-denied roots never activate or replace content (426.458916ms)
+✔ command-specific success validation cannot turn malformed acknowledgment into a save (460.334172ms)
+✔ supported SQLite hot journal recovers before application activation (562.572527ms)
+✔ known commands rejected before dispatch are not committed; original pending operations stay unknown (5.664728ms)
+✔ creation reservation failure is known not committed; a later partial creation remains unknown (13.702025ms)
+✔ torn finalized/aborted markers recover from journal and decision without replaying older generations (2778.176033ms)
+✔ reused former root path allows relocation while preserving exact content rows and bytes (1494.820658ms)
+✔ directory retarget during actual read/write/replace cannot touch or return an unrelated sentinel (33.556065ms)
+✔ private pending reconciliation accepts a physical alias and moved owner, rejects foreign/copy/payload mismatch (1048.980983ms)
+✔ creation preflights old context and preserves committed receipt if later activation fails (928.334824ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20730.04438
+✔ a universe preflight failure never leaves project creation uncertain or writes the project folder (926.740445ms)
+✔ successful project creation and reopen satisfy the transport contract (906.616984ms)
+✔ an activation failure after durable creation retains its committed outcome and can be reopened (906.822793ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2751.784257
+✔ preparing interruption after 0 participant journals aborts without advancing either unit (1746.519311ms)
+✔ preparing interruption after 1 participant journals aborts without advancing either unit (1879.664647ms)
+✔ a missing participant journal after the durable commit decision remains blocked (1712.687285ms)
+✔ actual universe reopen removes only aborted empty staging after 0 preparations (1290.495785ms)
+✔ actual universe reopen removes only aborted empty staging after 1 preparations (1679.73037ms)
+✔ fully prepared abort remains terminal when a stale commit retries its original ID (1957.502881ms)
+✔ unprepared nonempty evidence is preserved and prevents a completed abort (1107.026134ms)
+✔ activation binding accepts a proven foreign replacement and rejects uncertain old authority (1398.154366ms)
+✔ activation binding accepts an old physical alias to the same relocated authority (1204.604392ms)
+✔ retained versions require exact immutable descriptors and reject removal, alteration and duplication (1455.592582ms)
+✔ retained assets require exact immutable descriptors and reject removal, alteration and duplication (1461.903919ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16903.553922
+✔ long valid decision chains are validated without recursive call-stack limits and still reject cycles (350.339574ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 358.451749
+✔ an empty leftover destination does not hide a moved recovery participant (6.009837ms)
+✔ a partially published recovery can locate the remaining moved stage independently (2.544739ms)
+✔ a moved publication parent requires a new empty folder and preserves occupied output (1.230009ms)
+✔ uncertain authority evidence and conflicting owner identities block relocation (2.814963ms)
+✔ publication never nests owning roots, staging roots or the live coordinated universe (1.779661ms)
+✔ a moved remaining commit-stage requires an explicit empty destination and remains staged (2.860155ms)
+✔ ambiguous original roots and invalid native path bytes cannot rebind activation (1.982166ms)
+✔ an identity-proven completed publication may move without becoming a new stage (1.514055ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35.465652
+✔ only saved-copy operations can be deferred; live recovery and authority changes remain blocked (1.248327ms)
+✔ defer accepts only its closed renderer protocol and correlates uncertainty to the original operation (1.501636ms)
+✔ pending eligibility must reference distinct, valid pending operation identities (0.498694ms)
+✔ a failed backup retains its original manuscript while later writing saves and reconciliation publishes the original capture (4494.665764ms)
+✔ a failed export retains its original manuscript while later writing saves and reconciliation publishes the original capture (3801.119288ms)
+✔ deferred capture evidence survives automatic revision retention and manual deletion until reconciled (5057.6533ms)
+✔ a deferred archive older than the newest ten survives retention and explicit deletion (49929.344338ms)
+✔ a complete backup spanning archive read chunks preserves every manuscript byte (10662.587379ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 73956.117191
+✔ app shortcuts preserve claimed editor commands, composition, AltGr and shifted editing variants (0.953155ms)
+✔ save and project commands work with Control or Command while close has a separate universe command (0.177986ms)
+✔ timeline zoom does not capture shortcuts from text editors and save remains available while writing (0.131464ms)
+✔ the controller persistence loop completes imported subsets and preserves existing panel fields (89.400483ms)
+✔ write-then-reject reads durable settings and retains newer gestures: false (66.698353ms)
+✔ write-then-reject reads durable settings and retains newer gestures: true (147.675814ms)
+✔ a real generation conflict rebases the retry without losing latest gestures or unrelated settings (173.703656ms)
+✔ acknowledgement preserves newer edits to the same settings panel field (66.578983ms)
+✔ pointer dimensions ignore viewport constraints and collapsed resizing preserves expanded height (0.328239ms)
+✔ timeline intervals use actual month boundaries, standalone days and exact negative year buckets (1.282645ms)
+✔ selected timeline interval survives zoom, chapter focus and floating serialization (0.290464ms)
+✔ shared timeline interval and unresolved filter survive reparenting while repeated focus requests still reset (0.204493ms)
+✔ timeline forwarding and application reject foreign versions and invalid days at either endpoint (0.344749ms)
+✔ timeline includes every event at both interval boundaries and on shared dates, preserving order and visibility filters (45.804498ms)
+✔ timeline chronology uses exact calendar positions for its graphic, picker and unresolved list (19.627384ms)
+✔ floating view and layout commands retain focus; only main-content intents request owner focus (0.241491ms)
+✔ layout acknowledgements retain newer gestures, failed batches and independent panel patches (0.18736ms)
+✔ panel saves preserve unrelated unsaved settings layout fields and deterministic panel order (0.344493ms)
+✔ floating intents reject broad patches, arbitrary ordering and invalid timeline values (0.366814ms)
+✔ shared panel content exposes grouped navigation, context filters, selection and decision status (3.716515ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 629.438742
+✔ cancel waits for a TERM-resistant descendant after its successful parent exits (256.039936ms)
+✔ timeout waits for a TERM-resistant descendant after its successful parent exits (2153.235035ms)
+✖ ordinary converter completion still returns its exit status and diagnostics (23.935278ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2437.234819
+
+✖ failing tests:
+
+test at tests/converter-process.test.ts:2:3655
+✖ ordinary converter completion still returns its exit status and diagnostics (23.935278ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      code: 7,
+  +   stderr: '',
+  -   stderr: 'conversion diagnostic',
+      timedOut: false
+    }
+  
+      at TestContext.<anonymous> (/home/jo/Documents/writing-tool/tests/converter-process.test.ts:39:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [Object],
+    expected: [Object],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

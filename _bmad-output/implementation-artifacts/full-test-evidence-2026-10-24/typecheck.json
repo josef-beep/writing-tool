@@ -1,0 +1,12 @@
+{
+  "name": "typecheck",
+  "command": [
+    "npm",
+    "run",
+    "typecheck"
+  ],
+  "started": "2026-10-24T18:22:22.993708+00:00",
+  "seconds": 4.88,
+  "exit_code": 0,
+  "log": "typecheck.txt"
+}

@@ -1,0 +1,15 @@
+✔ project ZIP activates with exact identities, images and retained history after original roots are removed (15532.500477ms)
+✔ universe ZIP activates with exact identities, images and retained history after original roots are removed (7724.352795ms)
+✔ chapter restoration protects Replaced, rejects stale review, resumes cancellation and preserves linked events and calendar authority (11037.862645ms)
+✔ calendar edits preserve exact elapsed positions and plot groups while character, faction, birth and decision rules remain consistent (4290.83732ms)
+✔ settings imports are atomic, intervals independent, missing values preserved and unknown fields reported (2152.034112ms)
+✔ partial restore offers dependency restoration and rejects required-reference removal without touching live data (7644.060542ms)
+✔ noncontiguous manuscript export uses chapter order, preserves sources and refuses live destinations (5198.553699ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53587.555297

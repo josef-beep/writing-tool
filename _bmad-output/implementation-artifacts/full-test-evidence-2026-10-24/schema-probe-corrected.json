@@ -1,0 +1,18 @@
+{
+  "name": "schema-probe-corrected",
+  "command": [
+    "env",
+    "UV_CACHE_DIR=/tmp/writingtool-uv-cache",
+    "uv",
+    "run",
+    "--offline",
+    "--with",
+    "jsonschema",
+    "python",
+    "_bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/schema-probe.py"
+  ],
+  "started": "2026-10-24T18:28:33.337189+00:00",
+  "seconds": 0.34,
+  "exit_code": 0,
+  "log": "schema-probe-corrected.txt"
+}

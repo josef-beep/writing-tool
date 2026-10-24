@@ -1,0 +1,5 @@
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+MESA-LOADER: failed to open dri: /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so: cannot open shared object file: Permission denied (search paths /usr/lib/x86_64-linux-gnu/gbm, suffix _gbm)
+ERROR_EXIT_RECOVERY exact drafts and pending operation context retained before normal app shutdown
+WINDOW_CLOSED
+WRITINGTOOL_SMOKE {"mode":"close-pending","passed":true,"failedQueries":0,"captureCount":0,"backupCount":0,"lostAck":false,"conflicted":false,"panelId":"timeline"}

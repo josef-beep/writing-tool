@@ -1,0 +1,8 @@
+{
+  "fixture": "/tmp/writingtool-checker-ClfdR4",
+  "invalidCompile": "TS2322",
+  "validCompile": true,
+  "watchRecovery": true,
+  "watchClose": true,
+  "plugins": 0
+}

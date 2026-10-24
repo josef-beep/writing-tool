@@ -1,0 +1,11 @@
+{
+  "webpackBackup": "/tmp/writingtool-todo-preserve-a21418u3/webpack.tar",
+  "webpackFiles": {
+    ".webpack/main/utility-host.cjs": "f0ba1f104e6d3a8d5db731b6f521286d5ac68ca193e2a24730392748de4f3e70",
+    ".webpack/main/utility-host.cjs.map": "50df5550b039eeea9350954be1098f4d6dd4b382ab6f41cd6ffce167b58d01c7",
+    ".webpack/main/index.cjs": "efd0cc68f43dd385f32e88045b72978fd32e5435464bf65308f769ecafd16bac",
+    ".webpack/main/index.cjs.map": "e97cdcfc908e296896c1352f95fe9896a82df3ca9e90bba1727950e233488da0"
+  },
+  "gitStatus": " M .webpack/main/index.cjs\n M .webpack/main/index.cjs.map\n M .webpack/main/utility-host.cjs\n M .webpack/main/utility-host.cjs.map\n D .webpack/renderer/0ec3a5dfe334099be8d3.ttf\n D .webpack/renderer/1825a889a7dd3bd30189.ttf\n D .webpack/renderer/26bfe1935313d7c88907.ttf\n D .webpack/renderer/36cc7ae44340a12d605e.ttf\n D .webpack/renderer/511a67fd9b5f5e3acd7f.ttf\n D .webpack/renderer/72c9aa392482d99e94ca.ttf\n D .webpack/renderer/7797c9f089e5a172845a.ttf\n D .webpack/renderer/ac4a8164ee1c00304495.ttf\n D .webpack/renderer/c4e06f0a859cf65c69f4.ttf\n D .webpack/renderer/ea40d372c5366a02a48c.ttf\n D .webpack/renderer/f25c1c862a5cbf56cb8d.ttf\n D .webpack/renderer/f65c85197d09a9032d45.ttf\n D .webpack/renderer/main_window/index.html\n D .webpack/renderer/main_window/index.js\n D .webpack/renderer/main_window/index.js.map\n D .webpack/renderer/main_window/preload.cjs\n D .webpack/renderer/main_window/preload.cjs.map\n M TODO.md\n M _bmad-output/RESUME.md\n?? _bmad-output/implementation-artifacts/development-checker-error-2026-10-24/\n?? _bmad-output/implementation-artifacts/full-test-evidence-2026-10-24/\n",
+  "sourceRevision": "4281f787f03b4b5cee3c377342f6e3634f2f60c2"
+}

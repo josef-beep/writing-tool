@@ -1,0 +1,292 @@
+{
+  "fixture": "/tmp/writingtool-desktop-verification-CXvX9Q",
+  "count": 27,
+  "results": [
+    {
+      "mode": "panels",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "expectedBounds": {
+        "width": 290,
+        "height": 530
+      },
+      "panelId": "timeline"
+    },
+    {
+      "mode": "error-quit",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "recovery-notice",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "combined-error-quit",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "error-profile-quit",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "error-quit-timeout",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "error-quit-copy-keep",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "close-stalled",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "close-drain-cancel",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "close-backup-error",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "error-quit-copy-failure",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "close-pending",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 0,
+      "backupCount": 0,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "read-queue",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "read-failure",
+      "passed": true,
+      "failedQueries": 2,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "layout-retry",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": true,
+      "conflicted": true,
+      "expectedBounds": {
+        "width": 290,
+        "height": 530
+      },
+      "panelId": "timeline"
+    },
+    {
+      "mode": "partial-layout",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "expectedBounds": {
+        "width": 290,
+        "height": 530
+      },
+      "panelId": "timeline"
+    },
+    {
+      "mode": "context",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "expectedBounds": {
+        "width": 320,
+        "height": 530
+      },
+      "panelId": "context"
+    },
+    {
+      "mode": "menus",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "timeline",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "intervals",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "factions",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "writing",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "reconcile-defer",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "reconcile-defer-restart",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "reconcile-background",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 2,
+      "backupCount": 2,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "busy-inventory",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    },
+    {
+      "mode": "busy-inventory-restart",
+      "passed": true,
+      "failedQueries": 0,
+      "captureCount": 1,
+      "backupCount": 1,
+      "lostAck": false,
+      "conflicted": false,
+      "panelId": "timeline"
+    }
+  ]
+}

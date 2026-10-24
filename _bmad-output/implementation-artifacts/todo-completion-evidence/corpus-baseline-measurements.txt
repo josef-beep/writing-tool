@@ -1,0 +1,12 @@
+{"event":"start","operation":"open","root":"/tmp/writingtool-dec11-ZNsuyc/corpus"}
+{"event":"measured","operation":"open","samplesMs":[20658.879434000002],"p95Ms":20658.879434000002,"medianMs":20658.879434000002,"scope":"Authority open plus fully validated project/universe snapshot; excludes renderer/IPC readiness.","rss":468541440}
+{"event":"start","operation":"snapshot","run":0}
+{"event":"start","operation":"durable-save","run":0}
+{"event":"start","operation":"snapshot","run":1}
+{"event":"start","operation":"durable-save","run":1}
+{"event":"start","operation":"snapshot","run":2}
+{"event":"start","operation":"durable-save","run":2}
+{"event":"measured","operation":"snapshot","samplesMs":[8176.851601000002,8211.138212999998,7926.280992999993],"p95Ms":8211.138212999998,"medianMs":8176.851601000002,"scope":"Complete backend snapshot with all stored hashes and immutable history validation.","rss":572735488}
+{"event":"measured","operation":"chapter-and-filter-computation","samplesMs":[1.7373909999987518,1.459313999999722,1.3857920000009472],"p95Ms":1.7373909999987518,"medianMs":1.459313999999722,"scope":"Pure ordering/filter computation on loaded records; excludes DOM rendering.","rss":572735488}
+{"event":"measured","operation":"durable-save","samplesMs":[20023.029592000003,20349.556745999995,21032.617406999998],"p95Ms":21032.617406999998,"medianMs":20349.556745999995,"scope":"Durable chapter mutation and validated response snapshot; excludes IPC and UI.","rss":572735488}
+{"event":"start","operation":"revision"}

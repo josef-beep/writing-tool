@@ -1,0 +1,5 @@
+{
+  "time": "2026-10-24T19:23:53.851989+00:00",
+  "reason": "Stopped own baseline probe after identifying repeated full-store validation for each immutable object: 49 objects after many minutes. Partial timing evidence retained; not a completed revision.",
+  "pid": 55775
+}

@@ -1,0 +1,15 @@
+{
+  "name": "desktop-reconciliation-host",
+  "command": [
+    "npm",
+    "run",
+    "test:desktop",
+    "--",
+    "reconcile-background",
+    "busy-inventory"
+  ],
+  "started": "2026-10-24T18:29:32.860982+00:00",
+  "seconds": 46.76,
+  "exit_code": 0,
+  "log": "desktop-reconciliation-host.txt"
+}

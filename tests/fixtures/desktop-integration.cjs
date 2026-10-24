@@ -10,6 +10,8 @@ app.setPath('userData',path.join(fixture,'profile'));
 app.setAppPath(repo);
 let opened=false,main,failedQueries=0,allowReads=mode!=='read-failure',captureCount=0,backupCount=0,pass=false,lostAck=false,conflicted=false,expectedBounds,panelId='timeline',host,corruptedBackup=null;
 let holdProtection=false,releaseProtection,holdRead=false,releaseRead,holdProjectClose=false,releaseProjectClose,activeRequests=0,loseMutation=false,loseProfile=false,quitChoices=0,copyFailures=0,openedRecoveryFolder=false;
+let automaticCaptures=0,automaticBackups=0,scheduleSaves=0,failAutomaticBackup=false;
+let busyShellReads=0,holdShellRead=false,releaseShellRead;
 const originalFork=utilityProcess.fork.bind(utilityProcess);
 utilityProcess.fork=(...args)=>{
  host=originalFork(...args);
@@ -35,11 +37,18 @@ utilityProcess.fork=(...args)=>{
 };
 const originalHandle=ipcMain.handle.bind(ipcMain);
 ipcMain.handle=(channel,handler)=>originalHandle(channel,async(event,request)=>{
+ if(channel==='writingtool:project:v1'&&request.command==='project.current'&&busyShellReads){
+  busyShellReads--;
+  return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',code:'RECOVERY_REQUIRED',message:'Injected known-unsent busy refresh',outcome:'not-committed',retry:'after-recovery'};
+ }
  if(channel==='writingtool:workspace:v1'&&request.command==='workspace.query'&&opened&&!allowReads){
   failedQueries++;
   return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected temporary snapshot read failure',outcome:'not-committed',retry:'after-recovery',issues:[]};
  }
+ if(mode==='schedules'&&channel==='writingtool:workspace:v1'&&request.command==='workspace.mutate')scheduleSaves++;
  if(channel==='writingtool:protection:v1'){
+  if(request.reason==='Automatic'&&request.command==='protection.capture')automaticCaptures++;
+  if(request.reason==='Automatic'&&request.command==='protection.backup'){automaticBackups++;if(failAutomaticBackup){failAutomaticBackup=false;return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',message:'Injected scheduled destination failure',outcome:'not-committed',operationId:null};}}
   if(request.command==='protection.capture'&&request.reason==='Close')captureCount++;
   if(request.command==='protection.backup'&&request.reason==='Close')backupCount++;
  }
@@ -51,6 +60,7 @@ ipcMain.handle=(channel,handler)=>originalHandle(channel,async(event,request)=>{
  }
  activeRequests++;
  let result;try{result=await handler(event,request);}finally{activeRequests--;}
+ if(channel==='writingtool:project:v1'&&request.command==='project.current'&&holdShellRead){holdShellRead=false;await new Promise(resolve=>{releaseShellRead=resolve;});}
  if(mode==='layout-retry'&&layoutSave&&!lostAck&&result.status==='ok'&&request.values.panels.some(p=>p.id==='timeline'&&p.placement==='floating')){
   lostAck=true;return{protocolVersion:1,requestId:request.requestId,command:request.command,status:'error',code:'HOST_UNAVAILABLE',message:'Injected lost layout acknowledgement',outcome:'unknown',retry:'after-recovery',issues:[]};
  }
@@ -588,8 +598,23 @@ async function verifyWriting(){
   if(denied.status!=='error'||denied.code!=='VALIDATION')throw new Error('Host restart bypassed the associated project guard');
   const exitedAgain=new Promise(resolve=>host.once('exit',resolve));host.kill();await exitedAgain;
  }
+ if(mode==='writing'){
+  busyShellReads=2;
+  await evaluate(`document.dispatchEvent(new Event('writingtool-recovered-context'))`);
+  for(let attempt=0;busyShellReads&&attempt<100;attempt++)await delay(20);
+  if(busyShellReads)throw new Error('Busy recovery reads were not retried');
+  await waitFor(`!document.querySelector('.blocking')&&[...document.querySelectorAll('header nav button')].some(button=>button.textContent==='Close project'&&!button.disabled)`,'busy refresh preserves project context');
+  holdShellRead=true;
+  await evaluate(`document.dispatchEvent(new Event('writingtool-recovered-context'))`);
+  for(let attempt=0;!releaseShellRead&&attempt<100;attempt++)await delay(20);
+  if(!releaseShellRead)throw new Error('Recovery context read did not reach hold');
+ }
  await press('W',null,['control']);
  await waitFor(`document.querySelector('footer')?.textContent.includes('Project closed.')&&!document.querySelector('.manuscript')`,'closed writing project');
+ if(mode==='writing'){
+  releaseShellRead();releaseShellRead=null;
+  await waitFor(`![...document.querySelectorAll('header nav button')].some(button=>button.textContent==='Close project'&&!button.disabled)&&!document.querySelector('.blocking')`,'older recovery refresh cannot replace newer navigation');
+ }
  const remainingUniverse=await evaluate(`window.writingTool.currentUniverse()`);
  if(remainingUniverse.status!=='ok'||remainingUniverse.snapshot?.ownerId!==queried.snapshot.universe.owner.id)throw new Error('Closing the project lost its open universe');
  if(mode==='writing'){
@@ -604,6 +629,8 @@ async function verifyWriting(){
  await evaluate(`document.querySelector('.chapter-select').click()`);
  await waitFor(`document.querySelector('.manuscript h2 .manuscript-bold')?.textContent==='Writing works 🌍'&&!document.querySelector('.blocking')`,'reopened formatted manuscript');
  if(mode==='writing'||mode==='reconcile-defer'){
+  await evaluate(`(()=>{const editor=document.querySelector('.manuscript');editor.focus();const selection=getSelection();selection.selectAllChildren(editor);selection.collapseToEnd();})()`);
+  await delay(80);
   const exited=new Promise(resolve=>host.once('exit',resolve));host.kill();await exited;
   await evaluate(`document.querySelector('[data-top-profile-edit]').click()`);
   await waitFor(`!!document.querySelector('#profile-heading')&&!document.querySelector('.blocking')`,'profile command restores crashed host');
@@ -634,8 +661,58 @@ async function verifyWriting(){
   }
   await press('W',null,['control']);
   await waitFor(`!document.querySelector('#profile-heading')&&document.activeElement===document.querySelector('.manuscript')`,'profile close restores writing focus');
+  await main.webContents.insertText(' Focus restored');
+  await waitFor(`document.querySelector('.manuscript')?.textContent==='Writing works 🌍a Focus restored'&&document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Unsaved changes')`,'typing resumes at restored manuscript selection');
+  await press('Z',null,['control']);
+  await waitFor(`document.querySelector('.manuscript')?.textContent==='Writing works 🌍a'`,'focus verification edit undone');
+  await press('S',null,['control']);
+  await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Saved.')&&!document.querySelector('.blocking')`,'focus verification saved matched manuscript');
  }
  console.log('MANUSCRIPT_WRITING chapter creation, text/keyboard input, bold, headings, durable save and reopening passed');
+}
+async function verifySchedules(){
+ // Change only the renderer's elapsed clock. Production timers, IPC, saves and
+ // protection jobs run unchanged against the real isolated stores.
+ await evaluate(`(()=>{window.__scheduleClock={now:Date.now(),real:Date.now.bind(Date)};Date.now=()=>window.__scheduleClock.now;})()`);
+ const advance=async milliseconds=>{await evaluate(`(()=>{window.__scheduleClock.now+=${milliseconds};document.dispatchEvent(new Event('writingtool-system-resume'));})()`);};
+ await delay(1200); // let the production schedule establish its owner
+ if(automaticCaptures||automaticBackups)throw new Error('An automatic job ran before its initial interval');
+ await evaluate(`(()=>{const editor=document.querySelector('.manuscript');editor.focus();const selection=getSelection();selection.selectAllChildren(editor);selection.collapseToEnd();})()`);
+ await main.webContents.insertText(' Scheduled save');
+ await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Unsaved changes')`,'scheduled writing draft');
+ const savesBefore=scheduleSaves;
+ await advance(59000);await delay(150);if(scheduleSaves!==savesBefore)throw new Error('Autosave ran before one minute');
+ await advance(2000);await waitFor(`document.querySelector('.writing-meta [role="status"]')?.textContent.startsWith('Saved.')&&!document.querySelector('.blocking')`,'one-minute autosave');
+ if(scheduleSaves!==savesBefore+1||automaticCaptures||automaticBackups)throw new Error('Autosave changed the independent protection schedules');
+ holdProtection=true;await advance(60000);
+ let until=Date.now()+15000;while(!releaseProtection&&Date.now()<until)await delay(30);
+ if(!releaseProtection||automaticCaptures!==1||automaticBackups)throw new Error('The two-minute revision did not run independently');
+ for(let i=0;i<5;i++)await advance(0);await delay(150);
+ if(automaticCaptures!==1||automaticBackups)throw new Error('Resume events overlapped an active revision');
+ releaseProtection();releaseProtection=undefined;await waitFor(`!document.querySelector('.blocking')`,'scheduled revision completes');
+ await advance(60000);
+ until=Date.now()+15000;while(automaticBackups!==1&&Date.now()<until)await delay(30);
+ if(automaticBackups!==1)throw new Error('The three-minute backup did not run');
+ await waitFor(`!document.querySelector('.blocking')`,'scheduled backup completes');
+ // One overdue attempt per kind after a long sleep, regardless of repeated wakes.
+ holdProtection=true;await advance(3600000);
+ until=Date.now()+15000;while(!releaseProtection&&Date.now()<until)await delay(30);
+ if(automaticCaptures!==2)throw new Error('Resume missed the overdue revision');
+ for(let i=0;i<5;i++)await advance(0);if(automaticCaptures!==2||automaticBackups!==1)throw new Error('Sleep caused overlapping protection jobs');
+ releaseProtection();releaseProtection=undefined;
+ until=Date.now()+15000;while(automaticBackups!==2&&Date.now()<until)await delay(30);
+ await waitFor(`!document.querySelector('.blocking')`,'overdue jobs finish');await delay(1200);
+ if(automaticCaptures!==2||automaticBackups!==2)throw new Error('Sleep replayed every missed interval');
+ failAutomaticBackup=true;await advance(180000);
+ await waitFor(`document.querySelector('.blocking')?.textContent.includes('Injected scheduled destination failure')`,'scheduled failure preserves retry choice');
+ await clickText('Try again at next interval');await waitFor(`!document.querySelector('.blocking')`,'scheduled failure dismissed');
+ const attempts=automaticBackups;await advance(179000);await delay(150);if(automaticBackups!==attempts)throw new Error('A failed backup retried before its independent interval');
+ await advance(2000);until=Date.now()+15000;while(automaticBackups!==attempts+1&&Date.now()<until)await delay(30);
+ await waitFor(`!document.querySelector('.blocking')`,'failed backup retries next interval');
+ if(automaticBackups!==attempts+1)throw new Error('Failed backup did not retry exactly once');
+ const settings=await evaluate(`window.writingTool.workspace({command:'settings.get'})`);if(settings.status!=='ok'||settings.settings.backupDestination!==path.join(fixture,'backups'))throw new Error('Scheduled failure changed its destination');
+ await evaluate(`(()=>{Date.now=window.__scheduleClock.real;delete window.__scheduleClock;})()`);
+ console.log('SCHEDULES real autosave, independent revision/backup, resume, nonoverlap and next-interval failure retry passed');
 }
 async function verifyDeferredReconcile(){
  const id=fs.readFileSync(path.join(fixture,'pending-id'),'utf8');
@@ -803,6 +880,7 @@ async function drive(){
  const openDeadline=Date.now()+15000;while(!opened&&Date.now()<openDeadline)await delay(100);
  if(!opened)throw new Error('Project did not open');
  await waitFor(`document.body.innerText.includes('Your universe records')||document.body.innerText.includes('Create or select a story')||document.body.innerText.includes('Injected temporary snapshot')`,'project workspace');
+ if(mode==='schedules'){await verifyWriting();await verifySchedules();pass=true;main.close();return;}
  if(mode==='close-drain-cancel'){
   await waitFor(`document.querySelectorAll('.workspace-panel').length===3&&!document.querySelector('.blocking')`,'settled close-drain workspace');
   holdProjectClose=true;main.close();
@@ -923,9 +1001,10 @@ async function drive(){
   await waitFor(`document.querySelector('.center-form form')&&document.body.innerText.includes('Days per year')`,'calendar form');
   await evaluate(`(()=>{const label=[...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Days per year'));const input=label.querySelector('input');input.focus();input.select();})()`);
   await main.webContents.insertText('365');
+  await waitFor(`[...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Days per year'))?.querySelector('input')?.value==='365'`,'calendar days input accepted');
   await evaluate(`(()=>{const label=[...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Target days per year'));const input=label.querySelector('input');input.focus();input.select();})()`);
   await main.webContents.insertText('400');
-  await delay(100);
+  await waitFor(`[...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Target days per year'))?.querySelector('input')?.value==='400'`,'calendar target input accepted');
   await evaluate(`document.querySelector('.center-form form').requestSubmit()`);
   await waitFor(`document.querySelector('.center-form form')?.innerText.includes('Saved')&&!document.querySelector('.blocking')`,'saved calendar');
   await evaluate(`document.querySelector('.center-heading button').click()`);

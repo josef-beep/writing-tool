@@ -1,0 +1,11 @@
+{
+  "name": "unit-suite-host",
+  "command": [
+    "npm",
+    "test"
+  ],
+  "started": "2026-10-24T18:24:28.298164+00:00",
+  "seconds": 139.72,
+  "exit_code": 0,
+  "log": "unit-suite-host.txt"
+}

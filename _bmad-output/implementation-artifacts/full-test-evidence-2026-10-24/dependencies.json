@@ -1,0 +1,12 @@
+{
+  "name": "dependencies",
+  "command": [
+    "npm",
+    "ls",
+    "--depth=0"
+  ],
+  "started": "2026-10-24T18:26:45.001060+00:00",
+  "seconds": 0.54,
+  "exit_code": 0,
+  "log": "dependencies.txt"
+}

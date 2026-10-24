@@ -1,0 +1,45 @@
+{
+  "root": "/tmp/writingtool-export-probe-Aeu2gc",
+  "results": [
+    {
+      "format": "txt",
+      "bytes": 130,
+      "ms": 1224
+    },
+    {
+      "format": "md",
+      "bytes": 145,
+      "ms": 1325
+    },
+    {
+      "format": "docx",
+      "bytes": 5893,
+      "ms": 3607
+    },
+    {
+      "format": "pdf",
+      "bytes": 27136,
+      "ms": 3235
+    },
+    {
+      "format": "sqlite",
+      "bytes": 135168,
+      "ms": 1303
+    },
+    {
+      "format": "standalone-universe catalog",
+      "passed": true
+    },
+    {
+      "format": "project ZIP",
+      "originalRootsUnavailable": true,
+      "payloads": 11
+    },
+    {
+      "format": "universe ZIP",
+      "originalRootsUnavailable": true,
+      "payloads": 3
+    }
+  ],
+  "limits": "PDF checks extracted text and structure; visual layout and full recovery activation remain unverified."
+}

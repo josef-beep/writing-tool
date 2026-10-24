@@ -5,7 +5,6 @@ import {MakerDMG} from '@electron-forge/maker-dmg';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
-import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
@@ -31,7 +30,9 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     new MakerDMG({}),
     new MakerRpm({}),
-    new MakerDeb({}),
+    // Forge resolves --targets by this module name. A MakerDeb instance is
+    // named "deb", so that CLI override would silently discard its options.
+    {name:'@electron-forge/maker-deb',config:{options:{bin:'WritingTool'}}},
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),

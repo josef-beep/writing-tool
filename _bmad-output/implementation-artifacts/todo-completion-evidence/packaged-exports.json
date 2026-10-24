@@ -1,0 +1,45 @@
+{
+  "root": "/tmp/writingtool-export-probe-9226bR",
+  "results": [
+    {
+      "format": "txt",
+      "bytes": 130,
+      "ms": 1208
+    },
+    {
+      "format": "md",
+      "bytes": 145,
+      "ms": 1226
+    },
+    {
+      "format": "docx",
+      "bytes": 5893,
+      "ms": 3223
+    },
+    {
+      "format": "pdf",
+      "bytes": 27136,
+      "ms": 3028
+    },
+    {
+      "format": "sqlite",
+      "bytes": 135168,
+      "ms": 1097
+    },
+    {
+      "format": "standalone-universe catalog",
+      "passed": true
+    },
+    {
+      "format": "project ZIP",
+      "originalRootsUnavailable": true,
+      "payloads": 11
+    },
+    {
+      "format": "universe ZIP",
+      "originalRootsUnavailable": true,
+      "payloads": 3
+    }
+  ],
+  "limits": "PDF checks extracted text and structure; visual layout and full recovery activation remain unverified."
+}

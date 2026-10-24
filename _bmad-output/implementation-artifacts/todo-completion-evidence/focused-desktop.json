@@ -1,0 +1,9 @@
+{
+  "passed": [
+    "writing",
+    "reconcile-defer",
+    "reconcile-defer-restart"
+  ],
+  "fixture": "/tmp/writingtool-desktop-verification-yOpEpt",
+  "environmentFailure": "Chromium sandbox shutdown Operation not permitted in restricted executor; host-access run preserved Electron sandbox"
+}

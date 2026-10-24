@@ -3,6 +3,8 @@ export type WorkspaceCommit={expectedGeneration:string;records:WorkspaceRecord[]
 export type WorkspaceOperationRequest={protocolVersion:1;command:'workspace.mutate';submittedEditorRevision:string;units:UnitMutation[]}|{protocolVersion:1;command:'workspace.asset.import';owner:Owner;expectedGeneration:string;asset:AssetData}|{protocolVersion:1;command:'workspace.restore';submittedEditorRevision:string;plans:{owner:Owner;plan:WorkspaceCommit}[]};
 export type WorkspaceCapture={snapshot:WorkspaceUnitSnapshot;files:{relativePath:string;base64:string;sha256:string}[]};
 export interface WorkspaceUnitPort {
+ readonly location:string;
+ identity():{owner:Owner;rootId:string;universeId:string;generation:string;sessionToken:string};
  snapshot():WorkspaceUnitSnapshot;
  hasIdentity(id:string):boolean;
  receipt(operationId:string,digest?:string):WorkspaceReceipt|undefined;

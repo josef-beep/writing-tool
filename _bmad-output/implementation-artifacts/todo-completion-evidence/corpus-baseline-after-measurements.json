@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "root": "/tmp/writingtool-dec11-4cmmkR/corpus",
+  "scale": 1,
+  "tiny": false,
+  "startedAt": "2026-10-24T19:24:29.640Z",
+  "runs": 3,
+  "corpusCounts": {
+    "stories": 10,
+    "chapters": 100,
+    "events": 10000,
+    "characters": 200,
+    "factions": 20,
+    "decisions": 1000,
+    "images": 100,
+    "volumes": 2,
+    "wordsPerChapter": 2500,
+    "imageWidth": 1536,
+    "imageHeight": 1085
+  },
+  "corpusWords": 250000,
+  "imageBytes": 500158800,
+  "measurements": [
+    {
+      "operation": "open",
+      "samplesMs": [
+        12388.170517
+      ],
+      "p95Ms": 12388.170517,
+      "medianMs": 12388.170517,
+      "scope": "Authority open plus fully validated project/universe snapshot; excludes renderer/IPC readiness."
+    },
+    {
+      "operation": "snapshot",
+      "samplesMs": [
+        2859.3998470000006,
+        2918.250486000001,
+        3562.096497999999
+      ],
+      "p95Ms": 3562.096497999999,
+      "medianMs": 2918.250486000001,
+      "scope": "Complete backend snapshot with all stored hashes and immutable history validation."
+    },
+    {
+      "operation": "chapter-and-filter-computation",
+      "samplesMs": [
+        2.2577499999988504,
+        1.8465429999996559,
+        1.4878459999963525
+      ],
+      "p95Ms": 2.2577499999988504,
+      "medianMs": 1.8465429999996559,
+      "scope": "Pure ordering/filter computation on loaded records; excludes DOM rendering."
+    },
+    {
+      "operation": "durable-save",
+      "samplesMs": [
+        7388.285637000001,
+        8003.264986000002,
+        7799.967958000001
+      ],
+      "p95Ms": 8003.264986000002,
+      "medianMs": 7799.967958000001,
+      "scope": "Durable chapter mutation and validated response snapshot; excludes IPC and UI."
+    },
+    {
+      "operation": "revision",
+      "samplesMs": [
+        480710.30180300004
+      ],
+      "p95Ms": 480710.30180300004,
+      "medianMs": 480710.30180300004,
+      "scope": "Single production backend/converter sample; repeated reference-machine and installed acceptance remain required."
+    },
+    {
+      "operation": "backup",
+      "samplesMs": [
+        219970.88942300004
+      ],
+      "p95Ms": 219970.88942300004,
+      "medianMs": 219970.88942300004,
+      "scope": "Single production backend/converter sample; repeated reference-machine and installed acceptance remain required."
+    },
+    {
+      "operation": "txt",
+      "samplesMs": [
+        399149.975157
+      ],
+      "p95Ms": 399149.975157,
+      "medianMs": 399149.975157,
+      "scope": "Single production backend/converter sample; repeated reference-machine and installed acceptance remain required."
+    },
+    {
+      "operation": "md",
+      "samplesMs": [
+        407301.38170999987
+      ],
+      "p95Ms": 407301.38170999987,
+      "medianMs": 407301.38170999987,
+      "scope": "Single production backend/converter sample; repeated reference-machine and installed acceptance remain required."
+    }
+  ],
+  "hardware": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-1280P",
+    "logicalCpus": 20,
+    "memoryBytes": 33336754176,
+    "platform": "linux",
+    "release": "7.0.0-38-generic"
+  },
+  "referenceMachineMatches": false,
+  "installedInteractiveMeasured": false,
+  "cacheConditions": "Normal local filesystem cache; fresh authority open, then warm sequential operations. No OS cache eviction or forced GC.",
+  "scope": "Production backend and converter operations through Node with real temporary stores. Does not certify installed UI latency or reference-machine p95 budgets.",
+  "status": "running",
+  "historyPreserved": false,
+  "sizes": {},
+  "error": null
+}

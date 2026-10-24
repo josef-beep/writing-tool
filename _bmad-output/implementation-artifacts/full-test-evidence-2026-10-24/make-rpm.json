@@ -1,0 +1,16 @@
+{
+  "name": "make-rpm",
+  "command": [
+    "npm",
+    "run",
+    "make",
+    "--",
+    "--from-package",
+    "--targets",
+    "@electron-forge/maker-rpm"
+  ],
+  "started": "2026-10-24T18:30:05.610559+00:00",
+  "seconds": 0.76,
+  "exit_code": 1,
+  "log": "make-rpm.txt"
+}

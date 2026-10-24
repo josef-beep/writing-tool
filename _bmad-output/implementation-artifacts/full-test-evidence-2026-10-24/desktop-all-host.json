@@ -1,0 +1,12 @@
+{
+  "name": "desktop-all-host",
+  "command": [
+    "npm",
+    "run",
+    "test:desktop"
+  ],
+  "started": "2026-10-24T18:23:36.176074+00:00",
+  "seconds": 124.27,
+  "exit_code": 1,
+  "log": "desktop-all-host.txt"
+}

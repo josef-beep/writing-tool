@@ -305,13 +305,16 @@ else
             if(chosen.canceled||!resolved)throw new Error('The original owning identity is required. The protection operation remains pending.');
             return resolved;
         };
+        let recoveredContextPending=false;
+        const notifyRecoveredContext=()=>{if(protectionInFlight)recoveredContextPending=true;else window?.webContents.send('writingtool:recovered-context:v1');};
+        const releaseProtectionAdmission=()=>{protectionInFlight=false;notifyPendingProtection();if(recoveredContextPending){recoveredContextPending=false;notifyRecoveredContext();}};
         const synchronizeProtectionContext=async(notify=true)=>{
             const [project,universe]=await Promise.all([
                 projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.current'}),
                 universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.current'}),
             ]);
             if(project.status!=='ok'||universe.status!=='ok'){
-                if(notify)window?.webContents.send('writingtool:recovered-context:v1');
+                if(notify)notifyRecoveredContext();
                 throw new Error('The active recovery participants could not be confirmed. Reopen the saved owning roots.');
             }
             if(project.snapshot&&(!universe.snapshot||project.snapshot.universe.ownerId!==universe.snapshot.ownerId||project.snapshot.universe.rootId!==universe.snapshot.rootId))throw new Error('The active project and universe identities do not match.');
@@ -319,7 +322,7 @@ else
             activeProjectIdentity=project.snapshot?{id:project.snapshot.ownerId,rootId:project.snapshot.rootId}:undefined;
             activeLocation=universe.snapshot?.location;
             activeSnapshot=universe.snapshot;authorityRestorePending=false;
-            if(notify)window?.webContents.send('writingtool:recovered-context:v1');
+            if(notify)notifyRecoveredContext();
         };
         const runProtection=nativeProtection({openRoot:async(owner,location)=>{try{if(owner.kind==='project'){let result=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:location});if(result.status==='locate'){const chosen=await dialog.showOpenDialog(window!,{title:'Locate matching universe',properties:['openDirectory']});if(chosen.canceled||!chosen.filePaths[0])throw new Error('The matching universe is required.');result=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.open',basePath:location,universePath:chosen.filePaths[0]});}if(result.status!=='ok'||!result.snapshot)throw new Error(result.status==='error'?result.message:'Project opening was not acknowledged.');return{project:result.snapshot.location,universe:result.snapshot.universeLocation};}if(activeProjectLocation){const closed=await projectClient!.request({protocolVersion:1,requestId:randomUUID(),command:'project.close'});if(closed.status!=='ok')throw new Error('Close the active project before changing universes.');}const opened=await universeClient!.request({protocolVersion:1,requestId:randomUUID(),command:'universe.open',basePath:location});if(opened.status!=='ok'||!opened.snapshot)throw new Error(opened.status==='error'?opened.message:'Universe opening was not acknowledged.');return{project:null,universe:opened.snapshot.location};}finally{await synchronizeProtectionContext(false);}},window:()=>window!,originalRequest:id=>pendingProtection.get(id)?.request,originalUniverse:id=>{const pending=pendingProtection.get(id);return pending?.universe&&pending.universeIdentity?{owner:{kind:'universe' as const,id:pending.universeIdentity.id},rootId:pending.universeIdentity.rootId,location:pending.universe}:undefined;},roots:()=>[activeProjectLocation,activeLocation].filter((p):p is string=>!!p),activeOwners:()=>[...(activeProjectIdentity?[{kind:'project' as const,id:activeProjectIdentity.id}]:[]),...(activeSnapshot?[{kind:'universe' as const,id:activeSnapshot.ownerId}]:[])],sourceName:async r=>{if(r.command==='protection.export'&&r.storyId){const result=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'workspace.query'});if(result.status==='ok'){const story=result.snapshot.project?.records.find(record=>record.recordType==='story'&&record.id===r.storyId);if(story?.recordType==='story')return story.data.title;}}return r.command==='protection.export'&&r.owner.kind==='project'&&activeProjectLocation?path.basename(activeProjectLocation):activeSnapshot?.profile.name??'WritingTool';},settings:async()=>{workspaceClient?.fail();workspaceClient=new WorkspaceHostClient(child);const result=await workspaceClient!.request({protocolVersion:1,requestId:randomUUID(),command:'settings.get'});if(result.status!=='ok'||!result.settings)throw new Error('Read backup settings before continuing.');return result.settings;},send:async r=>{
             const persist=r.command!=='protection.reconcile'&&protectionHasDurableEffects(r);
@@ -363,10 +366,10 @@ else
                     const deferred:PendingProtection={...pending,deferred:true};
                     savePendingProtection(value.operationId,deferred);
                     pendingProtection.set(value.operationId,deferred);unresolvedOperations.delete(value.operationId);notifyPendingProtection();
-                    if(!hasBlockingOperations()&&!pendingProjectCreation)window?.webContents.send('writingtool:recovered-context:v1');
+                    if(!hasBlockingOperations()&&!pendingProjectCreation)notifyRecoveredContext();
                     return{...base,status:'ok',value:{...pendingProtectionState(),warnings:['The unfinished operation is retained for later reconciliation. It has not been marked complete.']}};
                 }catch(error){return{...base,status:'error',message:error instanceof Error?error.message:'The operation could not be set aside. Retry or reconcile it.',outcome:'unknown',operationId:value.operationId};}
-                finally{protectionInFlight=false;notifyPendingProtection();}
+                finally{releaseProtectionAdmission();}
             }
             // Listing recent roots has no authority effects and must remain available during recovery.
             if(value.command==='protection.recents')return runProtection(value);
@@ -385,7 +388,7 @@ else
                         // Execution was never sent; reset a failed preparation transport too.
                         protectionClient?.fail();protectionClient=new ProtectionHostClient(child);
                         forgetPendingProtection(value.operationId);
-                        window?.webContents.send('writingtool:recovered-context:v1');
+                        notifyRecoveredContext();
                         return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'ok',value:{reconciliation:{operationId:value.operationId,outcome:'not-committed'}}};
                     }
                     let moved=false;
@@ -442,12 +445,12 @@ else
                         return{...result,outcome:'unknown',operationId:value.operationId};
                     }
                     return result;
-                }catch(error){if(pendingProtection.has(value.operationId)&&!canDeferProtection(pendingProtection.get(value.operationId)!.request.command))unresolvedOperations.add(value.operationId);else if(!hasBlockingOperations())window?.webContents.send('writingtool:recovered-context:v1');return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
-                finally{protectionInFlight=false;notifyPendingProtection();}
+                }catch(error){if(pendingProtection.has(value.operationId)&&!canDeferProtection(pendingProtection.get(value.operationId)!.request.command))unresolvedOperations.add(value.operationId);else if(!hasBlockingOperations())notifyRecoveredContext();return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'Protection reconciliation remains unconfirmed.',outcome:'unknown',operationId:value.operationId};}
+                finally{releaseProtectionAdmission();}
             }
 
             if(protectionInFlight||workspaceInFlight||projectInFlight||universeInFlight||hasBlockingOperations())return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:'Finish or reconcile the pending authority operation first.',outcome:'not-committed',operationId:null};
-            protectionInFlight=true;try{await ensureApplicationHost();const result=await runProtection(value);if(result.status==='ok'&&result.value.activated||value.command==='protection.recent'&&value.action!=='remove')await synchronizeProtectionContext();if(result.status==='error'&&result.outcome==='unknown')unresolvedOperations.add(value.requestId);else forgetPendingProtection(value.requestId);return result;}catch(error){const uncertain=pendingProtection.has(value.requestId);if(uncertain)unresolvedOperations.add(value.requestId);return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'The native protection result could not be confirmed.',outcome:uncertain?'unknown':'not-committed',operationId:uncertain?value.requestId:null};}finally{protectionInFlight=false;notifyPendingProtection();}
+            protectionInFlight=true;try{await ensureApplicationHost();const result=await runProtection(value);if(result.status==='ok'&&result.value.activated||value.command==='protection.recent'&&value.action!=='remove')await synchronizeProtectionContext();if(result.status==='error'&&result.outcome==='unknown')unresolvedOperations.add(value.requestId);else forgetPendingProtection(value.requestId);return result;}catch(error){const uncertain=pendingProtection.has(value.requestId);if(uncertain)unresolvedOperations.add(value.requestId);return{protocolVersion:1,requestId:value.requestId,command:value.command,status:'error',message:error instanceof Error?error.message:'The native protection result could not be confirmed.',outcome:uncertain?'unknown':'not-committed',operationId:uncertain?value.requestId:null};}finally{releaseProtectionAdmission();}
         });
         ipcMain.handle(WORKSPACE_CHANNEL,async(event,value:unknown):Promise<WorkspaceResult>=>{
             if(!authorized(event)||!validWorkspaceRequest(value))throw new Error('Workspace request denied');

@@ -1,3 +1,4 @@
+import type {WorkspaceUnitSnapshot} from './contracts/workspace';
 import type {WorkspaceUnitPort} from './contracts/workspace-ports';
 import { type CreateInput, type SaveInput, type SaveReceipt, type UniverseSnapshot, type UniverseErrorCode, type ReconciliationExpectation } from './contracts/universe';
 export class UniverseFailure extends Error {
@@ -9,6 +10,7 @@ export interface UniverseStore {
     readonly location: string;
     workspace: WorkspaceUnitPort;
     snapshot(): UniverseSnapshot;
+    readSnapshot(): {identity:UniverseSnapshot;workspace:WorkspaceUnitSnapshot};
     save(input: SaveInput): SaveReceipt;
     recover(): void;
     prepareRelocatedReopen(basePath: string, expected: ReconciliationExpectation): void;
@@ -31,6 +33,9 @@ export class UniverseApplication {
     constructor(private storage: UniverseStorage) {
     }
     workspaceAuthority(): WorkspaceUnitPort | undefined { return this.active?.workspace; }
+    readWorkspace(): {identity:UniverseSnapshot;workspace:WorkspaceUnitSnapshot} | null {
+        return this.active?.readSnapshot() ?? null;
+    }
     current(): UniverseSnapshot | null {
         return this.active?.snapshot() ?? null;
     }

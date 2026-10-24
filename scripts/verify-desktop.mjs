@@ -16,7 +16,7 @@ import {runSmokeProcess} from './smoke.mjs';
 import {unzipSync,strFromU8} from 'fflate';
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url);
-const availableModes=['panels','error-quit','combined-error-quit','error-profile-quit','error-quit-timeout','error-quit-copy-keep','close-stalled','close-drain-cancel','close-backup-error','error-quit-copy-failure','close-pending','read-queue','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions','writing','reconcile-defer','reconcile-background','busy-inventory'];
+const availableModes=['panels','error-quit','combined-error-quit','error-profile-quit','error-quit-timeout','error-quit-copy-keep','close-stalled','close-drain-cancel','close-backup-error','error-quit-copy-failure','close-pending','read-queue','read-failure','layout-retry','partial-layout','context','menus','timeline','intervals','factions','writing','reconcile-defer','reconcile-background','busy-inventory','schedules'];
 const selectedModes=process.argv.slice(2);
 if(selectedModes.some(mode=>!availableModes.includes(mode)))throw new Error('Choose desktop scenarios from: '+availableModes.join(', '));
 const modes=selectedModes.length?selectedModes:availableModes;
@@ -99,6 +99,11 @@ for(const mode of modes){
     record.data.order=index.toString();return record;
    });
    fs.writeFileSync(path.join(fixture,'timeline.json'),JSON.stringify({records:[calendar,...events],expected:events.slice(1,-1).map(record=>record.id),dates:Object.fromEntries(events.map(record=>[record.data.code,dateLabel(record.data.date,calendar.data)]))}));
+  }
+  if(mode==='schedules'){
+   const settings=new SettingsStorage(path.join(fixture,'profile'),fn=>coordinator.settingsGate(fn)),saved=settings.get();
+   if(saved.autosaveMinutes!=='10'||saved.revisionMinutes!=='10'||saved.backupMinutes!=='10')throw new Error('Incorrect default protection intervals');
+   settings.save({...saved,autosaveMinutes:'1',revisionMinutes:'2',backupMinutes:'3',backupDestination:path.join(fixture,'backups')},saved.recordVersion);
   }
   if(mode==='partial-layout'){
    const settings=new SettingsStorage(path.join(fixture,'profile'),fn=>coordinator.settingsGate(fn)),saved=settings.get();

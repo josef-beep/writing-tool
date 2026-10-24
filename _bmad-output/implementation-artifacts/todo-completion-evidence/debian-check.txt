@@ -1,0 +1,1 @@
+Extracted Debian launch passed: /tmp/writingtool-debian-SM1ML5/extracted/usr/lib/writingtool/WritingTool

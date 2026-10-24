@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "root": "/tmp/writingtool-dec11-ZNsuyc/corpus",
+  "scale": 1,
+  "tiny": false,
+  "startedAt": "2026-10-24T19:16:20.344Z",
+  "runs": 3,
+  "corpusCounts": {
+    "stories": 10,
+    "chapters": 100,
+    "events": 10000,
+    "characters": 200,
+    "factions": 20,
+    "decisions": 1000,
+    "images": 100,
+    "volumes": 2,
+    "wordsPerChapter": 2500,
+    "imageWidth": 1536,
+    "imageHeight": 1085
+  },
+  "corpusWords": 250000,
+  "imageBytes": 500158800,
+  "measurements": [
+    {
+      "operation": "open",
+      "samplesMs": [
+        20658.879434000002
+      ],
+      "p95Ms": 20658.879434000002,
+      "medianMs": 20658.879434000002,
+      "scope": "Authority open plus fully validated project/universe snapshot; excludes renderer/IPC readiness."
+    },
+    {
+      "operation": "snapshot",
+      "samplesMs": [
+        8176.851601000002,
+        8211.138212999998,
+        7926.280992999993
+      ],
+      "p95Ms": 8211.138212999998,
+      "medianMs": 8176.851601000002,
+      "scope": "Complete backend snapshot with all stored hashes and immutable history validation."
+    },
+    {
+      "operation": "chapter-and-filter-computation",
+      "samplesMs": [
+        1.7373909999987518,
+        1.459313999999722,
+        1.3857920000009472
+      ],
+      "p95Ms": 1.7373909999987518,
+      "medianMs": 1.459313999999722,
+      "scope": "Pure ordering/filter computation on loaded records; excludes DOM rendering."
+    },
+    {
+      "operation": "durable-save",
+      "samplesMs": [
+        20023.029592000003,
+        20349.556745999995,
+        21032.617406999998
+      ],
+      "p95Ms": 21032.617406999998,
+      "medianMs": 20349.556745999995,
+      "scope": "Durable chapter mutation and validated response snapshot; excludes IPC and UI."
+    }
+  ],
+  "hardware": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-1280P",
+    "logicalCpus": 20,
+    "memoryBytes": 33336754176,
+    "platform": "linux",
+    "release": "7.0.0-38-generic"
+  },
+  "referenceMachineMatches": false,
+  "installedInteractiveMeasured": false,
+  "cacheConditions": "Normal local filesystem cache; fresh authority open, then warm sequential operations. No OS cache eviction or forced GC.",
+  "scope": "Production backend and converter operations through Node with real temporary stores. Does not certify installed UI latency or reference-machine p95 budgets.",
+  "status": "running",
+  "historyPreserved": false,
+  "sizes": {},
+  "error": null
+}

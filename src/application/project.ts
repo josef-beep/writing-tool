@@ -1,3 +1,4 @@
+import type {WorkspaceUnitSnapshot} from './contracts/workspace';
 import {assertWorkspaceState} from '../domain/workspace';
 import type {WorkspaceUnitPort} from './contracts/workspace-ports';
 import {UniverseApplication, UniverseFailure} from './universe';
@@ -6,6 +7,7 @@ export interface ProjectStore {
     readonly location: string;
     workspace: WorkspaceUnitPort;
     snapshot(): ProjectIdentity;
+    readSnapshot(): {identity:ProjectIdentity;workspace:WorkspaceUnitSnapshot};
     bind(universeLocation: string): void;
     close(): void;
     releaseCandidate(): void;
@@ -22,6 +24,7 @@ export class ProjectApplication {
     private retired: ProjectStore[] = [];
     constructor(private storage: ProjectStorage, private universes: UniverseApplication) {}
     workspaceAuthority(): WorkspaceUnitPort | undefined { return this.active?.workspace; }
+    readWorkspace(): {identity:ProjectIdentity;workspace:WorkspaceUnitSnapshot} | null {return this.active?.readSnapshot() ?? null;}
     associatedUniverseId(): string | undefined {return this.active?.snapshot().universeId;}
     current(): ProjectSnapshot | null {
         if (!this.active) return null;

@@ -1,0 +1,7 @@
+{
+  "profile": "/tmp/writingtool-interrupt-oqwj7y",
+  "interrupted": true,
+  "code": null,
+  "signal": "SIGINT",
+  "epipe": false
+}
